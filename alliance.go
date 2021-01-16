@@ -10,8 +10,8 @@ import (
 
 type AllianceRepository interface {
 	Alliances(ctx context.Context, operators ...*Operator) ([]*Alliance, error)
-	CreateAlliance(ctx context.Context, alliance *Alliance) error
-	UpdateAlliance(ctx context.Context, id uint, alliance *Alliance) error
+	CreateAlliance(ctx context.Context, alliance *Alliance) (*Alliance, error)
+	UpdateAlliance(ctx context.Context, id string, alliance *Alliance) (*Alliance, error)
 }
 
 // Alliance is an object representing the database table.

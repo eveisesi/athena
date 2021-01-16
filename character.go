@@ -10,8 +10,8 @@ import (
 
 type CharacterRepository interface {
 	Characters(ctx context.Context, operators ...*Operator) ([]*Character, error)
-	CreateCharacter(ctx context.Context, character *Character) error
-	UpdateCharacter(ctx context.Context, id uint64, character *Character) error
+	CreateCharacter(ctx context.Context, character *Character) (*Character, error)
+	UpdateCharacter(ctx context.Context, id string, character *Character) (*Character, error)
 }
 
 type Character struct {

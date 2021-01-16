@@ -7,10 +7,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type CorporationRespository interface {
+type CorporationRepository interface {
 	Corporations(ctx context.Context, operators ...*Operator) ([]*Corporation, error)
-	CreateCorporation(ctx context.Context, corporation *Corporation) error
-	UpdateCorporation(ctx context.Context, id uint, corporation *Corporation) error
+	CreateCorporation(ctx context.Context, corporation *Corporation) (*Corporation, error)
+	UpdateCorporation(ctx context.Context, id string, corporation *Corporation) (*Corporation, error)
 }
 
 type Corporation struct {
