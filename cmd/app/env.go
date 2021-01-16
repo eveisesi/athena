@@ -26,21 +26,20 @@ func loadConfig() (cfg config, err error) {
 
 type config struct {
 	Mongo struct {
-		Host     string
-		Port     int
-		User     string
-		Pass     string
-		Name     string
+		Host     string `required:"true"`
+		Port     int    `required:"true"`
+		User     string `required:"true"`
+		Pass     string `required:"true"`
+		Name     string `required:"true"`
 		AuthMech string `default:"SCRAM-SHA-256"`
 	}
 
 	Redis struct {
-		Host string
-		Port uint
+		Host string `required:"true"`
+		Port uint   `required:"true"`
 	}
 
 	NewRelic struct {
-		Enabled bool   `envconfig:"NEW_RELIC_ENABLED" default:"false"`
 		AppName string `envconfig:"NEW_RELIC_APP_NAME"`
 	}
 
@@ -51,21 +50,23 @@ type config struct {
 	}
 
 	Log struct {
-		Level string
+		Level string `required:"true"`
 	}
 
 	Server struct {
-		Port uint
+		Port uint `required:"true"`
 	}
 
 	Auth struct {
-		ClientID         string
-		ClientSecret     string
-		RedirectURL      string
-		AuthorizationURL string
-		TokenURL         string
-		JWKSURL          string
+		ClientID         string `required:"true"`
+		ClientSecret     string `required:"true"`
+		RedirectURL      string `required:"true"`
+		AuthorizationURL string `required:"true"`
+		TokenURL         string `required:"true"`
+		JWKSURL          string `required:"true"`
 	}
+
+	UserAgent string `required:"true"`
 }
 
 func (c config) validateEnvironment() bool {
