@@ -8,6 +8,7 @@ import (
 
 type Service interface {
 	authService
+	esiService
 	memberService
 }
 
