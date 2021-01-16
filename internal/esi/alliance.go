@@ -1,86 +1,56 @@
 package esi
 
-// import (
-// 	"context"
-// 	"encoding/json"
-// 	"fmt"
-// 	"net/http"
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 
-// 	"github.com/eveisesi/neo"
-// 	"github.com/jinzhu/copier"
-// 	"github.com/pkg/errors"
-// )
+	"github.com/eveisesi/athena"
+)
 
-// // Alliance is an object representing the database table.
-// type Alliance struct {
-// 	ID     uint   `json:"id"`
-// 	Name   string `json:"name"`
-// 	Ticker string `json:"ticker"`
-// }
+func isAllianceValid(r *athena.Alliance) bool {
+	if r.Name == "" || r.Ticker == "" {
+		return false
+	}
+	return true
+}
 
-// func (r Alliance) validate() bool {
-// 	if r.Name == "" || r.Ticker == "" {
-// 		return false
-// 	}
-// 	return true
-// }
+// GetAlliancesAllianceID makes a HTTP GET Request to the /alliances/{alliance_id} endpoint
+// for information about the provided alliance
+//
+// Documentation: https://esi.evetech.net/ui/#/Alliance/get_alliances_alliance_id
+// Version: v3
+// Cache: 3600 sec (1 Hour)
+func (s *service) GetAlliancesAllianceID(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error) {
 
-// // GetAlliancesAllianceID makes a HTTP GET Request to the /alliances/{alliance_id} endpoint
-// // for information about the provided alliance
-// //
-// // Documentation: https://esi.evetech.net/ui/#/Alliance/get_alliances_alliance_id
-// // Version: v3
-// // Cache: 3600 sec (1 Hour)
-// func (s *service) GetAlliancesAllianceID(ctx context.Context, id uint, etag string) (*neo.Alliance, Meta) {
+	path := fmt.Sprintf("/v3/alliances/%d/", alliance.AllianceID)
 
-// 	path := fmt.Sprintf("/v3/alliances/%d/", id)
-// 	headers := make(map[string]string)
+	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(alliance.Etag))
+	if err != nil {
+		return nil, nil, err
+	}
 
-// 	if etag != "" {
-// 		headers["If-None-Match"] = etag
-// 	}
+	switch sc := res.StatusCode; {
+	case sc == http.StatusOK:
+		err = json.Unmarshal(b, alliance)
+		if err != nil {
+			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+			return nil, nil, err
+		}
 
-// 	request := request{
-// 		method:  http.MethodGet,
-// 		path:    path,
-// 		headers: headers,
-// 	}
+		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
+			alliance.Etag = etag
+		}
 
-// 	response, m := s.request(ctx, request)
-// 	if m.IsErr() {
-// 		return nil, m
-// 	}
+		if !isAllianceValid(alliance) {
+			return nil, nil, fmt.Errorf("invalid alliance return from esi, missing name or ticker")
+		}
+	case sc >= http.StatusBadRequest:
+		return alliance, res, fmt.Errorf("failed to fetch alliance %d, received status code of %d", alliance.AllianceID, sc)
+	}
 
-// 	esiAlliance := new(Alliance)
+	alliance.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
-// 	switch m.Code {
-// 	case 200:
-// 		err = json.Unmarshal(response, esiAlliance)
-// 		if err != nil {
-// 			m.Msg = errors.Wrapf(err, "unable to unmarshal response body on request %s", path)
-// 			return nil, m
-// 		}
-
-// 		esiAlliance.ID = id
-
-// 		if !esiAlliance.validate() {
-// 			m.Code = http.StatusUnprocessableEntity
-// 			return nil, m
-// 		}
-
-// 	}
-
-// 	alliance := new(neo.Alliance)
-// 	err = copier.Copy(alliance, esiAlliance)
-// 	if err != nil {
-// 		m.Msg = err
-// 		return nil, m
-// 	}
-
-// 	alliance.CachedUntil = s.retrieveExpiresHeader(m.Headers, 0).Unix()
-// 	if s.retrieveEtagHeader(m.Headers) != "" {
-// 		alliance.Etag = s.retrieveEtagHeader(m.Headers)
-// 	}
-
-// 	return alliance, m
-// }
+	return alliance, res, nil
+}

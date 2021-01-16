@@ -1,88 +1,56 @@
 package esi
 
-// import (
-// 	"context"
-// 	"encoding/json"
-// 	"fmt"
-// 	"net/http"
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 
-// 	"github.com/eveisesi/neo"
-// 	"github.com/jinzhu/copier"
-// 	"github.com/pkg/errors"
-// )
+	"github.com/eveisesi/athena"
+)
 
-// type Character struct {
-// 	ID             uint64  `json:"id"`
-// 	Name           string  `json:"name"`
-// 	CorporationID  uint    `json:"corporation_id"`
-// 	AllianceID     *uint   `json:"alliance_id"`
-// 	FactionID      *uint   `json:"faction_id"`
-// 	SecurityStatus float64 `json:"security_status"`
-// }
+func isCharacterValid(r *athena.Character) bool {
+	if r.Name == "" || r.CorporationID == 0 {
+		return false
+	}
+	return true
+}
 
-// func (r Character) validate() bool {
-// 	if r.Name == "" || r.CorporationID == 0 {
-// 		return false
-// 	}
-// 	return true
-// }
+// GetCharactersCharacterID makes a HTTP GET Request to the /characters/{character_id} endpoint
+// for information about the provided character
+//
+// Documentation: https://esi.evetech.net/ui/#/Character/get_characters_character_id
+// Version: v4
+// Cache: 86400 sec (24 Hour)
+func (s *service) GetCharactersCharacterID(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error) {
 
-// // GetCharactersCharacterID makes a HTTP GET Request to the /characters/{character_id} endpoint
-// // for information about the provided character
-// //
-// // Documentation: https://esi.evetech.net/ui/#/Character/get_characters_character_id
-// // Version: v4
-// // Cache: 86400 sec (24 Hour)
-// func (s *service) GetCharactersCharacterID(ctx context.Context, id uint64, etag string) (*neo.Character, Meta) {
+	path := fmt.Sprintf("/v4/characters/%d/", character.CharacterID)
 
-// 	path := fmt.Sprintf("/v4/characters/%d/", id)
-// 	headers := make(map[string]string)
+	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(character.Etag))
+	if err != nil {
+		return nil, nil, err
+	}
 
-// 	if etag != "" {
-// 		headers["If-None-Match"] = etag
-// 	}
+	switch sc := res.StatusCode; {
+	case sc == http.StatusOK:
+		err = json.Unmarshal(b, character)
+		if err != nil {
+			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+			return nil, nil, err
+		}
 
-// 	request := request{
-// 		method:  http.MethodGet,
-// 		path:    path,
-// 		headers: headers,
-// 	}
+		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
+			character.Etag = etag
+		}
 
-// 	response, m := s.request(ctx, request)
-// 	if m.IsErr() {
-// 		return nil, m
-// 	}
+		if !isCharacterValid(character) {
+			return nil, nil, fmt.Errorf("invalid character return from esi, missing name or ticker")
+		}
+	case sc >= http.StatusBadRequest:
+		return character, res, fmt.Errorf("failed to fetch character %d, received status code of %d", character.CharacterID, sc)
+	}
 
-// 	esiCharacter := new(Character)
+	character.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
-// 	switch m.Code {
-// 	case 200:
-// 		err := json.Unmarshal(response, esiCharacter)
-// 		if err != nil {
-// 			m.Msg = errors.Wrapf(err, "unable to unmarshal response body on request %s", path)
-// 			return nil, m
-// 		}
-
-// 		esiCharacter.ID = id
-
-// 		if !esiCharacter.validate() {
-// 			m.Code = http.StatusUnprocessableEntity
-// 			return nil, m
-// 		}
-
-// 	}
-
-// 	character := new(neo.Character)
-// 	err = copier.Copy(character, esiCharacter)
-// 	if err != nil {
-// 		m.Msg = err
-// 		return nil, m
-// 	}
-
-// 	character.CachedUntil = s.retrieveExpiresHeader(m.Headers, 0).Unix()
-// 	if s.retrieveEtagHeader(m.Headers) != "" {
-// 		character.Etag = s.retrieveEtagHeader(m.Headers)
-// 	}
-
-// 	return character, m
-// }
+	return character, res, nil
+}
