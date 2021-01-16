@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/eveisesi/athena/internal/cache"
+	"github.com/eveisesi/athena/internal/character"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/eveisesi/athena"
@@ -20,16 +21,18 @@ type Service interface {
 }
 
 type service struct {
-	auth auth.Service
+	auth      auth.Service
+	cache     cache.Service
+	character character.Service
 
 	member athena.MemberRepository
-	cache  cache.Service
 }
 
-func NewService(auth auth.Service, cache cache.Service, member athena.MemberRepository) Service {
+func NewService(auth auth.Service, cache cache.Service, character character.Service, member athena.MemberRepository) Service {
 	return &service{
-		cache: cache,
-		auth:  auth,
+		auth:      auth,
+		cache:     cache,
+		character: character,
 
 		member: member,
 	}
@@ -61,7 +64,7 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 		return err
 	}
 
-	spew.Dump(member, err)
+	spew.Dump(bearer, token, member, err)
 
 	return nil
 
@@ -107,7 +110,7 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 
 	// This is a new member, lets create a record for them.
 
-	// character,err := s.
+	// character, err := s.character.Character(ctx, memberID)
 
 	return nil, nil
 

@@ -16,7 +16,10 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/lru"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/eveisesi/athena/internal/alliance"
 	"github.com/eveisesi/athena/internal/auth"
+	"github.com/eveisesi/athena/internal/character"
+	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/graphql"
 	"github.com/eveisesi/athena/internal/graphql/generated"
 	"github.com/eveisesi/athena/internal/member"
@@ -36,8 +39,11 @@ type server struct {
 	redis    *redis.Client
 	newrelic *newrelic.Application
 
-	auth   auth.Service
-	member member.Service
+	auth        auth.Service
+	member      member.Service
+	character   character.Service
+	corporation corporation.Service
+	alliance    alliance.Service
 
 	server *http.Server
 }
@@ -51,17 +57,23 @@ func NewServer(
 	newrelic *newrelic.Application,
 	auth auth.Service,
 	member member.Service,
+	character character.Service,
+	corporation corporation.Service,
+	alliance alliance.Service,
 ) *server {
 
 	s := &server{
-		port:     port,
-		env:      env,
-		db:       db,
-		logger:   logger,
-		redis:    redis,
-		newrelic: newrelic,
-		auth:     auth,
-		member:   member,
+		port:        port,
+		env:         env,
+		db:          db,
+		logger:      logger,
+		redis:       redis,
+		newrelic:    newrelic,
+		auth:        auth,
+		member:      member,
+		character:   character,
+		corporation: corporation,
+		alliance:    alliance,
 	}
 
 	s.server = &http.Server{
@@ -88,11 +100,11 @@ func (s *server) buildRouter() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(
-		// middleware.Timeout(time.Second*4),
+		middleware.Timeout(time.Second*4),
 		s.cors,
 	// s.monitoring,
 	)
-	// r.Get("/auth/login", s.handleGetAuthLogin)
+
 	r.Get("/auth/callback", s.handleGetAuthCallback)
 
 	r.Group(func(r chi.Router) {

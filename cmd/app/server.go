@@ -7,6 +7,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/eveisesi/athena/internal/alliance"
+	"github.com/eveisesi/athena/internal/character"
+	"github.com/eveisesi/athena/internal/corporation"
+	"github.com/eveisesi/athena/internal/esi"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/eveisesi/athena/internal/mongodb"
 
@@ -22,12 +26,34 @@ func serverCommand(c *cli.Context) error {
 
 	basics := basics("server")
 
+	cache := cache.NewService(basics.redis)
+
 	memberRepo, err := mongodb.NewMemberRepository(basics.db)
 	if err != nil {
 		basics.logger.WithError(err).Fatal("failed to initialize member repository")
 	}
 
-	cache := cache.NewService(basics.redis)
+	characterRepo, err := mongodb.NewCharacterRepository(basics.db)
+	if err != nil {
+		basics.logger.WithError(err).Fatal("failed to initialize character repository")
+	}
+
+	corporationRepo, err := mongodb.NewCorporationRepository(basics.db)
+	if err != nil {
+		basics.logger.WithError(err).Fatal("failed to initialize corporation repository")
+	}
+
+	allianceRepo, err := mongodb.NewAllianceRepository(basics.db)
+	if err != nil {
+		basics.logger.WithError(err).Fatal("failed to initialize alliance repository")
+	}
+
+	esi := esi.NewService(cache, basics.client, basics.cfg.UserAgent)
+
+	corporation := corporation.NewService(cache, esi, corporationRepo)
+	alliance := alliance.NewService(cache, esi, allianceRepo)
+
+	character := character.NewService(cache, esi, alliance, corporation, characterRepo)
 
 	auth := auth.NewService(
 		cache,
@@ -55,6 +81,9 @@ func serverCommand(c *cli.Context) error {
 		basics.newrelic,
 		auth,
 		member,
+		character,
+		corporation,
+		alliance,
 	)
 
 	serverErrors := make(chan error, 1)
