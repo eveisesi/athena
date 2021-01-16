@@ -15,11 +15,6 @@ type MemberRepository interface {
 	DeleteMember(ctx context.Context, id string) (bool, error)
 }
 
-type CacheMemberRepository interface {
-	Members(ctx context.Context, operators []*Operator) ([]*Member, error)
-	SetMembers(ctx context.Context, operators []*Operator, members []*Member) error
-}
-
 type Member struct {
 	ID                primitive.ObjectID `bson:"_id,omitempty" json:"_id"`
 	CharacterID       uint64             `bson:"character_id" json:"character_id"`

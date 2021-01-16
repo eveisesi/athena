@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/eveisesi/athena/internal/cache"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/auth"
@@ -21,15 +23,15 @@ type service struct {
 	auth auth.Service
 
 	member athena.MemberRepository
-	cache  athena.CacheMemberRepository
+	cache  cache.Service
 }
 
-func NewService(auth auth.Service, member athena.MemberRepository, memberCache athena.CacheMemberRepository) Service {
+func NewService(auth auth.Service, cache cache.Service, member athena.MemberRepository) Service {
 	return &service{
-		auth: auth,
+		cache: cache,
+		auth:  auth,
 
 		member: member,
-		cache:  memberCache,
 	}
 }
 
@@ -106,6 +108,8 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 	// This is a new member, lets create a record for them.
 
 	// character,err := s.
+
+	return nil, nil
 
 }
 

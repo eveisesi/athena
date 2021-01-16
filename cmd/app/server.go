@@ -22,16 +22,15 @@ func serverCommand(c *cli.Context) error {
 
 	basics := basics("server")
 
-	authCache := cache.NewAuthRepository(basics.redis, time.Minute*5)
-	memberCache := cache.NewMemberRepository(basics.redis, time.Minute*10)
-
 	memberRepo, err := mongodb.NewMemberRepository(basics.db)
 	if err != nil {
 		basics.logger.WithError(err).Fatal("failed to initialize member repository")
 	}
 
+	cache := cache.NewService(basics.redis)
+
 	auth := auth.NewService(
-		authCache,
+		cache,
 		&oauth2.Config{
 			ClientID:     basics.cfg.Auth.ClientID,
 			ClientSecret: basics.cfg.Auth.ClientSecret,
@@ -45,7 +44,7 @@ func serverCommand(c *cli.Context) error {
 		basics.cfg.Auth.JWKSURL,
 	)
 
-	member := member.NewService(auth, memberRepo, memberCache)
+	member := member.NewService(auth, cache, memberRepo)
 
 	server := server.NewServer(
 		basics.cfg.Server.Port,

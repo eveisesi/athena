@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
+	"github.com/eveisesi/athena/internal/cache"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jwt"
 	"golang.org/x/oauth2"
@@ -26,22 +27,20 @@ type Service interface {
 
 type service struct {
 	// athena.AuthRepository
-	oauth     *oauth2.Config
-	authCache athena.AuthRepository
+	oauth *oauth2.Config
+	cache cache.Service
 
 	client  *http.Client
 	jwksURI string
 }
 
 // authRepo athena.AuthRepository
-func NewService(authCache athena.AuthRepository, oauth *oauth2.Config, client *http.Client, jwksURI string) *service {
+func NewService(cache cache.Service, oauth *oauth2.Config, client *http.Client, jwksURI string) *service {
 	return &service{
-		// AuthRepository: authRepo,
-
-		oauth:     oauth,
-		authCache: authCache,
-		client:    client,
-		jwksURI:   jwksURI,
+		cache:   cache,
+		oauth:   oauth,
+		client:  client,
+		jwksURI: jwksURI,
 	}
 }
 
@@ -56,13 +55,13 @@ func (s *service) InitializeAttempt(ctx context.Context) (*athena.AuthAttempt, e
 		State:  fmt.Sprintf("%x", string(b)),
 	}
 
-	return s.authCache.CreateAuthAttempt(ctx, attempt)
+	return s.cache.CreateAuthAttempt(ctx, attempt)
 
 }
 
 func (s *service) AuthAttempt(ctx context.Context, hash string) (*athena.AuthAttempt, error) {
 
-	attempt, err := s.authCache.AuthAttempt(ctx, hash)
+	attempt, err := s.cache.AuthAttempt(ctx, hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch attempt with hash of %s: %w", hash, err)
 	}
@@ -104,7 +103,7 @@ func (s *service) getSet() (*jwk.Set, error) {
 
 	ctx := context.Background()
 
-	b, err := s.authCache.JSONWebKeySet(ctx)
+	b, err := s.cache.JSONWebKeySet(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unexpected error occured querying redis for jwks: %w", err)
 	}
@@ -124,7 +123,7 @@ func (s *service) getSet() (*jwk.Set, error) {
 			return nil, fmt.Errorf("failed to read jwk response body: %w", err)
 		}
 
-		err = s.authCache.SaveJSONWebKeySet(ctx, buf)
+		err = s.cache.SaveJSONWebKeySet(ctx, buf)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save jwks to cache layer: %w", err)
 		}
