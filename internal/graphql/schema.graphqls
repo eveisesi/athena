@@ -1,0 +1,12 @@
+directive @goModel(model: String) on OBJECT
+# directive @hasGrant(scope: String!) on FIELD_DEFINITION
+
+type Query {
+    # @hasGrant(scope: "esi-test.read-test.v1")
+    auth: AuthAttempt!
+    authorizationURI(state: String!): String!
+}
+
+type Subscription {
+    authStatus(state: String!): AuthAttempt!
+}

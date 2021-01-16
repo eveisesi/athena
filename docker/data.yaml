@@ -1,0 +1,21 @@
+version: "3.7"
+
+services:
+  athena_mongo:
+    image: mongo:4.4.2
+    restart: always
+    volumes:
+      - ./_data/mongo:/data/db:rw
+    env_file: ../.config/mongo.env
+    ports:
+      - "46100:27017"
+    command: mongod --auth
+    container_name: athena_mongo
+  athena_redis:
+    image: redis:6
+    restart: always
+    ports:
+      - "46110:6379"
+    volumes:
+      - ./_data/redis:/data
+    container_name: athena_redis
