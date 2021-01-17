@@ -3,6 +3,7 @@ package mongodb
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -39,6 +40,10 @@ func (r *allianceRepository) Alliances(ctx context.Context, operators ...*athena
 }
 
 func (r *allianceRepository) CreateAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, error) {
+
+	alliance.CreatedAt = time.Now()
+	alliance.UpdatedAt = time.Now()
+
 	result, err := r.alliances.InsertOne(ctx, alliance)
 	if err != nil {
 		return nil, err
@@ -56,6 +61,7 @@ func (r *allianceRepository) UpdateAlliance(ctx context.Context, id string, alli
 	}
 
 	alliance.ID = _id
+	alliance.UpdatedAt = time.Now()
 
 	update := primitive.D{primitive.E{Key: "$set", Value: alliance}}
 

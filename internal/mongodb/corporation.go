@@ -3,6 +3,7 @@ package mongodb
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -39,6 +40,10 @@ func (r *corporationRepository) Corporations(ctx context.Context, operators ...*
 }
 
 func (r *corporationRepository) CreateCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, error) {
+
+	corporation.CreatedAt = time.Now()
+	corporation.UpdatedAt = time.Now()
+
 	result, err := r.corporations.InsertOne(ctx, corporation)
 	if err != nil {
 		return nil, err
@@ -56,6 +61,7 @@ func (r *corporationRepository) UpdateCorporation(ctx context.Context, id string
 	}
 
 	corporation.ID = _id
+	corporation.UpdatedAt = time.Now()
 
 	update := primitive.D{primitive.E{Key: "$set", Value: corporation}}
 

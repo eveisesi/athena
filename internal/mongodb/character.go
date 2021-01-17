@@ -3,6 +3,7 @@ package mongodb
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -39,6 +40,10 @@ func (r *characterRepository) Characters(ctx context.Context, operators ...*athe
 }
 
 func (r *characterRepository) CreateCharacter(ctx context.Context, character *athena.Character) (*athena.Character, error) {
+
+	character.CreatedAt = time.Now()
+	character.UpdatedAt = time.Now()
+
 	result, err := r.characters.InsertOne(ctx, character)
 	if err != nil {
 		return nil, err
@@ -50,12 +55,14 @@ func (r *characterRepository) CreateCharacter(ctx context.Context, character *at
 }
 
 func (r *characterRepository) UpdateCharacter(ctx context.Context, id string, character *athena.Character) (*athena.Character, error) {
+
 	_id, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, fmt.Errorf("unable to cast %s to ObjectID: %w", id, err)
 	}
 
 	character.ID = _id
+	character.UpdatedAt = time.Now()
 
 	update := primitive.D{primitive.E{Key: "$set", Value: character}}
 

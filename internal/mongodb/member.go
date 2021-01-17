@@ -3,6 +3,7 @@ package mongodb
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -39,6 +40,10 @@ func (r *memberRepository) Members(ctx context.Context, operators ...*athena.Ope
 }
 
 func (r *memberRepository) CreateMember(ctx context.Context, member *athena.Member) (*athena.Member, error) {
+
+	member.CreatedAt = time.Now()
+	member.UpdatedAt = time.Now()
+
 	result, err := r.members.InsertOne(ctx, member)
 	if err != nil {
 		return nil, err
@@ -56,6 +61,7 @@ func (r *memberRepository) UpdateMember(ctx context.Context, id string, member *
 	}
 
 	member.ID = _id
+	member.UpdatedAt = time.Now()
 
 	update := primitive.D{primitive.E{Key: "$set", Value: member}}
 
