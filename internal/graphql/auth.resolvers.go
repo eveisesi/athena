@@ -14,6 +14,10 @@ func (r *authAttemptResolver) Status(ctx context.Context, obj *athena.AuthAttemp
 	return obj.Status.String(), nil
 }
 
+func (r *authAttemptResolver) URL(ctx context.Context, obj *athena.AuthAttempt) (string, error) {
+	return r.auth.AuthorizationURI(ctx, obj.State), nil
+}
+
 // AuthAttempt returns generated.AuthAttemptResolver implementation.
 func (r *Resolver) AuthAttempt() generated.AuthAttemptResolver { return &authAttemptResolver{r} }
 

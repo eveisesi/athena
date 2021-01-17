@@ -4,7 +4,6 @@ directive @goModel(model: String) on OBJECT
 type Query {
     # @hasGrant(scope: "esi-test.read-test.v1")
     auth: AuthAttempt!
-    authorizationURI(state: String!): String!
 }
 
 type Subscription {

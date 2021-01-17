@@ -22,10 +22,6 @@ func (r *queryResolver) Auth(ctx context.Context) (*athena.AuthAttempt, error) {
 	return attempt, nil
 }
 
-func (r *queryResolver) AuthorizationURI(ctx context.Context, state string) (string, error) {
-	return r.auth.AuthorizationURI(ctx, state), nil
-}
-
 func (r *subscriptionResolver) AuthStatus(ctx context.Context, state string) (<-chan *athena.AuthAttempt, error) {
 	pipe := make(chan *athena.AuthAttempt)
 
