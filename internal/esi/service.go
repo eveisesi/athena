@@ -1,6 +1,7 @@
 package esi
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -28,8 +29,8 @@ type (
 		// Characters
 		GetCharactersCharacterID(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error)
 
-		// // Corporations
-		// GetCorporationsCorporationID(ctx context.Context, id uint, etag string) (*athena.Corporation, *http.Response, error)
+		// Corporations
+		GetCorporationsCorporationID(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error)
 
 		// 		// Killmails
 		// 		GetKillmailsKillmailIDKillmailHash(ctx context.Context, id uint, hash string) (*neo.Killmail, *http.Response, error)
@@ -72,7 +73,7 @@ func NewService(cache cache.Service, client *http.Client, uagent string) Service
 // and returns the response
 func (s *service) request(
 	ctx context.Context,
-	optionFuncs ...OptionsFunc,
+	optionFuncs ...OptionFunc,
 ) ([]byte, *http.Response, error) {
 
 	options := s.opts(optionFuncs)
@@ -84,7 +85,7 @@ func (s *service) request(
 		RawQuery: options.query.Encode(),
 	}
 
-	req, err := http.NewRequestWithContext(ctx, options.method, uri.String(), options.body)
+	req, err := http.NewRequestWithContext(ctx, options.method, uri.String(), bytes.NewBuffer(options.body))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build request: %w", err)
 	}

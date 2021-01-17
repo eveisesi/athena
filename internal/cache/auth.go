@@ -11,9 +11,9 @@ import (
 
 type authService interface {
 	JSONWebKeySet(ctx context.Context) ([]byte, error)
-	SaveJSONWebKeySet(ctx context.Context, jwks []byte, optionFuncs ...OptionsFunc) error
+	SaveJSONWebKeySet(ctx context.Context, jwks []byte, optionFuncs ...OptionFunc) error
 	AuthAttempt(ctx context.Context, hash string) (*athena.AuthAttempt, error)
-	CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAttempt, optionFuncs ...OptionsFunc) (*athena.AuthAttempt, error)
+	CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAttempt, optionFuncs ...OptionFunc) (*athena.AuthAttempt, error)
 }
 
 const AUTH_ATTEMPT = "athena::auth::attempt::%s"
@@ -34,7 +34,7 @@ func (s *service) JSONWebKeySet(ctx context.Context) ([]byte, error) {
 
 }
 
-func (s *service) SaveJSONWebKeySet(ctx context.Context, jwks []byte, optionFuncs ...OptionsFunc) error {
+func (s *service) SaveJSONWebKeySet(ctx context.Context, jwks []byte, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -66,7 +66,7 @@ func (s *service) AuthAttempt(ctx context.Context, hash string) (*athena.AuthAtt
 
 }
 
-func (s *service) CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAttempt, optionFuncs ...OptionsFunc) (*athena.AuthAttempt, error) {
+func (s *service) CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAttempt, optionFuncs ...OptionFunc) (*athena.AuthAttempt, error) {
 
 	if attempt.State == "" {
 		return nil, fmt.Errorf("empty state provided")

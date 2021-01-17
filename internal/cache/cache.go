@@ -7,7 +7,10 @@ import (
 )
 
 type Service interface {
+	allianceService
 	authService
+	characterService
+	corporationService
 	esiService
 	memberService
 }
@@ -26,7 +29,7 @@ type options struct {
 	expiry time.Duration
 }
 
-type OptionsFunc func(opts *options) *options
+type OptionFunc func(opts *options) *options
 
 func defaultOptions() *options {
 	return &options{
@@ -34,7 +37,7 @@ func defaultOptions() *options {
 	}
 }
 
-func applyOptionFuncs(opts *options, optionFuncs []OptionsFunc) *options {
+func applyOptionFuncs(opts *options, optionFuncs []OptionFunc) *options {
 	if opts == nil {
 		opts = defaultOptions()
 	}
@@ -46,9 +49,17 @@ func applyOptionFuncs(opts *options, optionFuncs []OptionsFunc) *options {
 	return opts
 }
 
-func WithCustomExpiry(expiry time.Duration) OptionsFunc {
+func WithCustomExpiry(expiry time.Duration) OptionFunc {
 	return func(opts *options) *options {
 		opts.expiry = expiry
 		return opts
 	}
+}
+
+func ExpiryMinutes(min int) OptionFunc {
+	return WithCustomExpiry(time.Minute * time.Duration(min))
+}
+
+func ExpiryHours(hr int) OptionFunc {
+	return WithCustomExpiry(time.Hour * time.Duration(hr))
 }

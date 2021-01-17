@@ -19,6 +19,7 @@ import (
 type Service interface {
 	InitializeAttempt(ctx context.Context) (*athena.AuthAttempt, error)
 	AuthAttempt(ctx context.Context, hash string) (*athena.AuthAttempt, error)
+	UpdateAuthAttempt(ctx context.Context, hash string, attempt *athena.AuthAttempt) (*athena.AuthAttempt, error)
 
 	AuthorizationURI(ctx context.Context, state string) string
 	BearerForCode(ctx context.Context, code string) (*oauth2.Token, error)
@@ -75,6 +76,19 @@ func (s *service) AuthAttempt(ctx context.Context, hash string) (*athena.AuthAtt
 
 }
 
+func (s *service) UpdateAuthAttempt(ctx context.Context, hash string, attempt *athena.AuthAttempt) (*athena.AuthAttempt, error) {
+
+	attempt.State = hash
+
+	attempt, err := s.cache.CreateAuthAttempt(ctx, attempt)
+	if err != nil {
+		return nil, err
+	}
+
+	return attempt, nil
+
+}
+
 func (s *service) AuthorizationURI(ctx context.Context, state string) string {
 	return s.oauth.AuthCodeURL(state)
 }
@@ -123,7 +137,7 @@ func (s *service) getSet() (*jwk.Set, error) {
 			return nil, fmt.Errorf("failed to read jwk response body: %w", err)
 		}
 
-		err = s.cache.SaveJSONWebKeySet(ctx, buf)
+		err = s.cache.SaveJSONWebKeySet(ctx, buf, cache.ExpiryHours(6))
 		if err != nil {
 			return nil, fmt.Errorf("failed to save jwks to cache layer: %w", err)
 		}

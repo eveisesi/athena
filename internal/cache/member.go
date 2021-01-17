@@ -12,7 +12,7 @@ import (
 
 type memberService interface {
 	Members(ctx context.Context, operators []*athena.Operator) ([]*athena.Member, error)
-	SetMembers(ctx context.Context, operators []*athena.Operator, members []*athena.Member, optionFuncs ...OptionsFunc) error
+	SetMembers(ctx context.Context, operators []*athena.Operator, members []*athena.Member, optionFuncs ...OptionFunc) error
 }
 
 const MEMBER = "athena::member::%s"
@@ -51,7 +51,7 @@ func (s *service) Members(ctx context.Context, operators []*athena.Operator) ([]
 }
 
 // SetMembers caches a slice of members using the slice of operators used to fetch that slice of members.
-func (s *service) SetMembers(ctx context.Context, operators []*athena.Operator, members []*athena.Member, optionFuncs ...OptionsFunc) error {
+func (s *service) SetMembers(ctx context.Context, operators []*athena.Operator, members []*athena.Member, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -64,14 +64,12 @@ func (s *service) SetMembers(ctx context.Context, operators []*athena.Operator, 
 	_, _ = h.Write(data)
 	bs := h.Sum(nil)
 
-	key := fmt.Sprintf(MEMBERS, fmt.Sprintf("%x", bs))
-
 	data, err = json.Marshal(members)
 	if err != nil {
 		return fmt.Errorf("Failed to marsahl payload: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(MEMBERS, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

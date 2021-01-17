@@ -18,6 +18,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/eveisesi/athena/internal/alliance"
 	"github.com/eveisesi/athena/internal/auth"
+	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/graphql"
@@ -25,7 +26,6 @@ import (
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/go-redis/redis/v8"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -36,10 +36,10 @@ type server struct {
 	env      athena.Environment
 	db       *mongo.Database
 	logger   *logrus.Logger
-	redis    *redis.Client
 	newrelic *newrelic.Application
 
 	auth        auth.Service
+	cache       cache.Service
 	member      member.Service
 	character   character.Service
 	corporation corporation.Service
@@ -53,7 +53,7 @@ func NewServer(
 	env athena.Environment,
 	db *mongo.Database,
 	logger *logrus.Logger,
-	redis *redis.Client,
+	cache cache.Service,
 	newrelic *newrelic.Application,
 	auth auth.Service,
 	member member.Service,
@@ -67,7 +67,7 @@ func NewServer(
 		env:         env,
 		db:          db,
 		logger:      logger,
-		redis:       redis,
+		cache:       cache,
 		newrelic:    newrelic,
 		auth:        auth,
 		member:      member,
@@ -106,6 +106,7 @@ func (s *server) buildRouter() *chi.Mux {
 	)
 
 	r.Get("/auth/callback", s.handleGetAuthCallback)
+	r.Get("/auth/login", s.handleGetAuthLogin)
 
 	r.Group(func(r chi.Router) {
 		r.Use(

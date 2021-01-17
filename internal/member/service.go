@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/eveisesi/athena/internal/alliance"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/character"
+	"github.com/eveisesi/athena/internal/corporation"
+	"github.com/volatiletech/null"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/auth"
 	"github.com/lestrrat-go/jwx/jwt"
@@ -21,18 +24,22 @@ type Service interface {
 }
 
 type service struct {
-	auth      auth.Service
-	cache     cache.Service
-	character character.Service
+	auth        auth.Service
+	cache       cache.Service
+	character   character.Service
+	corporation corporation.Service
+	alliance    alliance.Service
 
 	member athena.MemberRepository
 }
 
-func NewService(auth auth.Service, cache cache.Service, character character.Service, member athena.MemberRepository) Service {
+func NewService(auth auth.Service, cache cache.Service, alliance alliance.Service, character character.Service, corporation corporation.Service, member athena.MemberRepository) Service {
 	return &service{
-		auth:      auth,
-		cache:     cache,
-		character: character,
+		auth:        auth,
+		cache:       cache,
+		character:   character,
+		corporation: corporation,
+		alliance:    alliance,
 
 		member: member,
 	}
@@ -64,7 +71,22 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 		return err
 	}
 
-	spew.Dump(bearer, token, member, err)
+	member.AccessToken = bearer.AccessToken
+	member.RefreshToken = bearer.RefreshToken
+	member.Expires = bearer.Expiry
+
+	_, err = s.member.UpdateMember(ctx, member.ID.Hex(), member)
+	if err != nil {
+		return err
+	}
+
+	attempt.Status = athena.CompletedAuthStatus
+	attempt.Token = null.NewString(member.AccessToken, true)
+
+	_, err = s.auth.UpdateAuthAttempt(ctx, attempt.State, attempt)
+	if err != nil {
+		return err
+	}
 
 	return nil
 
@@ -103,16 +125,63 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 	}
 
 	if len(members) == 1 {
+
 		_ = s.cache.SetMembers(ctx, operators, members)
 
 		return members[0], nil
 	}
 
 	// This is a new member, lets create a record for them.
+	character, err := s.character.CharacterByCharacterID(ctx, memberID, character.NewOptionFuncs())
+	if err != nil {
+		return nil, err
+	}
 
-	// character, err := s.character.Character(ctx, memberID)
+	corporation, err := s.corporation.CorporationByCorporationID(ctx, character.CorporationID, corporation.NewOptionFuncs())
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	if corporation.AllianceID.Valid {
+		_, err = s.alliance.AllianceByAllianceID(ctx, corporation.AllianceID.Uint, alliance.NewOptionFuncs())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	claims := token.PrivateClaims()
+
+	member := &athena.Member{
+		CharacterID: character.CharacterID,
+		LastLogin:   time.Now(),
+	}
+
+	if _, ok := claims["owner"]; !ok {
+		return nil, fmt.Errorf("failed to process token. owner hash is missing")
+	}
+
+	member.OwnerHash = claims["owner"].(string)
+
+	if _, ok := claims["scp"]; ok {
+		scp := []string{}
+		switch a := claims["scp"].(type) {
+		case []interface{}:
+			for _, v := range a {
+				scp = append(scp, v.(string))
+			}
+		case string:
+			scp = append(scp, a)
+		}
+
+		member.Scopes = scp
+	}
+
+	member, err = s.member.CreateMember(ctx, member)
+	if err != nil {
+		return nil, err
+	}
+
+	return member, nil
 
 }
 

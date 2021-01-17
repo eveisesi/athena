@@ -53,7 +53,7 @@ func serverCommand(c *cli.Context) error {
 	corporation := corporation.NewService(cache, esi, corporationRepo)
 	alliance := alliance.NewService(cache, esi, allianceRepo)
 
-	character := character.NewService(cache, esi, alliance, corporation, characterRepo)
+	character := character.NewService(cache, esi, characterRepo)
 
 	auth := auth.NewService(
 		cache,
@@ -70,14 +70,14 @@ func serverCommand(c *cli.Context) error {
 		basics.cfg.Auth.JWKSURL,
 	)
 
-	member := member.NewService(auth, cache, memberRepo)
+	member := member.NewService(auth, cache, alliance, character, corporation, memberRepo)
 
 	server := server.NewServer(
 		basics.cfg.Server.Port,
 		basics.cfg.Env,
 		basics.db,
 		basics.logger,
-		basics.redis,
+		cache,
 		basics.newrelic,
 		auth,
 		member,

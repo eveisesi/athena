@@ -25,7 +25,7 @@ type Member struct {
 	Expires           time.Time          `bson:"expires" json:"expires"`
 	Disabled          bool               `bson:"disabled" json:"disabled"`
 	DisabledReason    null.String        `bson:"disabled_reason,omitempty" json:"disabled_reason"`
-	DisabledTimestamp NullTimeZeroer     `bson:"disabled_timestamp,omitempty" json:"disabled_timestamp"`
+	DisabledTimestamp null.Time          `bson:"disabled_timestamp,omitempty" json:"disabled_timestamp"`
 	Scopes            []string           `bson:"scopes" json:"scopes"`
 	LastLogin         time.Time          `bson:"last_login" json:"last_login"`
 	CreatedAt         time.Time          `bson:"created_at" json:"created_at"`

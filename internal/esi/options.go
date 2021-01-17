@@ -1,27 +1,28 @@
 package esi
 
 import (
-	"bytes"
 	"net/http"
 	"net/url"
 )
 
 type options struct {
-	// This is the User Agent to use in our HTTP Request
 	method       string
 	path         string
 	query        url.Values
 	headers      http.Header
-	body         *bytes.Buffer
+	body         []byte
 	retryOnError bool
 	maxattempts  int
 }
 
-type OptionsFunc func(*options) *options
+type OptionFunc func(*options) *options
 
-func (s *service) opts(optionFuncs []OptionsFunc) *options {
+func (s *service) opts(optionFuncs []OptionFunc) *options {
 	opts := &options{
 		maxattempts: 3,
+		query:       make(url.Values),
+		headers:     make(http.Header),
+		body:        nil,
 	}
 
 	for _, optionFunc := range optionFuncs {
@@ -35,21 +36,21 @@ func (s *service) opts(optionFuncs []OptionsFunc) *options {
 	return opts
 }
 
-func WithMethod(method string) OptionsFunc {
+func WithMethod(method string) OptionFunc {
 	return func(o *options) *options {
 		o.method = method
 		return o
 	}
 }
 
-func WithPath(path string) OptionsFunc {
+func WithPath(path string) OptionFunc {
 	return func(o *options) *options {
 		o.path = path
 		return o
 	}
 }
 
-func WithQuery(key, value string) OptionsFunc {
+func WithQuery(key, value string) OptionFunc {
 	return func(o *options) *options {
 		if o.query == nil {
 			o.query = url.Values{}
@@ -61,10 +62,10 @@ func WithQuery(key, value string) OptionsFunc {
 	}
 }
 
-func WithHeaders(key, value string) OptionsFunc {
+func WithHeaders(key, value string) OptionFunc {
 	return func(o *options) *options {
 		if o.headers == nil {
-			o.headers = http.Header{}
+			o.headers = make(http.Header)
 		}
 
 		o.headers.Set(key, value)
@@ -73,18 +74,18 @@ func WithHeaders(key, value string) OptionsFunc {
 	}
 }
 
-func WithBody(d []byte) OptionsFunc {
+func WithBody(d []byte) OptionFunc {
 	return func(o *options) *options {
-		o.body = bytes.NewBuffer(d)
+		o.body = d
 		return o
 	}
 }
 
-// Helper Funcs Below here cause i'm lazy. These will contain
+// Helper Funcs below here cause i'm lazy. These will contain
 // some sort of if check to ensure the value is not empty before
 // calling one of the func above
 
-func WithEtag(etag string) OptionsFunc {
+func WithEtag(etag string) OptionFunc {
 	if etag == "" {
 		return emptyApplicator()
 	}
@@ -93,7 +94,7 @@ func WithEtag(etag string) OptionsFunc {
 
 }
 
-func emptyApplicator() OptionsFunc {
+func emptyApplicator() OptionFunc {
 	return func(o *options) *options {
 		return o
 	}

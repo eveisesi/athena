@@ -60,6 +60,10 @@ func (o Operation) Value() string {
 	return string(o)
 }
 
+func NewOperators(operators ...*Operator) []*Operator {
+	return operators
+}
+
 func NewEqualOperator(column string, value interface{}) *Operator {
 	return &Operator{
 		Column:    column,

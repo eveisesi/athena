@@ -24,7 +24,7 @@ type Character struct {
 	SecurityStatus null.Float64       `bson:"security_status,omitempty" json:"security_status,omitempty"`
 	Gender         string             `bson:"gender" json:"gender"`
 	Birthday       time.Time          `bson:"birthday" json:"birthday"`
-	Title          string             `bson:"title" json:"title"`
+	Title          null.String        `bson:"title,omitempty" json:"title,omitempty"`
 	AncestryID     null.Uint          `bson:"ancestry_id,omitempty" json:"ancestry_id,omitempty"`
 	BloodlineID    uint               `bson:"bloodline_id" json:"bloodline_id"`
 	RaceID         uint               `bson:"race_id" json:"race_id"`

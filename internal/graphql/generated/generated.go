@@ -51,11 +51,11 @@ type ComplexityRoot struct {
 		State  func(childComplexity int) int
 		Status func(childComplexity int) int
 		Token  func(childComplexity int) int
+		URL    func(childComplexity int) int
 	}
 
 	Query struct {
-		Auth             func(childComplexity int) int
-		AuthorizationURI func(childComplexity int, state string) int
+		Auth func(childComplexity int) int
 	}
 
 	Subscription struct {
@@ -65,10 +65,11 @@ type ComplexityRoot struct {
 
 type AuthAttemptResolver interface {
 	Status(ctx context.Context, obj *athena.AuthAttempt) (string, error)
+
+	URL(ctx context.Context, obj *athena.AuthAttempt) (string, error)
 }
 type QueryResolver interface {
 	Auth(ctx context.Context) (*athena.AuthAttempt, error)
-	AuthorizationURI(ctx context.Context, state string) (string, error)
 }
 type SubscriptionResolver interface {
 	AuthStatus(ctx context.Context, state string) (<-chan *athena.AuthAttempt, error)
@@ -110,24 +111,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AuthAttempt.Token(childComplexity), true
 
+	case "AuthAttempt.url":
+		if e.complexity.AuthAttempt.URL == nil {
+			break
+		}
+
+		return e.complexity.AuthAttempt.URL(childComplexity), true
+
 	case "Query.auth":
 		if e.complexity.Query.Auth == nil {
 			break
 		}
 
 		return e.complexity.Query.Auth(childComplexity), true
-
-	case "Query.authorizationURI":
-		if e.complexity.Query.AuthorizationURI == nil {
-			break
-		}
-
-		args, err := ec.field_Query_authorizationURI_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.AuthorizationURI(childComplexity, args["state"].(string)), true
 
 	case "Subscription.authStatus":
 		if e.complexity.Subscription.AuthStatus == nil {
@@ -212,6 +208,7 @@ var sources = []*ast.Source{
     status: String!
     state: String
     token: String
+    url: String!
 }
 `, BuiltIn: false},
 	{Name: "internal/graphql/schema.graphqls", Input: `directive @goModel(model: String) on OBJECT
@@ -220,7 +217,6 @@ var sources = []*ast.Source{
 type Query {
     # @hasGrant(scope: "esi-test.read-test.v1")
     auth: AuthAttempt!
-    authorizationURI(state: String!): String!
 }
 
 type Subscription {
@@ -246,21 +242,6 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_authorizationURI_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["state"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("state"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["state"] = arg0
 	return args, nil
 }
 
@@ -416,6 +397,41 @@ func (ec *executionContext) _AuthAttempt_token(ctx context.Context, field graphq
 	return ec.marshalOString2githubᚗcomᚋvolatiletechᚋnullᚐString(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _AuthAttempt_url(ctx context.Context, field graphql.CollectedField, obj *athena.AuthAttempt) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "AuthAttempt",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.AuthAttempt().URL(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_auth(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -449,48 +465,6 @@ func (ec *executionContext) _Query_auth(ctx context.Context, field graphql.Colle
 	res := resTmp.(*athena.AuthAttempt)
 	fc.Result = res
 	return ec.marshalNAuthAttempt2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐAuthAttempt(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Query_authorizationURI(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Query_authorizationURI_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().AuthorizationURI(rctx, args["state"].(string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1740,6 +1714,20 @@ func (ec *executionContext) _AuthAttempt(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._AuthAttempt_state(ctx, field, obj)
 		case "token":
 			out.Values[i] = ec._AuthAttempt_token(ctx, field, obj)
+		case "url":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAttempt_url(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -1775,20 +1763,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_auth(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
-		case "authorizationURI":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_authorizationURI(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
