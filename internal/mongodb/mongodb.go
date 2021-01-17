@@ -5,10 +5,17 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
 
 	"github.com/eveisesi/athena"
 	"github.com/newrelic/go-agent/_integrations/nrmongo"
 	"github.com/pkg/errors"
+	"github.com/volatiletech/null"
+	"go.mongodb.org/mongo-driver/bson/bsoncodec"
+	"go.mongodb.org/mongo-driver/bson/bsonrw"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -19,7 +26,7 @@ func Connect(ctx context.Context, uri *url.URL) (*mongo.Client, error) {
 	monitor := nrmongo.NewCommandMonitor(nil)
 
 	opts := options.Client().ApplyURI(uri.String()).SetMonitor(monitor)
-
+	opts.SetRegistry(customCodecRegistery().Build())
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect to mongo db")
@@ -156,3 +163,145 @@ func BuildFindOptions(ops ...*athena.Operator) *options.FindOptions {
 // func newString(s string) *string {
 // 	return &s
 // }
+
+var (
+	typeNullString  = reflect.TypeOf(null.String{})
+	typeNullTime    = reflect.TypeOf(null.Time{})
+	typeNullFloat64 = reflect.TypeOf(null.Float64{})
+	typeNullUint    = reflect.TypeOf(null.Uint{})
+)
+
+var allTypes = []reflect.Type{typeNullString, typeNullTime, typeNullFloat64, typeNullUint}
+
+func customCodecRegistery() *bsoncodec.RegistryBuilder {
+
+	var primitiveCodecs bson.PrimitiveCodecs
+	rb := bsoncodec.NewRegistryBuilder()
+	bsoncodec.DefaultValueDecoders{}.RegisterDefaultDecoders(rb)
+	bsoncodec.DefaultValueEncoders{}.RegisterDefaultEncoders(rb)
+
+	for _, t := range allTypes {
+		rb.RegisterTypeEncoder(t, bsoncodec.ValueEncoderFunc(EncodeNullValue))
+		rb.RegisterTypeDecoder(t, bsoncodec.ValueDecoderFunc(DecodeNullValue))
+	}
+
+	primitiveCodecs.RegisterPrimitiveCodecs(rb)
+	return rb
+
+}
+
+func EncodeNullValue(ec bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val reflect.Value) error {
+
+	if !val.IsValid() || (val.Type() != typeNullString && val.Type() != typeNullTime && val.Type() != typeNullFloat64 && val.Type() != typeNullUint) {
+		return bsoncodec.ValueEncoderError{Name: "EncodeNullValue", Types: []reflect.Type{typeNullString, typeNullTime, typeNullFloat64, typeNullUint}, Received: val}
+	}
+
+	switch v := val.Interface().(type) {
+	case null.String:
+		if v.Valid {
+			return vw.WriteString(v.String)
+		}
+
+		return vw.WriteNull()
+	case null.Time:
+		if v.Valid {
+			return vw.WriteString(v.Time.Format(time.RFC3339))
+		}
+
+		return vw.WriteNull()
+	case null.Uint:
+		if v.Valid {
+			return vw.WriteInt32(int32(v.Uint))
+		}
+
+		return vw.WriteInt32(0)
+	case null.Float64:
+		if v.Valid {
+			return vw.WriteDouble(v.Float64)
+		}
+
+		return vw.WriteDouble(0.00)
+	default:
+		panic("EncodeNullValue: unaccounted for type in switch")
+	}
+}
+
+func DecodeNullValue(dc bsoncodec.DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
+
+	if !val.CanSet() || val.Kind() != reflect.Struct {
+		return bsoncodec.ValueDecoderError{Name: "DecodeNullStringValue", Kinds: []reflect.Kind{reflect.Struct}, Received: val}
+	}
+
+	switch vr.Type() {
+	case bsontype.String:
+		str, err := vr.ReadString()
+		if err != nil {
+			return err
+		}
+
+		switch val.Interface().(type) {
+		case null.String:
+			val.Set(reflect.ValueOf(null.NewString(str, true)))
+		case null.Time:
+
+			t, err := time.Parse(time.RFC3339, str)
+			if err != nil {
+				return err
+			}
+			val.Set(reflect.ValueOf(null.NewTime(t, true)))
+
+		}
+	case bsontype.Double:
+		d, err := vr.ReadDouble()
+		if err != nil {
+			return err
+		}
+
+		val.Set(reflect.ValueOf(null.NewFloat64(d, true)))
+	case bsontype.Int32:
+		d, err := vr.ReadInt32()
+		if err != nil {
+			return err
+		}
+
+		switch val.Interface().(type) {
+		case null.Uint:
+			val.Set(reflect.ValueOf(null.NewUint(uint(d), true)))
+		default:
+			return fmt.Errorf("[DecodeNullValue]: unhandled integer conversion %s to %T", vr.Type(), val.Interface())
+		}
+	case bsontype.DateTime:
+		d, err := vr.ReadDateTime()
+		if err != nil {
+			return err
+		}
+
+		val.Set(reflect.ValueOf(null.NewTime(time.Unix(0, d*int64(time.Millisecond)), true)))
+
+	case bsontype.Null:
+		err := vr.ReadNull()
+		if err != nil {
+			return err
+		}
+
+		switch val.Interface().(type) {
+		case null.String:
+			val.Set(reflect.ValueOf(null.StringFromPtr(nil)))
+		case null.Time:
+			val.Set(reflect.ValueOf(null.TimeFromPtr(nil)))
+		case null.Uint:
+			val.Set(reflect.ValueOf(null.UintFromPtr(nil)))
+		case null.Uint64:
+			val.Set(reflect.ValueOf(null.Uint64FromPtr(nil)))
+		case null.Float64:
+			val.Set(reflect.ValueOf(null.Float64FromPtr(nil)))
+		}
+
+	default:
+		return fmt.Errorf("[DecodeNullValue]: don't know how to decode %s", vr.Type())
+
+	}
+
+	return nil
+
+}
