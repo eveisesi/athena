@@ -100,7 +100,6 @@ func (s *server) buildRouter() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(
-		middleware.Timeout(time.Second*4),
 		s.cors,
 	// s.monitoring,
 	)

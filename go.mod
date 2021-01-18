@@ -4,12 +4,14 @@ go 1.15
 
 require (
 	github.com/99designs/gqlgen v0.13.1-0.20210113020329-997da421b0b8
+	github.com/davecgh/go-spew v1.1.1
 	github.com/friendsofgo/errors v0.9.2 // indirect
 	github.com/go-chi/chi v3.3.2+incompatible
 	github.com/go-redis/redis/v8 v8.4.8
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/korovkin/limiter v0.0.0-20190919045942-dac5a6b2a536
 	github.com/lestrrat-go/jwx v1.0.7
 	github.com/newrelic/go-agent v3.10.0+incompatible
 	github.com/newrelic/go-agent/v3 v3.9.0

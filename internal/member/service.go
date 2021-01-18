@@ -20,7 +20,6 @@ import (
 
 type Service interface {
 	Login(ctx context.Context, code, state string) error
-	// ProcessUserByToken(token jwt.Token)
 }
 
 type service struct {
@@ -74,6 +73,10 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 	member.AccessToken = bearer.AccessToken
 	member.RefreshToken = bearer.RefreshToken
 	member.Expires = bearer.Expiry
+
+	if member.IsNew {
+		s.cache.PushIDToProcessorQueue(ctx, member.ID)
+	}
 
 	_, err = s.member.UpdateMember(ctx, member.ID.Hex(), member)
 	if err != nil {
@@ -154,6 +157,7 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 	member := &athena.Member{
 		CharacterID: character.CharacterID,
 		LastLogin:   time.Now(),
+		IsNew:       true,
 	}
 
 	if _, ok := claims["owner"]; !ok {
@@ -163,14 +167,18 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 	member.OwnerHash = claims["owner"].(string)
 
 	if _, ok := claims["scp"]; ok {
-		scp := []string{}
+		scp := []athena.MemberScope{}
 		switch a := claims["scp"].(type) {
 		case []interface{}:
 			for _, v := range a {
-				scp = append(scp, v.(string))
+				scp = append(scp, athena.MemberScope{
+					Scope: athena.Scope(v.(string)),
+				})
 			}
 		case string:
-			scp = append(scp, a)
+			scp = append(scp, athena.MemberScope{
+				Scope: athena.Scope(a),
+			})
 		}
 
 		member.Scopes = scp
@@ -180,6 +188,8 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 	if err != nil {
 		return nil, err
 	}
+
+	s.cache.PushIDToProcessorQueue(ctx, member.ID)
 
 	return member, nil
 

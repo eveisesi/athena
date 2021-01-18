@@ -3,6 +3,7 @@ package null
 import (
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/volatiletech/null"
@@ -15,7 +16,7 @@ func MarshalString(ns null.String) graphql.Marshaler {
 			return
 		}
 
-		_, _ = io.WriteString(w, ns.String)
+		_, _ = io.WriteString(w, strconv.Quote(ns.String))
 	})
 }
 

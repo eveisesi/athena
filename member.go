@@ -21,15 +21,21 @@ type Member struct {
 	MainID            null.Uint64        `bson:"main_id,omitempty" json:"main_id"`
 	AccessToken       string             `bson:"access_token" json:"access_token"`
 	RefreshToken      string             `bson:"refresh_token" json:"refresh_token"`
-	OwnerHash         string             `bson:"owner_hash" json:"owner_hash"`
 	Expires           time.Time          `bson:"expires" json:"expires"`
+	OwnerHash         string             `bson:"owner_hash" json:"owner_hash"`
+	Scopes            []MemberScope      `bson:"scopes,omitempty" json:"scopes,omitempty"`
+	IsNew             bool               `bson:"is_new" json:"is_new"`
 	Disabled          bool               `bson:"disabled" json:"disabled"`
 	DisabledReason    null.String        `bson:"disabled_reason,omitempty" json:"disabled_reason"`
 	DisabledTimestamp null.Time          `bson:"disabled_timestamp,omitempty" json:"disabled_timestamp"`
-	Scopes            []string           `bson:"scopes" json:"scopes"`
 	LastLogin         time.Time          `bson:"last_login" json:"last_login"`
 	CreatedAt         time.Time          `bson:"created_at" json:"created_at"`
 	UpdatedAt         time.Time          `bson:"updated_at" json:"updated_at"`
+}
+
+type MemberScope struct {
+	Scope  Scope     `bson:"scope" json:"scope"`
+	Expiry null.Time `bson:"expiry,omitempty" json:"expiry,omitempty"`
 }
 
 type MemberLogin struct {

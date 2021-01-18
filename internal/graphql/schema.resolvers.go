@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/graphql/generated"
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -44,6 +45,8 @@ func (r *subscriptionResolver) AuthStatus(ctx context.Context, state string) (<-
 					close(pipe)
 					return
 				}
+
+				spew.Dump(attempt)
 
 				pipe <- attempt
 

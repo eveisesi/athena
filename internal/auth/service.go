@@ -68,7 +68,7 @@ func (s *service) AuthAttempt(ctx context.Context, hash string) (*athena.AuthAtt
 	}
 
 	if attempt == nil {
-		var attempt = new(athena.AuthAttempt)
+		attempt = new(athena.AuthAttempt)
 		attempt.Status = athena.InvalidAuthStatus
 	}
 

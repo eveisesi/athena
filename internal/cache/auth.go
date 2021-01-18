@@ -17,11 +17,11 @@ type authService interface {
 }
 
 const AUTH_ATTEMPT = "athena::auth::attempt::%s"
-const AUTH_WEB_KEY_SET = "athena::auth::jwks"
+const AUTH_JWKS = "athena::auth::jwks"
 
 func (s *service) JSONWebKeySet(ctx context.Context) ([]byte, error) {
 
-	result, err := s.client.Get(ctx, AUTH_WEB_KEY_SET).Bytes()
+	result, err := s.client.Get(ctx, AUTH_JWKS).Bytes()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *service) SaveJSONWebKeySet(ctx context.Context, jwks []byte, optionFunc
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err := s.client.Set(ctx, AUTH_WEB_KEY_SET, jwks, options.expiry).Result()
+	_, err := s.client.Set(ctx, AUTH_JWKS, jwks, options.expiry).Result()
 
 	return err
 

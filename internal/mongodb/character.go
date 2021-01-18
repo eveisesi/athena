@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type characterRepository struct {
@@ -16,6 +18,20 @@ type characterRepository struct {
 
 func NewCharacterRepository(d *mongo.Database) (athena.CharacterRepository, error) {
 	characters := d.Collection("characters")
+	characterIndexModel := mongo.IndexModel{
+		Keys: bson.M{
+			"character_id": 1,
+		},
+		Options: &options.IndexOptions{
+			Name:   newString("characters_character_id_unique"),
+			Unique: newBool(true),
+		},
+	}
+
+	_, err := characters.Indexes().CreateOne(context.Background(), characterIndexModel)
+	if err != nil {
+		return nil, fmt.Errorf("[Character Repository]: Failed to Create Index on Characters Collection: %w", err)
+	}
 
 	return &characterRepository{
 		characters,

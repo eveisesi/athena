@@ -157,12 +157,12 @@ func BuildFindOptions(ops ...*athena.Operator) *options.FindOptions {
 	return opts
 }
 
-// func newBool(b bool) *bool {
-// 	return &b
-// }
-// func newString(s string) *string {
-// 	return &s
-// }
+func newBool(b bool) *bool {
+	return &b
+}
+func newString(s string) *string {
+	return &s
+}
 
 var (
 	typeNullString  = reflect.TypeOf(null.String{})

@@ -13,6 +13,7 @@ type Service interface {
 	corporationService
 	esiService
 	memberService
+	processorService
 }
 
 type service struct {

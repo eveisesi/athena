@@ -84,6 +84,10 @@ func main() {
 			Usage:  "Initialize the HTTP Services responsible for handling HTTP Requests to this application",
 			Action: serverCommand,
 		},
+		cli.Command{
+			Name:   "processor",
+			Action: processorCommand,
+		},
 	}
 
 	err := app.Run(os.Args)

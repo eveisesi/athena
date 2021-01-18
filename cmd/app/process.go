@@ -1,34 +1,29 @@
 package main
 
 import (
-	"context"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
 	"github.com/eveisesi/athena"
-
 	"github.com/eveisesi/athena/internal/alliance"
+	"github.com/eveisesi/athena/internal/auth"
+	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/esi"
+	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/eveisesi/athena/internal/mongodb"
-
-	"github.com/eveisesi/athena/internal/auth"
-	"github.com/eveisesi/athena/internal/cache"
-	"golang.org/x/oauth2"
-
-	"github.com/eveisesi/athena/internal/server"
+	"github.com/eveisesi/athena/internal/processor"
 	"github.com/urfave/cli"
+	"golang.org/x/oauth2"
 )
 
-func serverCommand(c *cli.Context) error {
+func processorCommand(c *cli.Context) error {
 
-	basics := basics("server")
+	basics := basics("processor")
 
-	cache := cache.NewService(basics.redis)
+	locationRepo, err := mongodb.NewLocationRepository(basics.db)
+	if err != nil {
+		basics.logger.WithError(err).Fatalln("failed to initialize location repository")
+	}
 
 	memberRepo, err := mongodb.NewMemberRepository(basics.db)
 	if err != nil {
@@ -50,6 +45,7 @@ func serverCommand(c *cli.Context) error {
 		basics.logger.WithError(err).Fatal("failed to initialize alliance repository")
 	}
 
+	cache := cache.NewService(basics.redis)
 	esi := esi.NewService(cache, basics.client, basics.cfg.UserAgent)
 
 	corporation := corporation.NewService(cache, esi, corporationRepo)
@@ -74,45 +70,11 @@ func serverCommand(c *cli.Context) error {
 	)
 
 	member := member.NewService(auth, cache, alliance, character, corporation, memberRepo)
+	location := location.NewService(basics.logger, cache, esi, locationRepo)
 
-	server := server.NewServer(
-		basics.cfg.Server.Port,
-		basics.cfg.Env,
-		basics.db,
-		basics.logger,
-		cache,
-		basics.newrelic,
-		auth,
-		member,
-		character,
-		corporation,
-		alliance,
-	)
+	processor := processor.NewService(basics.logger, cache, esi, member, location)
 
-	serverErrors := make(chan error, 1)
-
-	go func() {
-		serverErrors <- server.Run()
-	}()
-
-	osSignals := make(chan os.Signal, 1)
-	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
-
-	select {
-	case err := <-serverErrors:
-		basics.logger.WithError(err).Fatal("server encountered an unexpected error and had to quit")
-	case sig := <-osSignals:
-		basics.logger.WithField("sig", sig).Info("interrupt signal received, starting server shutdown")
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
-
-		err = server.GracefullyShutdown(ctx)
-		if err != nil {
-			basics.logger.WithError(err).Fatal("failed to shutdown server")
-		}
-
-		basics.logger.Info("server gracefully shutdown successfully")
-	}
+	processor.Run()
 
 	return nil
 
