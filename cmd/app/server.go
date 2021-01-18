@@ -67,7 +67,7 @@ func serverCommand(c *cli.Context) error {
 				AuthURL:  basics.cfg.Auth.AuthorizationURL,
 				TokenURL: basics.cfg.Auth.TokenURL,
 			},
-			Scopes: []string{athena.READ_SHIP_V1},
+			Scopes: []string{athena.ReadShipV1.String()},
 		},
 		basics.client,
 		basics.cfg.Auth.JWKSURL,

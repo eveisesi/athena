@@ -18,13 +18,13 @@ type corporationService interface {
 }
 
 const (
-	CORPORATION  = "athena::corporation::%s"
-	CORPORATIONS = "athena::corporations::%s"
+	keyCorporation  = "athena::corporation::%s"
+	keyCorporations = "athena::corporations::%s"
 )
 
 func (s *service) Corporation(ctx context.Context, id string) (*athena.Corporation, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(CORPORATION, id)).Result()
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyCorporation, id)).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (s *service) SetCorporation(ctx context.Context, corporation *athena.Corpor
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(CHARACTER, corporation.ID.Hex()), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporation, corporation.ID.Hex()), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -72,7 +72,7 @@ func (s *service) Corporations(ctx context.Context, operators []*athena.Operator
 	_, _ = h.Write(data)
 	bs := h.Sum(nil)
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(CORPORATIONS, fmt.Sprintf("%x", bs))).Result()
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyCorporations, fmt.Sprintf("%x", bs))).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s *service) SetCorporations(ctx context.Context, operators []*athena.Opera
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(CORPORATIONS, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporations, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

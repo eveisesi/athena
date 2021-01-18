@@ -16,12 +16,12 @@ type authService interface {
 	CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAttempt, optionFuncs ...OptionFunc) (*athena.AuthAttempt, error)
 }
 
-const AUTH_ATTEMPT = "athena::auth::attempt::%s"
-const AUTH_JWKS = "athena::auth::jwks"
+const keyAuthAttempt = "athena::auth::attempt::%s"
+const keyAuthJWKS = "athena::auth::jwks"
 
 func (s *service) JSONWebKeySet(ctx context.Context) ([]byte, error) {
 
-	result, err := s.client.Get(ctx, AUTH_JWKS).Bytes()
+	result, err := s.client.Get(ctx, keyAuthJWKS).Bytes()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *service) SaveJSONWebKeySet(ctx context.Context, jwks []byte, optionFunc
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err := s.client.Set(ctx, AUTH_JWKS, jwks, options.expiry).Result()
+	_, err := s.client.Set(ctx, keyAuthJWKS, jwks, options.expiry).Result()
 
 	return err
 
@@ -48,7 +48,7 @@ func (s *service) AuthAttempt(ctx context.Context, hash string) (*athena.AuthAtt
 
 	var attempt = new(athena.AuthAttempt)
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(AUTH_ATTEMPT, hash)).Bytes()
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyAuthAttempt, hash)).Bytes()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s *service) CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAtt
 		return nil, fmt.Errorf("failed to cache auth attempt: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(AUTH_ATTEMPT, attempt.State), b, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyAuthAttempt, attempt.State), b, options.expiry).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create auth attempt: %w", err)
 	}

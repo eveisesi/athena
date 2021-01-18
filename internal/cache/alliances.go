@@ -18,13 +18,13 @@ type allianceService interface {
 }
 
 const (
-	ALLIANCE  = "athena::alliance::%s"
-	ALLIANCES = "athena::alliances::%s"
+	keyAlliance  = "athena::alliance::%s"
+	keyAlliances = "athena::alliances::%s"
 )
 
 func (s *service) Alliance(ctx context.Context, id string) (*athena.Alliance, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(CORPORATION, id)).Result()
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyAlliance, id)).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (s *service) SetAlliance(ctx context.Context, alliance *athena.Alliance, op
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(CHARACTER, alliance.ID.Hex()), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyAlliance, alliance.ID.Hex()), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -72,7 +72,7 @@ func (s *service) Alliances(ctx context.Context, operators []*athena.Operator) (
 	_, _ = h.Write(data)
 	bs := h.Sum(nil)
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(ALLIANCES, fmt.Sprintf("%x", bs))).Result()
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyAlliances, fmt.Sprintf("%x", bs))).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s *service) SetAlliances(ctx context.Context, operators []*athena.Operator
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(ALLIANCES, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyAlliances, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

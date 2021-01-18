@@ -11,13 +11,55 @@ import (
 )
 
 type memberService interface {
+	Member(ctx context.Context, memberID string) (*athena.Member, error)
+	SetMember(ctx context.Context, memberID string, member *athena.Member, optionFuncs ...OptionFunc) error
 	Members(ctx context.Context, operators []*athena.Operator) ([]*athena.Member, error)
 	SetMembers(ctx context.Context, operators []*athena.Operator, members []*athena.Member, optionFuncs ...OptionFunc) error
 }
 
-const MEMBER = "athena::member::%s"
-const MEMBERID = "athena::member::id::%d"
-const MEMBERS = "athena::members::%s"
+const (
+	keyMember  = "athena::member::%s"
+	keyMembers = "athena::members::%s"
+)
+
+func (s *service) Member(ctx context.Context, memberID string) (*athena.Member, error) {
+
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyMember, memberID)).Bytes()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(result) > 0 {
+		var member = new(athena.Member)
+
+		err = json.Unmarshal(result, member)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal member onto struct")
+		}
+
+		return member, nil
+	}
+
+	return nil, nil
+}
+
+func (s *service) SetMember(ctx context.Context, memberID string, member *athena.Member, optionFuncs ...OptionFunc) error {
+
+	options := applyOptionFuncs(nil, optionFuncs)
+
+	data, err := json.Marshal(member)
+	if err != nil {
+		return fmt.Errorf("failed to marsahl struct: %w", err)
+	}
+
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMember, fmt.Sprintf("%x", memberID)), data, options.expiry).Result()
+	if err != nil {
+		return fmt.Errorf("failed to write to cache: %w", err)
+	}
+
+	return nil
+
+}
 
 func (s *service) Members(ctx context.Context, operators []*athena.Operator) ([]*athena.Member, error) {
 
@@ -30,7 +72,7 @@ func (s *service) Members(ctx context.Context, operators []*athena.Operator) ([]
 	_, _ = h.Write(data)
 	bs := h.Sum(nil)
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(MEMBERS, fmt.Sprintf("%x", bs))).Result()
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyMembers, fmt.Sprintf("%x", bs))).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -69,7 +111,7 @@ func (s *service) SetMembers(ctx context.Context, operators []*athena.Operator, 
 		return fmt.Errorf("Failed to marsahl payload: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(MEMBERS, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMembers, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

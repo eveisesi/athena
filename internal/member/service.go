@@ -19,6 +19,7 @@ import (
 )
 
 type Service interface {
+	Member(ctx context.Context, memberID string) (*athena.Member, error)
 	Login(ctx context.Context, code, state string) error
 }
 
@@ -42,6 +43,26 @@ func NewService(auth auth.Service, cache cache.Service, alliance alliance.Servic
 
 		member: member,
 	}
+}
+
+func (s *service) Member(ctx context.Context, memberID string) (*athena.Member, error) {
+
+	member, err := s.cache.Member(ctx, memberID)
+	if err != nil {
+		return nil, err
+	}
+
+	if member != nil {
+		return member, nil
+	}
+
+	member, err = s.member.Member(ctx, memberID)
+	if err != nil {
+		return nil, err
+	}
+
+	return member, nil
+
 }
 
 func (s *service) Login(ctx context.Context, code, state string) error {
@@ -83,6 +104,8 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 		return err
 	}
 
+	_ = s.cache.SetMember(ctx, member.ID.Hex(), member)
+
 	attempt.Status = athena.CompletedAuthStatus
 	attempt.Token = null.NewString(member.AccessToken, true)
 
@@ -109,28 +132,12 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 
 	operators := []*athena.Operator{athena.NewEqualOperator("character_id", memberID), athena.NewLimitOperator(1)}
 
-	members, err := s.cache.Members(ctx, operators)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(members) > 1 {
-		return nil, fmt.Errorf("invalid number of members returned")
-	}
-
-	if members != nil {
-		return members[0], nil
-	}
-
-	members, err = s.member.Members(ctx, operators...)
+	members, err := s.member.Members(ctx, operators...)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(members) == 1 {
-
-		_ = s.cache.SetMembers(ctx, operators, members)
-
 		return members[0], nil
 	}
 

@@ -9,6 +9,7 @@ import (
 )
 
 type MemberRepository interface {
+	Member(ctx context.Context, id string) (*Member, error)
 	Members(ctx context.Context, operators ...*Operator) ([]*Member, error)
 	CreateMember(ctx context.Context, member *Member) (*Member, error)
 	UpdateMember(ctx context.Context, id string, member *Member) (*Member, error)

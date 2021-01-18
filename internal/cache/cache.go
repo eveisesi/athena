@@ -20,6 +20,7 @@ type service struct {
 	client *redis.Client
 }
 
+// NewService returns a new instance of the Cache Service
 func NewService(client *redis.Client) Service {
 	return &service{
 		client: client,

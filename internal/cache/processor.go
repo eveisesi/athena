@@ -16,7 +16,7 @@ type processorService interface {
 }
 
 const (
-	PROCESSOR_MEMBER_ID_QUEUE = "athena::processor::members"
+	keyProcessorMemberIDQueue = "athena::processor::members"
 )
 
 func (s *service) PushIDToProcessorQueue(ctx context.Context, memberID primitive.ObjectID) {
@@ -26,7 +26,7 @@ func (s *service) PushIDToProcessorQueue(ctx context.Context, memberID primitive
 	ts := time.Now().UnixNano()
 	z := &redis.Z{Score: float64(ts), Member: memberID.Hex()}
 
-	s.client.ZAdd(ctx, PROCESSOR_MEMBER_ID_QUEUE, z)
+	s.client.ZAdd(ctx, keyProcessorMemberIDQueue, z)
 
 }
 
@@ -35,7 +35,7 @@ func (s *service) PopFromProcessorQueue(ctx context.Context, count int) ([]strin
 	mx.Lock()
 	defer mx.Unlock()
 
-	results, err := s.client.ZPopMin(ctx, PROCESSOR_MEMBER_ID_QUEUE, int64(count)).Result()
+	results, err := s.client.ZPopMin(ctx, keyProcessorMemberIDQueue, int64(count)).Result()
 	if err != nil && err != redis.Nil {
 		return nil, fmt.Errorf("[PopFromProcessorQueue] Failed to retrieve records from processor queue: %w", err)
 	}
@@ -59,7 +59,7 @@ func (s *service) ProcessorQueueCount(ctx context.Context) (int64, error) {
 	mx.Lock()
 	defer mx.Unlock()
 
-	results, err := s.client.ZCount(ctx, PROCESSOR_MEMBER_ID_QUEUE, "-inf", "+inf").Result()
+	results, err := s.client.ZCount(ctx, keyProcessorMemberIDQueue, "-inf", "+inf").Result()
 	if err != nil {
 		return 0, fmt.Errorf("[ProcessorQueueCount] Failed to retrieve the count of records from processor queue: %w", err)
 	}

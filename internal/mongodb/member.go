@@ -22,6 +22,21 @@ func NewMemberRepository(d *mongo.Database) (athena.MemberRepository, error) {
 	}, nil
 }
 
+func (r *memberRepository) Member(ctx context.Context, id string) (*athena.Member, error) {
+
+	var member = new(athena.Member)
+
+	pid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, fmt.Errorf("[Member Repository] Failed to cast id to objectID: %w", err)
+	}
+
+	err = r.members.FindOne(ctx, primitive.D{primitive.E{Key: "_id", Value: pid}}).Decode(member)
+
+	return member, err
+
+}
+
 func (r *memberRepository) Members(ctx context.Context, operators ...*athena.Operator) ([]*athena.Member, error) {
 
 	filters := BuildFilters(operators...)
@@ -63,9 +78,10 @@ func (r *memberRepository) UpdateMember(ctx context.Context, id string, member *
 	member.ID = _id
 	member.UpdatedAt = time.Now()
 
+	filter := primitive.D{primitive.E{Key: "_id", Value: _id}}
 	update := primitive.D{primitive.E{Key: "$set", Value: member}}
 
-	_, err = r.members.UpdateOne(ctx, primitive.D{primitive.E{Key: "_id", Value: _id}}, update)
+	_, err = r.members.UpdateOne(ctx, filter, update)
 
 	return member, err
 }

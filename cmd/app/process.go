@@ -48,10 +48,9 @@ func processorCommand(c *cli.Context) error {
 	cache := cache.NewService(basics.redis)
 	esi := esi.NewService(cache, basics.client, basics.cfg.UserAgent)
 
+	character := character.NewService(cache, esi, characterRepo)
 	corporation := corporation.NewService(cache, esi, corporationRepo)
 	alliance := alliance.NewService(cache, esi, allianceRepo)
-
-	character := character.NewService(cache, esi, characterRepo)
 
 	auth := auth.NewService(
 		cache,
@@ -63,7 +62,7 @@ func processorCommand(c *cli.Context) error {
 				AuthURL:  basics.cfg.Auth.AuthorizationURL,
 				TokenURL: basics.cfg.Auth.TokenURL,
 			},
-			Scopes: []string{athena.READ_SHIP_V1},
+			Scopes: []string{athena.ReadLocationV1.String()},
 		},
 		basics.client,
 		basics.cfg.Auth.JWKSURL,

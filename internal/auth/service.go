@@ -13,6 +13,7 @@ import (
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jwt"
+	newrelic "github.com/newrelic/go-agent"
 	"golang.org/x/oauth2"
 )
 
@@ -90,6 +91,9 @@ func (s *service) UpdateAuthAttempt(ctx context.Context, hash string, attempt *a
 }
 
 func (s *service) AuthorizationURI(ctx context.Context, state string) string {
+	client := s.oauth.Client()
+	client.Transport = newrelic.NewRoundTripper(ctx, client.Transport)
+
 	return s.oauth.AuthCodeURL(state)
 }
 

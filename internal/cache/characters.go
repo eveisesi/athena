@@ -18,13 +18,13 @@ type characterService interface {
 }
 
 const (
-	CHARACTER  = "athena::character::%s"
-	CHARACTERS = "athena::characters::%s"
+	keyCharacter  = "athena::character::%s"
+	keyCharacters = "athena::characters::%s"
 )
 
 func (s *service) Character(ctx context.Context, id string) (*athena.Character, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(CHARACTER, id)).Result()
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyCharacter, id)).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (s *service) SetCharacter(ctx context.Context, character *athena.Character,
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(CHARACTER, character.ID.Hex()), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyCharacter, character.ID.Hex()), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -72,7 +72,7 @@ func (s *service) Characters(ctx context.Context, operators []*athena.Operator) 
 	_, _ = h.Write(data)
 	bs := h.Sum(nil)
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(CHARACTERS, fmt.Sprintf("%x", bs))).Result()
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyCharacters, fmt.Sprintf("%x", bs))).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s *service) SetCharacters(ctx context.Context, operators []*athena.Operato
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(CHARACTERS, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyCharacters, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

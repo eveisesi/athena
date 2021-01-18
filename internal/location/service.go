@@ -2,6 +2,7 @@ package location
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
@@ -36,13 +37,22 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, loc
 }
 
 func (s *service) MemberLocation(ctx context.Context, member *athena.Member) error {
+
+	fmt.Println("Hello From MemberLocation")
+
 	return nil
 }
 
 func (s *service) MemberShip(ctx context.Context, member *athena.Member) error {
+
+	fmt.Println("Hello From MemberShip")
+
 	return nil
 }
 
 func (s *service) MemberOnline(ctx context.Context, member *athena.Member) error {
+
+	fmt.Println("Hello From MemberOnline")
+
 	return nil
 }
