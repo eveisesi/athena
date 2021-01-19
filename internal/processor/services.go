@@ -2,10 +2,10 @@ package processor
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/eveisesi/athena"
-	"github.com/eveisesi/athena/internal/auth"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/eveisesi/athena/internal/location"
@@ -23,19 +23,17 @@ type service struct {
 
 	cache    cache.Service
 	esi      esi.Service
-	auth     auth.Service
 	member   member.Service
 	location location.Service
 	scopes   athena.ScopeMap
 }
 
-func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, auth auth.Service, member member.Service, location location.Service) Service {
+func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, member member.Service, location location.Service) Service {
 
 	s := &service{
 		logger:   logger,
 		cache:    cache,
 		esi:      esi,
-		auth:     auth,
 		member:   member,
 		location: location,
 	}
@@ -48,15 +46,34 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, aut
 func (s *service) buildScopeMap() {
 
 	scopeMap := make(athena.ScopeMap)
-	scopeMap[athena.ReadLocationV1] = s.location.MemberLocation
-	// scopeMap[athena.ReadOnlineV1] = s.location.MemberOnline
-	// scopeMap[athena.ReadShipV1] = s.location.MemberShip
+	scopeMap[athena.ReadLocationV1] = []athena.ScopeResolver{
+		athena.ScopeResolver{
+			Name: "MemberLocation",
+			Func: s.location.EmptyMemberLocation,
+		},
+	}
+
+	scopeMap[athena.ReadOnlineV1] = []athena.ScopeResolver{
+		athena.ScopeResolver{
+			Name: "MemberOnline",
+			Func: s.location.EmptyMemberOnline,
+		},
+	}
+
+	scopeMap[athena.ReadShipV1] = []athena.ScopeResolver{
+		athena.ScopeResolver{
+			Name: "MemberShip",
+			Func: s.location.EmptyMemberShip,
+		},
+	}
 
 	s.scopes = scopeMap
 
 }
 
 func (s *service) Run() {
+
+	s.logger.Info("Processor is running")
 
 	limit := limiter.NewConcurrencyLimiter(10)
 	for {
@@ -87,7 +104,6 @@ func (s *service) Run() {
 				s.processMember(ctx, result)
 			})
 		}
-		limit.Wait()
 	}
 
 }
@@ -100,13 +116,20 @@ func (s *service) processMember(ctx context.Context, memberID string) {
 		return
 	}
 
-	// Member Retrieve successfully. Loop over the scopes array calling the functions in the scope map
+	member, err = s.member.ValidateToken(ctx, member)
+	if err != nil {
+		s.logger.WithError(err).WithField("memberID", member.ID.Hex()).Errorln("failed to verify token is valid")
+		return
+	}
 
+	// Member Retrieve successfully. Loop over the scopes array calling the functions in the scope map
 	for _, scope := range member.Scopes {
+
 		// If the scope expiry is valid, that means it has previously been called,
 		// and if the expiry is after the current time, that means that the cache timer
 		// has been expired yet, so updating the data now will not yield any fresh results
 		if scope.Expiry.Valid && scope.Expiry.Time.After(time.Now()) {
+			fmt.Println(scope.Scope, "is not valid")
 			continue
 		}
 
@@ -115,9 +138,18 @@ func (s *service) processMember(ctx context.Context, memberID string) {
 			continue
 		}
 
-		err := s.scopes[scope.Scope](ctx, member)
-		if err != nil {
-			s.logger.WithError(err).WithField("field", scope.Scope).Errorln()
+		for _, resolver := range s.scopes[scope.Scope] {
+			s.logger.WithFields(logrus.Fields{
+				"member": member.ID.Hex(),
+				"scope":  scope.Scope,
+				"name":   resolver.Name,
+			}).Infoln()
+
+			err := resolver.Func(ctx, member)
+			if err != nil {
+				s.logger.WithError(err).WithField("field", scope.Scope).Errorln()
+			}
+			time.Sleep(time.Second)
 		}
 
 	}

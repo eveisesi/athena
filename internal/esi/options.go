@@ -1,6 +1,7 @@
 package esi
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -19,10 +20,11 @@ type OptionFunc func(*options) *options
 
 func (s *service) opts(optionFuncs []OptionFunc) *options {
 	opts := &options{
-		maxattempts: 3,
-		query:       make(url.Values),
-		headers:     make(http.Header),
-		body:        nil,
+		maxattempts:  3,
+		query:        make(url.Values),
+		headers:      make(http.Header),
+		body:         nil,
+		retryOnError: true,
 	}
 
 	for _, optionFunc := range optionFuncs {
@@ -62,7 +64,7 @@ func WithQuery(key, value string) OptionFunc {
 	}
 }
 
-func WithHeaders(key, value string) OptionFunc {
+func WithHeader(key, value string) OptionFunc {
 	return func(o *options) *options {
 		if o.headers == nil {
 			o.headers = make(http.Header)
@@ -90,8 +92,16 @@ func WithEtag(etag string) OptionFunc {
 		return emptyApplicator()
 	}
 
-	return WithHeaders("if-none-match", etag)
+	return WithHeader("if-none-match", etag)
 
+}
+
+func WithAuthorization(token string) OptionFunc {
+	if token == "" {
+		return emptyApplicator()
+	}
+
+	return WithHeader("authorization", fmt.Sprintf("Bearer %s", token))
 }
 
 func emptyApplicator() OptionFunc {

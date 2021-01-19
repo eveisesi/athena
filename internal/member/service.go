@@ -21,6 +21,7 @@ import (
 type Service interface {
 	Member(ctx context.Context, memberID string) (*athena.Member, error)
 	Login(ctx context.Context, code, state string) error
+	ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error)
 }
 
 type service struct {
@@ -43,6 +44,27 @@ func NewService(auth auth.Service, cache cache.Service, alliance alliance.Servic
 
 		member: member,
 	}
+}
+
+func (s *service) ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error) {
+
+	currentToken := member.AccessToken
+	member, err := s.auth.ValidateToken(ctx, member)
+	if err != nil {
+
+		return nil, err
+
+	}
+
+	if member.AccessToken != currentToken {
+		_, err = s.member.UpdateMember(ctx, member.ID.Hex(), member)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return member, nil
+
 }
 
 func (s *service) Member(ctx context.Context, memberID string) (*athena.Member, error) {
@@ -95,15 +117,12 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 	member.RefreshToken = bearer.RefreshToken
 	member.Expires = bearer.Expiry
 
-	if member.IsNew {
-		s.cache.PushIDToProcessorQueue(ctx, member.ID)
-	}
-
 	_, err = s.member.UpdateMember(ctx, member.ID.Hex(), member)
 	if err != nil {
 		return err
 	}
 
+	s.cache.PushIDToProcessorQueue(ctx, member.ID)
 	_ = s.cache.SetMember(ctx, member.ID.Hex(), member)
 
 	attempt.Status = athena.CompletedAuthStatus
@@ -137,35 +156,37 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 		return nil, err
 	}
 
-	if len(members) == 1 {
-		return members[0], nil
-	}
-
-	// This is a new member, lets create a record for them.
-	character, err := s.character.CharacterByCharacterID(ctx, memberID, character.NewOptionFuncs())
-	if err != nil {
-		return nil, err
-	}
-
-	corporation, err := s.corporation.CorporationByCorporationID(ctx, character.CorporationID, corporation.NewOptionFuncs())
-	if err != nil {
-		return nil, err
-	}
-
-	if corporation.AllianceID.Valid {
-		_, err = s.alliance.AllianceByAllianceID(ctx, corporation.AllianceID.Uint, alliance.NewOptionFuncs())
+	var member *athena.Member
+	if len(members) > 1 {
+		return nil, fmt.Errorf("invalid number of results returned from member query")
+	} else if len(members) == 1 {
+		member = members[0]
+	} else {
+		// This is a new member, lets create a record for them.
+		character, err := s.character.CharacterByCharacterID(ctx, memberID, character.NewOptionFuncs())
 		if err != nil {
 			return nil, err
+		}
+
+		corporation, err := s.corporation.CorporationByCorporationID(ctx, character.CorporationID, corporation.NewOptionFuncs())
+		if err != nil {
+			return nil, err
+		}
+
+		if corporation.AllianceID.Valid {
+			_, err = s.alliance.AllianceByAllianceID(ctx, corporation.AllianceID.Uint, alliance.NewOptionFuncs())
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		member = &athena.Member{
+			CharacterID: character.CharacterID,
+			LastLogin:   time.Now(),
 		}
 	}
 
 	claims := token.PrivateClaims()
-
-	member := &athena.Member{
-		CharacterID: character.CharacterID,
-		LastLogin:   time.Now(),
-		IsNew:       true,
-	}
 
 	if _, ok := claims["owner"]; !ok {
 		return nil, fmt.Errorf("failed to process token. owner hash is missing")
@@ -191,12 +212,17 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 		member.Scopes = scp
 	}
 
-	member, err = s.member.CreateMember(ctx, member)
-	if err != nil {
-		return nil, err
+	if member.IsNew {
+		member, err = s.member.CreateMember(ctx, member)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		member, err = s.member.UpdateMember(ctx, member.ID.Hex(), member)
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	s.cache.PushIDToProcessorQueue(ctx, member.ID)
 
 	return member, nil
 

@@ -28,6 +28,9 @@ type (
 
 		// Characters
 		GetCharactersCharacterID(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error)
+		GetCharactersCharacterIDLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error)
+		GetCharactersCharacterIDOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error)
+		GetCharactersCharacterIDShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error)
 
 		// Corporations
 		GetCorporationsCorporationID(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error)
@@ -120,11 +123,11 @@ func (s *service) _exec(req *http.Request, options *options) (response *http.Res
 
 	for i := 0; i < options.maxattempts; i++ {
 		response, err = s.client.Do(req)
-		if err != nil {
+		if err != nil && !options.retryOnError {
 			return nil, fmt.Errorf("failed to execute request: %w", err)
 		}
 
-		if response.StatusCode < http.StatusInternalServerError {
+		if response.StatusCode > http.StatusContinue && response.StatusCode < http.StatusInternalServerError {
 			break
 		}
 

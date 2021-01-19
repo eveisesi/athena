@@ -52,7 +52,7 @@ func (s *service) SetMember(ctx context.Context, memberID string, member *athena
 		return fmt.Errorf("failed to marsahl struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMember, fmt.Sprintf("%x", memberID)), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMember, fmt.Sprintf("%s", memberID)), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

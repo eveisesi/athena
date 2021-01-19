@@ -25,7 +25,7 @@ type Member struct {
 	Expires           time.Time          `bson:"expires" json:"expires"`
 	OwnerHash         string             `bson:"owner_hash" json:"owner_hash"`
 	Scopes            []MemberScope      `bson:"scopes,omitempty" json:"scopes,omitempty"`
-	IsNew             bool               `bson:"is_new" json:"is_new"`
+	IsNew             bool               `bson:"-" json:"-"`
 	Disabled          bool               `bson:"disabled" json:"disabled"`
 	DisabledReason    null.String        `bson:"disabled_reason,omitempty" json:"disabled_reason"`
 	DisabledTimestamp null.Time          `bson:"disabled_timestamp,omitempty" json:"disabled_timestamp"`

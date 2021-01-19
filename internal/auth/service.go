@@ -13,7 +13,6 @@ import (
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/lestrrat-go/jwx/jwt"
-	newrelic "github.com/newrelic/go-agent"
 	"golang.org/x/oauth2"
 )
 
@@ -22,6 +21,7 @@ type Service interface {
 	AuthAttempt(ctx context.Context, hash string) (*athena.AuthAttempt, error)
 	UpdateAuthAttempt(ctx context.Context, hash string, attempt *athena.AuthAttempt) (*athena.AuthAttempt, error)
 
+	ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error)
 	AuthorizationURI(ctx context.Context, state string) string
 	BearerForCode(ctx context.Context, code string) (*oauth2.Token, error)
 	ParseAndVerifyToken(ctx context.Context, t string) (jwt.Token, error)
@@ -91,10 +91,31 @@ func (s *service) UpdateAuthAttempt(ctx context.Context, hash string, attempt *a
 }
 
 func (s *service) AuthorizationURI(ctx context.Context, state string) string {
-	client := s.oauth.Client()
-	client.Transport = newrelic.NewRoundTripper(ctx, client.Transport)
-
 	return s.oauth.AuthCodeURL(state)
+}
+
+func (s *service) ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error) {
+
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, s.client)
+
+	token := new(oauth2.Token)
+	token.AccessToken = member.AccessToken
+	token.RefreshToken = member.RefreshToken
+	token.Expiry = member.Expires
+
+	tokenSource := s.oauth.TokenSource(ctx, token)
+	newToken, err := tokenSource.Token()
+	if err != nil {
+		return nil, err
+	}
+
+	if member.AccessToken != newToken.AccessToken {
+		member.AccessToken = newToken.AccessToken
+		member.Expires = newToken.Expiry
+		member.RefreshToken = newToken.RefreshToken
+	}
+
+	return member, nil
 }
 
 func (s *service) BearerForCode(ctx context.Context, code string) (*oauth2.Token, error) {

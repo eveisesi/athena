@@ -12,6 +12,7 @@ type Service interface {
 	characterService
 	corporationService
 	esiService
+	locationService
 	memberService
 	processorService
 }

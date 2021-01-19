@@ -2,9 +2,12 @@ package athena
 
 import "context"
 
-type ScopeMap map[Scope]ScopeResolverFunc
+type ScopeMap map[Scope][]ScopeResolver
 
-type ScopeResolverFunc func(context.Context, *Member) error
+type ScopeResolver struct {
+	Name string
+	Func func(context.Context, *Member) error
+}
 
 type Scope string
 

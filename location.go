@@ -2,7 +2,6 @@ package athena
 
 import (
 	"context"
-	"time"
 
 	"github.com/volatiletech/null"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -41,8 +40,7 @@ type MemberLocation struct {
 	SolarSystemID uint               `bson:"solar_system_id" json:"solar_system_id"`
 	StationID     null.Uint          `bson:"station_id,omitempty" json:"station_id,omitempty"`
 	StructureID   null.Uint64        `bson:"structure_id,omitempty" json:"structure_id,omitempty"`
-	CreatedAt     time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt     time.Time          `bson:"updated_at" json:"updated_at"`
+	Meta
 }
 
 type MemberOnline struct {
@@ -52,8 +50,7 @@ type MemberOnline struct {
 	LastLogout null.Time          `bson:"last_logout,omitempty" json:"last_logout,omitempty"`
 	Logins     null.Uint          `bson:"logins,omitempty" json:"logins,omitempty"`
 	Online     bool               `bson:"online,omitempty" json:"online,omitempty"`
-	CreatedAt  time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt  time.Time          `bson:"updated_at" json:"updated_at"`
+	Meta
 }
 
 type MemberShip struct {
@@ -62,6 +59,5 @@ type MemberShip struct {
 	ShipItemID uint64             `bson:"ship_item_id" json:"ship_item_id"`
 	ShipName   string             `bson:"ship_name" json:"ship_name"`
 	ShipTypeID uint               `bson:"ship_type_id" json:"ship_type_id"`
-	CreatedAt  time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt  time.Time          `bson:"updated_at" json:"updated_at"`
+	Meta
 }
