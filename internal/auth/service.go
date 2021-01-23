@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/eveisesi/athena"
@@ -22,7 +23,7 @@ type Service interface {
 	UpdateAuthAttempt(ctx context.Context, hash string, attempt *athena.AuthAttempt) (*athena.AuthAttempt, error)
 
 	ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error)
-	AuthorizationURI(ctx context.Context, state string) string
+	AuthorizationURI(ctx context.Context, state string, scopes []string) string
 	BearerForCode(ctx context.Context, code string) (*oauth2.Token, error)
 	ParseAndVerifyToken(ctx context.Context, t string) (jwt.Token, error)
 }
@@ -90,8 +91,13 @@ func (s *service) UpdateAuthAttempt(ctx context.Context, hash string, attempt *a
 
 }
 
-func (s *service) AuthorizationURI(ctx context.Context, state string) string {
-	return s.oauth.AuthCodeURL(state)
+func (s *service) AuthorizationURI(ctx context.Context, state string, scopes []string) string {
+	strScopes := ""
+	if len(scopes) > 0 {
+		strScopes = strings.Join(scopes, " ")
+	}
+
+	return s.oauth.AuthCodeURL(state, oauth2.SetAuthURLParam("scope", strScopes))
 }
 
 func (s *service) ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error) {

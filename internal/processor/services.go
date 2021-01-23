@@ -7,6 +7,7 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
+	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/member"
@@ -25,17 +26,21 @@ type service struct {
 	esi      esi.Service
 	member   member.Service
 	location location.Service
-	scopes   athena.ScopeMap
+	clone    clone.Service
+
+	scopes athena.ScopeMap
 }
 
-func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, member member.Service, location location.Service) Service {
+func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, member member.Service, location location.Service, clone clone.Service) Service {
 
 	s := &service{
-		logger:   logger,
+		logger: logger,
+
 		cache:    cache,
 		esi:      esi,
 		member:   member,
 		location: location,
+		clone:    clone,
 	}
 
 	s.buildScopeMap()
@@ -47,23 +52,37 @@ func (s *service) buildScopeMap() {
 
 	scopeMap := make(athena.ScopeMap)
 	scopeMap[athena.ReadLocationV1] = []athena.ScopeResolver{
-		athena.ScopeResolver{
+		{
 			Name: "MemberLocation",
 			Func: s.location.EmptyMemberLocation,
 		},
 	}
 
 	scopeMap[athena.ReadOnlineV1] = []athena.ScopeResolver{
-		athena.ScopeResolver{
+		{
 			Name: "MemberOnline",
 			Func: s.location.EmptyMemberOnline,
 		},
 	}
 
 	scopeMap[athena.ReadShipV1] = []athena.ScopeResolver{
-		athena.ScopeResolver{
+		{
 			Name: "MemberShip",
 			Func: s.location.EmptyMemberShip,
+		},
+	}
+
+	scopeMap[athena.ReadClonesV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberClones",
+			Func: s.clone.EmptyMemberClones,
+		},
+	}
+
+	scopeMap[athena.ReadImplants] = []athena.ScopeResolver{
+		{
+			Name: "MemberImplants",
+			Func: s.clone.EmptyMemberImplants,
 		},
 	}
 
@@ -134,7 +153,7 @@ func (s *service) processMember(ctx context.Context, memberID string) {
 		}
 
 		if _, ok := s.scopes[scope.Scope]; !ok {
-			s.logger.WithField("scope", scope.Scope.String()).Error("scope not supported")
+			s.logger.WithField("scope", scope.Scope).Error("scope not supported")
 			continue
 		}
 

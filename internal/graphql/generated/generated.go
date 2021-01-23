@@ -51,7 +51,7 @@ type ComplexityRoot struct {
 		State  func(childComplexity int) int
 		Status func(childComplexity int) int
 		Token  func(childComplexity int) int
-		URL    func(childComplexity int) int
+		URL    func(childComplexity int, scopes []string) int
 	}
 
 	Query struct {
@@ -66,7 +66,7 @@ type ComplexityRoot struct {
 type AuthAttemptResolver interface {
 	Status(ctx context.Context, obj *athena.AuthAttempt) (string, error)
 
-	URL(ctx context.Context, obj *athena.AuthAttempt) (string, error)
+	URL(ctx context.Context, obj *athena.AuthAttempt, scopes []string) (string, error)
 }
 type QueryResolver interface {
 	Auth(ctx context.Context) (*athena.AuthAttempt, error)
@@ -116,7 +116,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.AuthAttempt.URL(childComplexity), true
+		args, err := ec.field_AuthAttempt_url_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.AuthAttempt.URL(childComplexity, args["scopes"].([]string)), true
 
 	case "Query.auth":
 		if e.complexity.Query.Auth == nil {
@@ -208,7 +213,7 @@ var sources = []*ast.Source{
     status: String!
     state: String
     token: String
-    url: String!
+    url(scopes: [String!]): String!
 }
 `, BuiltIn: false},
 	{Name: "internal/graphql/schema.graphqls", Input: `directive @goModel(model: String) on OBJECT
@@ -229,6 +234,21 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_AuthAttempt_url_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []string
+	if tmp, ok := rawArgs["scopes"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopes"))
+		arg0, err = ec.unmarshalOString2ᚕstringᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["scopes"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -413,9 +433,16 @@ func (ec *executionContext) _AuthAttempt_url(ctx context.Context, field graphql.
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_AuthAttempt_url_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.AuthAttempt().URL(rctx, obj)
+		return ec.resolvers.AuthAttempt().URL(rctx, obj, args["scopes"].([]string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2361,6 +2388,42 @@ func (ec *executionContext) unmarshalOString2string(ctx context.Context, v inter
 
 func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	return graphql.MarshalString(v)
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {

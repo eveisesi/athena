@@ -7,6 +7,7 @@ import (
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/esi"
+	"github.com/eveisesi/athena/internal/universe"
 
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
@@ -27,18 +28,20 @@ type Service interface {
 type service struct {
 	logger *logrus.Logger
 
-	cache cache.Service
-	esi   esi.Service
+	cache    cache.Service
+	esi      esi.Service
+	universe universe.Service
 
 	location athena.MemberLocationRepository
 }
 
-func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, location athena.MemberLocationRepository) Service {
+func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, universe universe.Service, location athena.MemberLocationRepository) Service {
 	return &service{
 		logger: logger,
 
-		cache: cache,
-		esi:   esi,
+		cache:    cache,
+		esi:      esi,
+		universe: universe,
 
 		location: location,
 	}
@@ -82,8 +85,10 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 	location, _, err = s.esi.GetCharactersCharacterIDLocation(ctx, member, location)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch location for member")
-		return nil, nil
+		return nil, err
 	}
+
+	s.resolveLocationAttributes(ctx, member, location)
 
 	switch upsert {
 	case "create":
@@ -93,7 +98,7 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 		}
 
 	case "update":
-		location, err = s.location.UpdateMemberLocation(ctx, location.ID.Hex(), location)
+		location, err = s.location.UpdateMemberLocation(ctx, member.ID.Hex(), location)
 		if err != nil {
 			return nil, err
 		}
@@ -106,6 +111,31 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 	}
 
 	return location, nil
+}
+
+func (s *service) resolveLocationAttributes(ctx context.Context, member *athena.Member, location *athena.MemberLocation) {
+
+	_, err := s.universe.SolarSystem(ctx, int(location.SolarSystemID))
+	if err != nil {
+		return
+	}
+
+	if location.StationID.Valid {
+		_, err = s.universe.Station(ctx, int(location.StationID.Uint))
+		if err != nil {
+			s.logger.WithError(err).WithField("station_id", location.StationID.Uint).Error("failed to resolve station")
+			return
+		}
+	}
+
+	if location.StructureID.Valid {
+		_, err := s.universe.Structure(ctx, member, int64(location.StructureID.Uint64))
+		if err != nil {
+			s.logger.WithError(err).WithField("structure_id", location.StructureID.Uint64).Error("failed to resolve structure")
+			return
+		}
+	}
+
 }
 
 func (s *service) EmptyMemberShip(ctx context.Context, member *athena.Member) error {
@@ -149,6 +179,8 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 		return nil, err
 	}
 
+	s.resolveShipAttributes(ctx, member, ship)
+
 	switch upsert {
 	case "create":
 		ship, err = s.location.CreateMemberShip(ctx, ship)
@@ -156,7 +188,7 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 			return nil, err
 		}
 	case "update":
-		ship, err = s.location.UpdateMemberShip(ctx, ship.ID.Hex(), ship)
+		ship, err = s.location.UpdateMemberShip(ctx, member.ID.Hex(), ship)
 		if err != nil {
 			return nil, err
 		}
@@ -168,6 +200,15 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 	}
 
 	return ship, nil
+}
+
+func (s *service) resolveShipAttributes(ctx context.Context, member *athena.Member, ship *athena.MemberShip) {
+
+	_, err := s.universe.Type(ctx, int(ship.ShipTypeID))
+	if err != nil {
+		s.logger.WithError(err).WithField("ship_type_id", ship.ShipTypeID).Error("failed to resolve ship type id")
+	}
+
 }
 
 func (s *service) EmptyMemberOnline(ctx context.Context, member *athena.Member) error {
@@ -218,7 +259,7 @@ func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*ath
 			return nil, err
 		}
 	case "update":
-		online, err = s.location.UpdateMemberOnline(ctx, online.ID.Hex(), online)
+		online, err = s.location.UpdateMemberOnline(ctx, member.ID.Hex(), online)
 		if err != nil {
 			return nil, err
 		}

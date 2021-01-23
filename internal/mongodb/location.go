@@ -27,7 +27,7 @@ func NewLocationRepository(d *mongo.Database) (athena.MemberLocationRepository, 
 			"member_id": 1,
 		},
 		Options: &options.IndexOptions{
-			Name:   newString("location_member_id_unique"),
+			Name:   newString("member_location_member_id_unique"),
 			Unique: newBool(true),
 		},
 	}
@@ -42,7 +42,7 @@ func NewLocationRepository(d *mongo.Database) (athena.MemberLocationRepository, 
 			"member_id": 1,
 		},
 		Options: &options.IndexOptions{
-			Name:   newString("online_member_id_unique"),
+			Name:   newString("member_online_member_id_unique"),
 			Unique: newBool(true),
 		},
 	}
@@ -57,7 +57,7 @@ func NewLocationRepository(d *mongo.Database) (athena.MemberLocationRepository, 
 			"member_id": 1,
 		},
 		Options: &options.IndexOptions{
-			Name:   newString("ship_member_id_unique"),
+			Name:   newString("member_ship_member_id_unique"),
 			Unique: newBool(true),
 		},
 	}
@@ -94,12 +94,10 @@ func (r *memberLocationRepository) CreateMemberLocation(ctx context.Context, loc
 	location.CreatedAt = time.Now()
 	location.UpdatedAt = time.Now()
 
-	result, err := r.location.InsertOne(ctx, location)
+	_, err := r.location.InsertOne(ctx, location)
 	if err != nil {
 		return nil, fmt.Errorf("[Location Repository] Failed to insert record into location collection: %w", err)
 	}
-
-	location.ID = result.InsertedID.(primitive.ObjectID)
 
 	return location, nil
 
@@ -112,10 +110,10 @@ func (r *memberLocationRepository) UpdateMemberLocation(ctx context.Context, id 
 		return nil, fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
 	}
 
-	location.ID = pid
+	location.MemberID = pid
 	location.UpdatedAt = time.Now()
 
-	filter := primitive.D{primitive.E{Key: "_id", Value: pid}}
+	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 	update := primitive.D{primitive.E{Key: "$set", Value: location}}
 
 	_, err = r.location.UpdateOne(ctx, filter, update)
@@ -134,7 +132,7 @@ func (r *memberLocationRepository) DeleteMemberLocation(ctx context.Context, id 
 		return fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
 	}
 
-	filter := primitive.D{primitive.E{Key: "_id", Value: pid}}
+	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 
 	_, err = r.location.DeleteOne(ctx, filter)
 	if err != nil {
@@ -165,12 +163,10 @@ func (r *memberLocationRepository) CreateMemberOnline(ctx context.Context, onlin
 	online.CreatedAt = time.Now()
 	online.UpdatedAt = time.Now()
 
-	result, err := r.online.InsertOne(ctx, online)
+	_, err := r.online.InsertOne(ctx, online)
 	if err != nil {
 		return nil, fmt.Errorf("[Location Repository] Failed to insert record into online collection: %w", err)
 	}
-
-	online.ID = result.InsertedID.(primitive.ObjectID)
 
 	return online, nil
 
@@ -183,10 +179,10 @@ func (r *memberLocationRepository) UpdateMemberOnline(ctx context.Context, id st
 		return nil, fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
 	}
 
-	online.ID = pid
+	online.MemberID = pid
 	online.UpdatedAt = time.Now()
 
-	filter := primitive.D{primitive.E{Key: "_id", Value: pid}}
+	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 	update := primitive.D{primitive.E{Key: "$set", Value: online}}
 
 	_, err = r.online.UpdateOne(ctx, filter, update)
@@ -205,7 +201,7 @@ func (r *memberLocationRepository) DeleteMemberOnline(ctx context.Context, id st
 		return fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
 	}
 
-	filter := primitive.D{primitive.E{Key: "_id", Value: pid}}
+	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 
 	_, err = r.online.DeleteOne(ctx, filter)
 	if err != nil {
@@ -236,12 +232,10 @@ func (r *memberLocationRepository) CreateMemberShip(ctx context.Context, ship *a
 	ship.CreatedAt = time.Now()
 	ship.UpdatedAt = time.Now()
 
-	result, err := r.ship.InsertOne(ctx, ship)
+	_, err := r.ship.InsertOne(ctx, ship)
 	if err != nil {
 		return nil, fmt.Errorf("[Location Repository] Failed to insert record into ship collection: %w", err)
 	}
-
-	ship.ID = result.InsertedID.(primitive.ObjectID)
 
 	return ship, nil
 
@@ -254,10 +248,10 @@ func (r *memberLocationRepository) UpdateMemberShip(ctx context.Context, id stri
 		return nil, fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
 	}
 
-	ship.ID = pid
+	ship.MemberID = pid
 	ship.UpdatedAt = time.Now()
 
-	filter := primitive.D{primitive.E{Key: "_id", Value: pid}}
+	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 	update := primitive.D{primitive.E{Key: "$set", Value: ship}}
 
 	_, err = r.ship.UpdateOne(ctx, filter, update)
@@ -276,7 +270,7 @@ func (r *memberLocationRepository) DeleteMemberShip(ctx context.Context, id stri
 		return fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
 	}
 
-	filter := primitive.D{primitive.E{Key: "_id", Value: pid}}
+	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 
 	_, err = r.ship.DeleteOne(ctx, filter)
 	if err != nil {

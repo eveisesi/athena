@@ -105,7 +105,7 @@ func (s *server) buildRouter() *chi.Mux {
 	)
 
 	r.Get("/auth/callback", s.handleGetAuthCallback)
-	r.Get("/auth/login", s.handleGetAuthLogin)
+	// r.Get("/auth/login", s.handleGetAuthLogin)
 
 	r.Group(func(r chi.Router) {
 		r.Use(

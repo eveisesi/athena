@@ -2,5 +2,5 @@ type AuthAttempt @goModel(model: "github.com/eveisesi/athena.AuthAttempt") {
     status: String!
     state: String
     token: String
-    url: String!
+    url(scopes: [String!]): String!
 }

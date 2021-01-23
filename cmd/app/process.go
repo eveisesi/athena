@@ -1,19 +1,19 @@
 package main
 
 import (
-	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/alliance"
 	"github.com/eveisesi/athena/internal/auth"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/character"
+	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/eveisesi/athena/internal/mongodb"
 	"github.com/eveisesi/athena/internal/processor"
+	"github.com/eveisesi/athena/internal/universe"
 	"github.com/urfave/cli"
-	"golang.org/x/oauth2"
 )
 
 func processorCommand(c *cli.Context) error {
@@ -45,6 +45,16 @@ func processorCommand(c *cli.Context) error {
 		basics.logger.WithError(err).Fatal("failed to initialize alliance repository")
 	}
 
+	cloneRepo, err := mongodb.NewCloneRepository(basics.db)
+	if err != nil {
+		basics.logger.WithError(err).Fatal("failed to initialize clone repository")
+	}
+
+	universeRepo, err := mongodb.NewUniverseRepository(basics.db)
+	if err != nil {
+		basics.logger.WithError(err).Fatal("failed to initialize universe repository")
+	}
+
 	cache := cache.NewService(basics.redis)
 	esi := esi.NewService(cache, basics.client, basics.cfg.UserAgent)
 
@@ -54,24 +64,17 @@ func processorCommand(c *cli.Context) error {
 
 	auth := auth.NewService(
 		cache,
-		&oauth2.Config{
-			ClientID:     basics.cfg.Auth.ClientID,
-			ClientSecret: basics.cfg.Auth.ClientSecret,
-			RedirectURL:  basics.cfg.Auth.RedirectURL,
-			Endpoint: oauth2.Endpoint{
-				AuthURL:  basics.cfg.Auth.AuthorizationURL,
-				TokenURL: basics.cfg.Auth.TokenURL,
-			},
-			Scopes: []string{athena.ReadLocationV1.String()},
-		},
+		getAuthConfig(basics.cfg),
 		basics.client,
 		basics.cfg.Auth.JWKSURL,
 	)
 
+	universe := universe.NewService(basics.logger, cache, esi, universeRepo)
 	member := member.NewService(auth, cache, alliance, character, corporation, memberRepo)
-	location := location.NewService(basics.logger, cache, esi, locationRepo)
+	location := location.NewService(basics.logger, cache, esi, universe, locationRepo)
+	clone := clone.NewService(basics.logger, cache, esi, universe, cloneRepo)
 
-	processor := processor.NewService(basics.logger, cache, esi, member, location)
+	processor := processor.NewService(basics.logger, cache, esi, member, location, clone)
 
 	processor.Run()
 

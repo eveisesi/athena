@@ -55,7 +55,7 @@ func (s *service) SetMemberLocation(ctx context.Context, memberID string, locati
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberLocation, fmt.Sprintf("%s", memberID)), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberLocation, memberID), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -95,7 +95,7 @@ func (s *service) SetMemberOnline(ctx context.Context, memberID string, online *
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberOnline, fmt.Sprintf("%s", memberID)), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberOnline, memberID), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -135,7 +135,7 @@ func (s *service) SetMemberShip(ctx context.Context, memberID string, ship *athe
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberShip, fmt.Sprintf("%s", memberID)), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberShip, memberID), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

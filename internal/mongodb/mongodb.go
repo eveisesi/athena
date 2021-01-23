@@ -168,10 +168,13 @@ var (
 	typeNullString  = reflect.TypeOf(null.String{})
 	typeNullTime    = reflect.TypeOf(null.Time{})
 	typeNullFloat64 = reflect.TypeOf(null.Float64{})
+	typeNullInt     = reflect.TypeOf(null.Int{})
 	typeNullUint    = reflect.TypeOf(null.Uint{})
+	typeNullInt64   = reflect.TypeOf(null.Int64{})
+	typeNullUint64  = reflect.TypeOf(null.Uint64{})
 )
 
-var allTypes = []reflect.Type{typeNullString, typeNullTime, typeNullFloat64, typeNullUint}
+var allTypes = []reflect.Type{typeNullString, typeNullTime, typeNullFloat64, typeNullUint, typeNullInt, typeNullInt64, typeNullUint64}
 
 func customCodecRegistery() *bsoncodec.RegistryBuilder {
 
@@ -192,8 +195,16 @@ func customCodecRegistery() *bsoncodec.RegistryBuilder {
 
 func EncodeNullValue(ec bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val reflect.Value) error {
 
-	if !val.IsValid() || (val.Type() != typeNullString && val.Type() != typeNullTime && val.Type() != typeNullFloat64 && val.Type() != typeNullUint) {
-		return bsoncodec.ValueEncoderError{Name: "EncodeNullValue", Types: []reflect.Type{typeNullString, typeNullTime, typeNullFloat64, typeNullUint}, Received: val}
+	matched := false
+	for _, rt := range allTypes {
+		if val.Type() == rt {
+			matched = true
+			break
+		}
+	}
+
+	if !val.IsValid() || !matched {
+		return bsoncodec.ValueEncoderError{Name: "EncodeNullValue", Types: allTypes, Received: val}
 	}
 
 	switch v := val.Interface().(type) {
@@ -221,8 +232,28 @@ func EncodeNullValue(ec bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val refl
 		}
 
 		return vw.WriteDouble(0.00)
+	case null.Int:
+		if v.Valid {
+			return vw.WriteInt32(int32(v.Int))
+		}
+
+		return vw.WriteInt32(0)
+	case null.Int64:
+		var val int64
+		if v.Valid {
+			val = v.Int64
+		}
+
+		return vw.WriteInt64(val)
+	case null.Uint64:
+		var val int64
+		if v.Valid {
+			val = int64(v.Uint64)
+		}
+
+		return vw.WriteInt64(val)
 	default:
-		panic("EncodeNullValue: unaccounted for type in switch")
+		panic(fmt.Sprintf("EncodeNullValue: unaccounted for type in switch %v ", v))
 	}
 }
 

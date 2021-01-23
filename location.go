@@ -35,7 +35,6 @@ type shipRepository interface {
 }
 
 type MemberLocation struct {
-	ID            primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 	MemberID      primitive.ObjectID `bson:"member_id" json:"member_id"`
 	SolarSystemID uint               `bson:"solar_system_id" json:"solar_system_id"`
 	StationID     null.Uint          `bson:"station_id,omitempty" json:"station_id,omitempty"`
@@ -44,7 +43,6 @@ type MemberLocation struct {
 }
 
 type MemberOnline struct {
-	ID         primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 	MemberID   primitive.ObjectID `bson:"member_id" json:"member_id"`
 	LastLogin  null.Time          `bson:"last_login,omitempty" json:"last_login,omitempty"`
 	LastLogout null.Time          `bson:"last_logout,omitempty" json:"last_logout,omitempty"`
@@ -54,7 +52,6 @@ type MemberOnline struct {
 }
 
 type MemberShip struct {
-	ID         primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 	MemberID   primitive.ObjectID `bson:"member_id" json:"member_id"`
 	ShipItemID uint64             `bson:"ship_item_id" json:"ship_item_id"`
 	ShipName   string             `bson:"ship_name" json:"ship_name"`

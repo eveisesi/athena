@@ -7,8 +7,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/eveisesi/athena"
-
 	"github.com/eveisesi/athena/internal/alliance"
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/corporation"
@@ -18,7 +16,6 @@ import (
 
 	"github.com/eveisesi/athena/internal/auth"
 	"github.com/eveisesi/athena/internal/cache"
-	"golang.org/x/oauth2"
 
 	"github.com/eveisesi/athena/internal/server"
 	"github.com/urfave/cli"
@@ -59,20 +56,7 @@ func serverCommand(c *cli.Context) error {
 
 	auth := auth.NewService(
 		cache,
-		&oauth2.Config{
-			ClientID:     basics.cfg.Auth.ClientID,
-			ClientSecret: basics.cfg.Auth.ClientSecret,
-			RedirectURL:  basics.cfg.Auth.RedirectURL,
-			Endpoint: oauth2.Endpoint{
-				AuthURL:  basics.cfg.Auth.AuthorizationURL,
-				TokenURL: basics.cfg.Auth.TokenURL,
-			},
-			Scopes: []string{
-				athena.ReadLocationV1.String(),
-				athena.ReadShipV1.String(),
-				athena.ReadOnlineV1.String(),
-			},
-		},
+		getAuthConfig(basics.cfg),
 		basics.client,
 		basics.cfg.Auth.JWKSURL,
 	)

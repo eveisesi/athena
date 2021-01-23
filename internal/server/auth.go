@@ -39,34 +39,34 @@ func (s *server) handleGetAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *server) handleGetAuthLogin(w http.ResponseWriter, r *http.Request) {
+// func (s *server) handleGetAuthLogin(w http.ResponseWriter, r *http.Request) {
 
-	var ctx = r.Context()
+// 	// var ctx = r.Context()
 
-	state := r.URL.Query().Get("state")
-	if state == "" {
-		return
-	}
+// 	// state := r.URL.Query().Get("state")
+// 	// if state == "" {
+// 	// 	return
+// 	// }
 
-	uri := s.auth.AuthorizationURI(ctx, state)
+// 	// uri := s.auth.AuthorizationURI(ctx, state)
 
-	_, _ = w.Write([]byte(fmt.Sprintf(`
-	<html>
-		<body>
-			<a href="" onclick="popupCenter(600, 800)">Click Here To Login To CCP</a>
+// 	// _, _ = w.Write([]byte(fmt.Sprintf(`
+// 	// <html>
+// 	// 	<body>
+// 	// 		<a href="" onclick="popupCenter(600, 800)">Click Here To Login To CCP</a>
 
-			<script>
-				function popupCenter(w, h) {
-					var left = (screen.width/2)-(w/2);
-					var top = (screen.height/2)-(h/2);
-					window.open("%s", "", 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
-				}
-			</script>
-		</body>
-	</html>
-	`, uri)))
+// 	// 		<script>
+// 	// 			function popupCenter(w, h) {
+// 	// 				var left = (screen.width/2)-(w/2);
+// 	// 				var top = (screen.height/2)-(h/2);
+// 	// 				window.open("%s", "", 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
+// 	// 			}
+// 	// 		</script>
+// 	// 	</body>
+// 	// </html>
+// 	// `, uri)))
 
-}
+// }
 
 func (s *server) parseCodeAndStateFromURL(uri *url.URL) (code, state string, err error) {
 

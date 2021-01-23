@@ -10,11 +10,13 @@ type Service interface {
 	allianceService
 	authService
 	characterService
+	cloneService
 	corporationService
 	esiService
 	locationService
 	memberService
 	processorService
+	universeService
 }
 
 type service struct {
