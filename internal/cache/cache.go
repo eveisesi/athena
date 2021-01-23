@@ -16,6 +16,7 @@ type Service interface {
 	locationService
 	memberService
 	processorService
+	skillService
 	universeService
 }
 
