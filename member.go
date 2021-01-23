@@ -35,7 +35,7 @@ type Member struct {
 }
 
 type MemberScope struct {
-	Scope  string    `bson:"scope" json:"scope"`
+	Scope  Scope     `bson:"scope" json:"scope"`
 	Expiry null.Time `bson:"expiry,omitempty" json:"expiry,omitempty"`
 }
 
