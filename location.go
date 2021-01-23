@@ -17,21 +17,21 @@ type locationRepository interface {
 	MemberLocation(ctx context.Context, id string) (*MemberLocation, error)
 	CreateMemberLocation(ctx context.Context, location *MemberLocation) (*MemberLocation, error)
 	UpdateMemberLocation(ctx context.Context, id string, location *MemberLocation) (*MemberLocation, error)
-	DeleteMemberLocation(ctx context.Context, id string) error
+	DeleteMemberLocation(ctx context.Context, id string) (bool, error)
 }
 
 type onlineRepository interface {
 	MemberOnline(ctx context.Context, id string) (*MemberOnline, error)
 	CreateMemberOnline(ctx context.Context, onlien *MemberOnline) (*MemberOnline, error)
 	UpdateMemberOnline(ctx context.Context, id string, onlien *MemberOnline) (*MemberOnline, error)
-	DeleteMemberOnline(ctx context.Context, id string) error
+	DeleteMemberOnline(ctx context.Context, id string) (bool, error)
 }
 
 type shipRepository interface {
 	MemberShip(ctx context.Context, id string) (*MemberShip, error)
 	CreateMemberShip(ctx context.Context, ship *MemberShip) (*MemberShip, error)
 	UpdateMemberShip(ctx context.Context, id string, ship *MemberShip) (*MemberShip, error)
-	DeleteMemberShip(ctx context.Context, id string) error
+	DeleteMemberShip(ctx context.Context, id string) (bool, error)
 }
 
 type MemberLocation struct {

@@ -16,14 +16,14 @@ type cloneRepository interface {
 	MemberClones(ctx context.Context, id string) (*MemberClones, error)
 	CreateMemberClones(ctx context.Context, location *MemberClones) (*MemberClones, error)
 	UpdateMemberClones(ctx context.Context, id string, location *MemberClones) (*MemberClones, error)
-	DeleteMemberClones(ctx context.Context, id string) error
+	DeleteMemberClones(ctx context.Context, id string) (bool, error)
 }
 
 type implantRepository interface {
 	MemberImplants(ctx context.Context, id string) (*MemberImplants, error)
 	CreateMemberImplants(ctx context.Context, location *MemberImplants) (*MemberImplants, error)
 	UpdateMemberImplants(ctx context.Context, id string, location *MemberImplants) (*MemberImplants, error)
-	DeleteMemberImplants(ctx context.Context, id string) error
+	DeleteMemberImplants(ctx context.Context, id string) (bool, error)
 }
 
 type MemberClones struct {

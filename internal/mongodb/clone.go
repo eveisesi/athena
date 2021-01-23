@@ -106,21 +106,21 @@ func (r *memberCloneRepository) UpdateMemberClones(ctx context.Context, id strin
 
 }
 
-func (r *memberCloneRepository) DeleteMemberClones(ctx context.Context, id string) error {
+func (r *memberCloneRepository) DeleteMemberClones(ctx context.Context, id string) (bool, error) {
 
 	pid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return false, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 
-	_, err = r.clones.DeleteOne(ctx, filter)
+	results, err := r.clones.DeleteOne(ctx, filter)
 	if err != nil {
 		err = fmt.Errorf("[Clone Repository] Failed to delete record from clones collection: %w", err)
 	}
 
-	return err
+	return results.DeletedCount > 0, err
 
 }
 
@@ -175,20 +175,20 @@ func (r *memberCloneRepository) UpdateMemberImplants(ctx context.Context, id str
 
 }
 
-func (r *memberCloneRepository) DeleteMemberImplants(ctx context.Context, id string) error {
+func (r *memberCloneRepository) DeleteMemberImplants(ctx context.Context, id string) (bool, error) {
 
 	pid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return fmt.Errorf("[Implant Repository] Failed to cast id to objectID: %w", err)
+		return false, fmt.Errorf("[Implant Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 
-	_, err = r.implants.DeleteOne(ctx, filter)
+	results, err := r.implants.DeleteOne(ctx, filter)
 	if err != nil {
 		err = fmt.Errorf("[Implant Repository] Failed to delete record from implants collection: %w", err)
 	}
 
-	return err
+	return results.DeletedCount > 0, err
 
 }

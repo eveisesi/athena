@@ -125,21 +125,21 @@ func (r *memberLocationRepository) UpdateMemberLocation(ctx context.Context, id 
 
 }
 
-func (r *memberLocationRepository) DeleteMemberLocation(ctx context.Context, id string) error {
+func (r *memberLocationRepository) DeleteMemberLocation(ctx context.Context, id string) (bool, error) {
 
 	pid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
+		return false, fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 
-	_, err = r.location.DeleteOne(ctx, filter)
+	results, err := r.location.DeleteOne(ctx, filter)
 	if err != nil {
 		err = fmt.Errorf("[Location Repository] Failed to delete record from ship collection: %w", err)
 	}
 
-	return err
+	return results.DeletedCount > 0, err
 
 }
 
@@ -194,21 +194,21 @@ func (r *memberLocationRepository) UpdateMemberOnline(ctx context.Context, id st
 
 }
 
-func (r *memberLocationRepository) DeleteMemberOnline(ctx context.Context, id string) error {
+func (r *memberLocationRepository) DeleteMemberOnline(ctx context.Context, id string) (bool, error) {
 
 	pid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
+		return false, fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 
-	_, err = r.online.DeleteOne(ctx, filter)
+	results, err := r.online.DeleteOne(ctx, filter)
 	if err != nil {
 		err = fmt.Errorf("[Location Repository] Failed to delete record from ship collection: %w", err)
 	}
 
-	return err
+	return results.DeletedCount > 0, err
 
 }
 
@@ -263,20 +263,20 @@ func (r *memberLocationRepository) UpdateMemberShip(ctx context.Context, id stri
 
 }
 
-func (r *memberLocationRepository) DeleteMemberShip(ctx context.Context, id string) error {
+func (r *memberLocationRepository) DeleteMemberShip(ctx context.Context, id string) (bool, error) {
 
 	pid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
+		return false, fmt.Errorf("[Location Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 
-	_, err = r.ship.DeleteOne(ctx, filter)
+	results, err := r.ship.DeleteOne(ctx, filter)
 	if err != nil {
 		err = fmt.Errorf("[Location Repository] Failed to delete record from ship collection: %w", err)
 	}
 
-	return err
+	return results.DeletedCount > 0, err
 
 }
