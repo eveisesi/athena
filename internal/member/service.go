@@ -201,12 +201,12 @@ func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena
 		case []interface{}:
 			for _, v := range a {
 				scp = append(scp, athena.MemberScope{
-					Scope: v.(string),
+					Scope: athena.Scope(v.(string)),
 				})
 			}
 		case string:
 			scp = append(scp, athena.MemberScope{
-				Scope: a,
+				Scope: athena.Scope(a),
 			})
 		}
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/eveisesi/athena"
 	"golang.org/x/oauth2"
 )
 
@@ -13,9 +12,6 @@ func getAuthConfig(cfg config) *oauth2.Config {
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  cfg.Auth.AuthorizationURL,
 			TokenURL: cfg.Auth.TokenURL,
-		},
-		Scopes: []string{
-			athena.ReadLocationV1,
 		},
 	}
 }
