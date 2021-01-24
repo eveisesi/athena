@@ -3,6 +3,7 @@ package esi
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -23,66 +24,195 @@ const (
 
 type (
 	Service interface {
+		GenerateEndpointHash(endpoint Endpoint, obj interface{}) (bool, string)
+
 		// Alliances
 		GetAlliancesAllianceID(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error)
 
 		// Characters
 		GetCharactersCharacterID(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error)
+		GetCharactersCharacterIDClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error)
+		GetCharactersCharacterIDContacts(ctx context.Context, member *athena.Member, etag *athena.Etag, contacts []*athena.MemberContact) ([]*athena.MemberContact, *athena.Etag, *http.Response, error)
+		GetCharactersCharacterIDContactLabels(ctx context.Context, member *athena.Member, etag *athena.Etag, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *athena.Etag, *http.Response, error)
+		GetCharactersCharacterIDImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error)
 		GetCharactersCharacterIDLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error)
 		GetCharactersCharacterIDOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error)
 		GetCharactersCharacterIDShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error)
-		GetCharactersCharacterIDClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error)
-		GetCharactersCharacterIDImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error)
 
 		// Corporations
 		GetCorporationsCorporationID(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error)
 
 		// 		// Killmails
-		// 		GetKillmailsKillmailIDKillmailHash(ctx context.Context, id uint, hash string) (*neo.Killmail, *http.Response, error)
+		// 		GetKillmailsKillmailIDKillmailHash(ctx context.Context, id uint, hash string) (*athena.Killmail, *http.Response, error)
 
 		// 		// Market
 		// 		HeadMarketsRegionIDTypes(ctx context.Context, regionID uint) *http.Response, error
 		// 		GetMarketGroups(ctx context.Context) ([]int, *http.Response, error)
-		// 		GetMarketGroupsMarketGroupID(ctx context.Context, id int) (*neo.MarketGroup, *http.Response, error)
+		// 		GetMarketGroupsMarketGroupID(ctx context.Context, id int) (*athena.MarketGroup, *http.Response, error)
 		// 		GetMarketsRegionIDTypes(ctx context.Context, regionID uint, page null.String) ([]int, *http.Response, error)
-		// 		GetMarketsRegionIDHistory(ctx context.Context, regionID uint, typeID uint) ([]*neo.HistoricalRecord, *http.Response, error)
-		// 		GetMarketsPrices(ctx context.Context) ([]*neo.MarketPrices, *http.Response, error)
+		// 		GetMarketsRegionIDHistory(ctx context.Context, regionID uint, typeID uint) ([]*athena.HistoricalRecord, *http.Response, error)
+		// 		GetMarketsPrices(ctx context.Context) ([]*athena.MarketPrices, *http.Response, error)
 
 		// 		// Status
-		// 		GetStatus(ctx context.Context) (*neo.ServerStatus, *http.Response, error)
+		// 		GetStatus(ctx context.Context) (*athena.ServerStatus, *http.Response, error)
 
-		// 		// Universe
+		// Universe
 		GetUniverseAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error)
 		GetUniverseBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error)
-		GetUniverseRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error)
-		GetUniverseFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error)
 		GetUniverseCategories(ctx context.Context, ids []int) ([]int, *http.Response, error)
 		GetUniverseCategoriesCategoryID(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error)
+		GetUniverseConstellationsConstellationID(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error)
+		GetUniverseFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error)
 		GetUniverseGroupsGroupID(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error)
-		GetUniverseTypesTypeID(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error)
 		GetUniverseRegions(ctx context.Context, ids []int) ([]int, *http.Response, error)
 		GetUniverseRegionsRegionID(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error)
-		GetUniverseConstellationsConstellationID(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error)
+		GetUniverseRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error)
 		GetUniverseSolarSystemsSolarSystemID(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error)
 		GetUniverseStationsStationID(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error)
 		GetUniverseStructuresStructureID(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error)
+		GetUniverseTypesTypeID(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error)
 	}
 
+	endpointMap map[Endpoint]func(obj interface{}) string
+
 	service struct {
-		client *http.Client
-		cache  cache.Service
-		ua     string
+		client    *http.Client
+		cache     cache.Service
+		ua        string
+		endpoints endpointMap
 	}
 )
 
 // NewService returns a default implementation of this service
 func NewService(cache cache.Service, client *http.Client, uagent string) Service {
 
-	return &service{
+	s := &service{
 		cache:  cache,
 		client: client,
 		ua:     uagent,
 	}
+
+	s.buildEndpointMap()
+
+	return s
+
+}
+
+type Endpoint string
+
+const (
+	EndpointGetAlliancesAllianceID                   Endpoint = "GetAlliancesAllianceID"
+	EndpointGetCharactersCharacterID                 Endpoint = "GetCharactersCharacterID"
+	EndpointGetCharactersCharacterIDClones           Endpoint = "GetCharactersCharacterIDClones"
+	EndpointGetCharactersCharacterIDContacts         Endpoint = "GetCharactersCharacterIDContacts"
+	EndpointGetCharactersCharacterIDContactLabels    Endpoint = "GetCharactersCharacterIDContactLabels"
+	EndpointGetCharactersCharacterIDImplants         Endpoint = "GetCharactersCharacterIDImplants"
+	EndpointGetCharactersCharacterIDLocation         Endpoint = "GetCharactersCharacterIDLocation"
+	EndpointGetCharactersCharacterIDOnline           Endpoint = "GetCharactersCharacterIDOnline"
+	EndpointGetCharactersCharacterIDShip             Endpoint = "GetCharactersCharacterIDShip"
+	EndpointGetCorporationsCorporationID             Endpoint = "GetCorporationsCorporationID"
+	EndpointGetUniverseAncestries                    Endpoint = "GetUniverseAncestries"
+	EndpointGetUniverseBloodlines                    Endpoint = "GetUniverseBloodlines"
+	EndpointGetUniverseCategories                    Endpoint = "GetUniverseCategories"
+	EndpointGetUniverseCategoriesCategoryID          Endpoint = "GetUniverseCategoriesCategoryID"
+	EndpointGetUniverseConstellationsConstellationID Endpoint = "GetUniverseConstellationsConstellationID"
+	EndpointGetUniverseFactions                      Endpoint = "GetUniverseFactions"
+	EndpointGetUniverseGroupsGroupID                 Endpoint = "GetUniverseGroupsGroupID"
+	EndpointGetUniverseRaces                         Endpoint = "GetUniverseRaces"
+	EndpointGetUniverseRegions                       Endpoint = "GetUniverseRegions"
+	EndpointGetUniverseRegionsRegionID               Endpoint = "GetUniverseRegionsRegionID"
+	EndpointGetUniverseSolarSystemsSolarSystemID     Endpoint = "GetUniverseSolarSystemsSolarSystemID"
+	EndpointGetUniverseStationsStationID             Endpoint = "GetUniverseStationsStationID"
+	EndpointGetUniverseStructuresStructureID         Endpoint = "GetUniverseStructuresStructureID"
+	EndpointGetUniverseTypesTypeID                   Endpoint = "GetUniverseTypesTypeID"
+)
+
+var AllEndpoints = []Endpoint{
+	EndpointGetAlliancesAllianceID,
+	EndpointGetCharactersCharacterID,
+	EndpointGetCharactersCharacterIDClones,
+	EndpointGetCharactersCharacterIDContacts,
+	EndpointGetCharactersCharacterIDContactLabels,
+	EndpointGetCharactersCharacterIDImplants,
+	EndpointGetCharactersCharacterIDLocation,
+	EndpointGetCharactersCharacterIDOnline,
+	EndpointGetCharactersCharacterIDShip,
+	EndpointGetCorporationsCorporationID,
+	EndpointGetUniverseAncestries,
+	EndpointGetUniverseBloodlines,
+	EndpointGetUniverseCategories,
+	EndpointGetUniverseCategoriesCategoryID,
+	EndpointGetUniverseConstellationsConstellationID,
+	EndpointGetUniverseFactions,
+	EndpointGetUniverseGroupsGroupID,
+	EndpointGetUniverseRaces,
+	EndpointGetUniverseRegions,
+	EndpointGetUniverseRegionsRegionID,
+	EndpointGetUniverseSolarSystemsSolarSystemID,
+	EndpointGetUniverseStationsStationID,
+	EndpointGetUniverseStructuresStructureID,
+	EndpointGetUniverseTypesTypeID,
+}
+
+func (e Endpoint) String() string {
+	return string(e)
+}
+
+func (e Endpoint) Valid() bool {
+	for _, v := range AllEndpoints {
+		if e == v {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *service) buildEndpointMap() {
+
+	s.endpoints = endpointMap{
+		EndpointGetAlliancesAllianceID:                   s.resolveGetAlliancesAllianceIDEndpoint,
+		EndpointGetCharactersCharacterID:                 s.resolveGetCharactersCharacterIDEndpoint,
+		EndpointGetCharactersCharacterIDClones:           s.resolveGetCharactersCharacterIDClonesEndpoint,
+		EndpointGetCharactersCharacterIDContacts:         s.resolveGetCharactersCharacterIDContactsEndpoint,
+		EndpointGetCharactersCharacterIDContactLabels:    s.resolveGetCharactersCharacterIDContactLabelsEndpoint,
+		EndpointGetCharactersCharacterIDImplants:         s.resolveGetCharactersCharacterIDImplantsEndpoint,
+		EndpointGetCharactersCharacterIDLocation:         s.resolveGetCharactersCharacterIDLocationEndpoint,
+		EndpointGetCharactersCharacterIDOnline:           s.resolveGetCharactersCharacterIDOnlineEndpoint,
+		EndpointGetCharactersCharacterIDShip:             s.resolveGetCharactersCharacterIDShipEndpoint,
+		EndpointGetCorporationsCorporationID:             s.resolveGetCorporationsCorporationIDEndpoint,
+		EndpointGetUniverseAncestries:                    s.resolveUniverseAncestriesEndpoint,
+		EndpointGetUniverseBloodlines:                    s.resolveUniverseBloodlinesEndpoint,
+		EndpointGetUniverseCategories:                    s.resolveUniverseCategoriesEndpoint,
+		EndpointGetUniverseCategoriesCategoryID:          s.resolveUniverseCategoriesCategoryIDEndpoint,
+		EndpointGetUniverseConstellationsConstellationID: s.resolveGetUniverseConstellationsConstellationIDEndpoint,
+		EndpointGetUniverseFactions:                      s.resolveUniverseFactionsEndpoint,
+		EndpointGetUniverseGroupsGroupID:                 s.resolveUniverseGroupsGroupIDEndpoint,
+		EndpointGetUniverseRaces:                         s.resolveUniverseRacesEndpoint,
+		EndpointGetUniverseRegions:                       s.resolveGetUniverseRegionsEndpoint,
+		EndpointGetUniverseRegionsRegionID:               s.resolveGetUniverseRegionsRegionIDEndpoint,
+		EndpointGetUniverseSolarSystemsSolarSystemID:     s.resolveGetUniverseSolarSystemsSolarSystemIDEndpoint,
+		EndpointGetUniverseStationsStationID:             s.resolveGetUniverseStationsStationIDEndpoint,
+		EndpointGetUniverseStructuresStructureID:         s.resolveGetUniverseStructuresStructureIDEndpoint,
+		EndpointGetUniverseTypesTypeID:                   s.resolveGetUniverseTypesTypeIDEndpoint,
+	}
+
+}
+
+func (s *service) GenerateEndpointHash(endpoint Endpoint, obj interface{}) (bool, string) {
+
+	if !endpoint.Valid() {
+		return false, ""
+	}
+
+	if _, ok := s.endpoints[endpoint]; !ok {
+		return false, ""
+	}
+
+	alg := sha256.New()
+	n, _ := alg.Write([]byte(s.endpoints[endpoint](obj)))
+
+	return n > 0, fmt.Sprintf("%s::%x", endpoint.String(), alg.Sum(nil))
 
 }
 

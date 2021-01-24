@@ -24,7 +24,7 @@ func isCharacterValid(r *athena.Character) bool {
 // Cache: 86400 sec (24 Hour)
 func (s *service) GetCharactersCharacterID(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error) {
 
-	path := fmt.Sprintf("/v4/characters/%d/", character.CharacterID)
+	path := s.endpoints[EndpointGetCharactersCharacterID](character)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(character.Etag))
 	if err != nil {
@@ -53,4 +53,21 @@ func (s *service) GetCharactersCharacterID(ctx context.Context, character *athen
 	character.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return character, res, nil
+}
+
+func (s *service) resolveGetCharactersCharacterIDEndpoint(obj interface{}) string {
+
+	if obj == nil {
+		panic("invalid type provided for endpoint resolution, expect *athena.Character, received nil")
+	}
+
+	var thing *athena.Character
+	var ok bool
+
+	if thing, ok = obj.(*athena.Character); !ok {
+		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Character, got %T", obj))
+	}
+
+	return fmt.Sprintf("/v4/characters/%d/", thing.CharacterID)
+
 }

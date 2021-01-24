@@ -12,7 +12,6 @@ import (
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/eveisesi/athena/internal/member"
-	"github.com/eveisesi/athena/internal/mongodb"
 
 	"github.com/eveisesi/athena/internal/auth"
 	"github.com/eveisesi/athena/internal/cache"
@@ -26,33 +25,16 @@ func serverCommand(c *cli.Context) error {
 	basics := basics("server")
 
 	cache := cache.NewService(basics.redis)
-
-	memberRepo, err := mongodb.NewMemberRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize member repository")
-	}
-
-	characterRepo, err := mongodb.NewCharacterRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize character repository")
-	}
-
-	corporationRepo, err := mongodb.NewCorporationRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize corporation repository")
-	}
-
-	allianceRepo, err := mongodb.NewAllianceRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize alliance repository")
-	}
-
 	esi := esi.NewService(cache, basics.client, basics.cfg.UserAgent)
+	// etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
 
-	corporation := corporation.NewService(cache, esi, corporationRepo)
-	alliance := alliance.NewService(cache, esi, allianceRepo)
-
-	character := character.NewService(cache, esi, characterRepo)
+	// universe := universe.NewService(basics.logger, cache, esi, basics.repositories.universe)
+	// location := location.NewService(basics.logger, cache, esi, universe, basics.repositories.location)
+	// clone := clone.NewService(basics.logger, cache, esi, universe, basics.repositories.clone)
+	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
+	alliance := alliance.NewService(cache, esi, basics.repositories.alliance)
+	character := character.NewService(cache, esi, basics.repositories.character)
+	// contact := contact.NewService(basics.logger, cache, esi, etag, universe, basics.repositories.contact)
 
 	auth := auth.NewService(
 		cache,
@@ -61,7 +43,7 @@ func serverCommand(c *cli.Context) error {
 		basics.cfg.Auth.JWKSURL,
 	)
 
-	member := member.NewService(auth, cache, alliance, character, corporation, memberRepo)
+	member := member.NewService(auth, cache, alliance, character, corporation, basics.repositories.member)
 
 	server := server.NewServer(
 		basics.cfg.Server.Port,

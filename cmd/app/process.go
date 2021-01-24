@@ -6,11 +6,12 @@ import (
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/clone"
+	"github.com/eveisesi/athena/internal/contact"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/esi"
+	"github.com/eveisesi/athena/internal/etag"
 	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/member"
-	"github.com/eveisesi/athena/internal/mongodb"
 	"github.com/eveisesi/athena/internal/processor"
 	"github.com/eveisesi/athena/internal/universe"
 	"github.com/urfave/cli"
@@ -20,47 +21,13 @@ func processorCommand(c *cli.Context) error {
 
 	basics := basics("processor")
 
-	locationRepo, err := mongodb.NewLocationRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatalln("failed to initialize location repository")
-	}
-
-	memberRepo, err := mongodb.NewMemberRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize member repository")
-	}
-
-	characterRepo, err := mongodb.NewCharacterRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize character repository")
-	}
-
-	corporationRepo, err := mongodb.NewCorporationRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize corporation repository")
-	}
-
-	allianceRepo, err := mongodb.NewAllianceRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize alliance repository")
-	}
-
-	cloneRepo, err := mongodb.NewCloneRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize clone repository")
-	}
-
-	universeRepo, err := mongodb.NewUniverseRepository(basics.db)
-	if err != nil {
-		basics.logger.WithError(err).Fatal("failed to initialize universe repository")
-	}
-
 	cache := cache.NewService(basics.redis)
 	esi := esi.NewService(cache, basics.client, basics.cfg.UserAgent)
+	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
 
-	character := character.NewService(cache, esi, characterRepo)
-	corporation := corporation.NewService(cache, esi, corporationRepo)
-	alliance := alliance.NewService(cache, esi, allianceRepo)
+	character := character.NewService(cache, esi, basics.repositories.character)
+	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
+	alliance := alliance.NewService(cache, esi, basics.repositories.alliance)
 
 	auth := auth.NewService(
 		cache,
@@ -69,12 +36,15 @@ func processorCommand(c *cli.Context) error {
 		basics.cfg.Auth.JWKSURL,
 	)
 
-	universe := universe.NewService(basics.logger, cache, esi, universeRepo)
-	member := member.NewService(auth, cache, alliance, character, corporation, memberRepo)
-	location := location.NewService(basics.logger, cache, esi, universe, locationRepo)
-	clone := clone.NewService(basics.logger, cache, esi, universe, cloneRepo)
+	universe := universe.NewService(basics.logger, cache, esi, basics.repositories.universe)
+	member := member.NewService(auth, cache, alliance, character, corporation, basics.repositories.member)
+	location := location.NewService(basics.logger, cache, esi, universe, basics.repositories.location)
+	clone := clone.NewService(basics.logger, cache, esi, universe, basics.repositories.clone)
+	contact := contact.NewService(basics.logger, cache, esi, etag, universe, alliance, character, corporation, basics.repositories.contact)
 
-	processor := processor.NewService(basics.logger, cache, esi, member, location, clone)
+	processor := processor.NewService(basics.logger, cache, esi, member, location, clone, contact)
+
+	processor.SetScopeMap(buildScopeMap(location, clone, contact))
 
 	processor.Run()
 

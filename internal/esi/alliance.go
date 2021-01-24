@@ -24,7 +24,7 @@ func isAllianceValid(r *athena.Alliance) bool {
 // Cache: 3600 sec (1 Hour)
 func (s *service) GetAlliancesAllianceID(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error) {
 
-	path := fmt.Sprintf("/v3/alliances/%d/", alliance.AllianceID)
+	path := s.endpoints[EndpointGetAlliancesAllianceID](alliance)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(alliance.Etag))
 	if err != nil {
@@ -53,4 +53,21 @@ func (s *service) GetAlliancesAllianceID(ctx context.Context, alliance *athena.A
 	alliance.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return alliance, res, nil
+}
+
+func (s *service) resolveGetAlliancesAllianceIDEndpoint(obj interface{}) string {
+
+	if obj == nil {
+		panic("invalid type provided for endpoint resolution, expect *athena.Alliance, received nil")
+	}
+
+	var thing *athena.Alliance
+	var ok bool
+
+	if thing, ok = obj.(*athena.Alliance); !ok {
+		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Alliance, got %T", obj))
+	}
+
+	return fmt.Sprintf("/v3/alliances/%d/", thing.AllianceID)
+
 }

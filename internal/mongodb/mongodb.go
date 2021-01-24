@@ -25,8 +25,8 @@ func Connect(ctx context.Context, uri *url.URL) (*mongo.Client, error) {
 
 	monitor := nrmongo.NewCommandMonitor(nil)
 
-	opts := options.Client().ApplyURI(uri.String()).SetMonitor(monitor)
-	opts.SetRegistry(customCodecRegistery().Build())
+	opts := options.Client().ApplyURI(uri.String()).SetMonitor(monitor).SetRegistry(customCodecRegistery().Build())
+
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect to mongo db")
@@ -167,6 +167,7 @@ func newString(s string) *string {
 var (
 	typeNullString  = reflect.TypeOf(null.String{})
 	typeNullTime    = reflect.TypeOf(null.Time{})
+	typeNullBool    = reflect.TypeOf(null.Bool{})
 	typeNullFloat64 = reflect.TypeOf(null.Float64{})
 	typeNullInt     = reflect.TypeOf(null.Int{})
 	typeNullUint    = reflect.TypeOf(null.Uint{})
@@ -174,7 +175,7 @@ var (
 	typeNullUint64  = reflect.TypeOf(null.Uint64{})
 )
 
-var allTypes = []reflect.Type{typeNullString, typeNullTime, typeNullFloat64, typeNullUint, typeNullInt, typeNullInt64, typeNullUint64}
+var allTypes = []reflect.Type{typeNullString, typeNullTime, typeNullBool, typeNullFloat64, typeNullUint, typeNullInt, typeNullInt64, typeNullUint64}
 
 func customCodecRegistery() *bsoncodec.RegistryBuilder {
 
@@ -220,21 +221,16 @@ func EncodeNullValue(ec bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val refl
 		}
 
 		return vw.WriteNull()
-	case null.Uint:
-		if v.Valid {
-			return vw.WriteInt32(int32(v.Uint))
-		}
 
-		return vw.WriteInt32(0)
-	case null.Float64:
-		if v.Valid {
-			return vw.WriteDouble(v.Float64)
-		}
-
-		return vw.WriteDouble(0.00)
 	case null.Int:
 		if v.Valid {
 			return vw.WriteInt32(int32(v.Int))
+		}
+
+		return vw.WriteInt32(0)
+	case null.Uint:
+		if v.Valid {
+			return vw.WriteInt32(int32(v.Uint))
 		}
 
 		return vw.WriteInt32(0)
@@ -252,6 +248,14 @@ func EncodeNullValue(ec bsoncodec.EncodeContext, vw bsonrw.ValueWriter, val refl
 		}
 
 		return vw.WriteInt64(val)
+	case null.Float64:
+		if v.Valid {
+			return vw.WriteDouble(v.Float64)
+		}
+
+		return vw.WriteDouble(0.00)
+	case null.Bool:
+		return vw.WriteBoolean(v.Bool)
 	default:
 		panic(fmt.Sprintf("EncodeNullValue: unaccounted for type in switch %v ", v))
 	}
@@ -282,13 +286,13 @@ func DecodeNullValue(dc bsoncodec.DecodeContext, vr bsonrw.ValueReader, val refl
 			val.Set(reflect.ValueOf(null.NewTime(t, true)))
 
 		}
-	case bsontype.Double:
-		d, err := vr.ReadDouble()
+	case bsontype.DateTime:
+		d, err := vr.ReadDateTime()
 		if err != nil {
 			return err
 		}
 
-		val.Set(reflect.ValueOf(null.NewFloat64(d, true)))
+		val.Set(reflect.ValueOf(null.NewTime(time.Unix(0, d*int64(time.Millisecond)), true)))
 	case bsontype.Int32:
 		d, err := vr.ReadInt32()
 		if err != nil {
@@ -297,18 +301,26 @@ func DecodeNullValue(dc bsoncodec.DecodeContext, vr bsonrw.ValueReader, val refl
 
 		switch val.Interface().(type) {
 		case null.Uint:
-			val.Set(reflect.ValueOf(null.NewUint(uint(d), true)))
+			val.Set(reflect.ValueOf(null.NewUint(uint(d), d > 0)))
+		case null.Int:
+			val.Set(reflect.ValueOf(null.NewInt(int(d), d > 0)))
 		default:
 			return fmt.Errorf("[DecodeNullValue]: unhandled integer conversion %s to %T", vr.Type(), val.Interface())
 		}
-	case bsontype.DateTime:
-		d, err := vr.ReadDateTime()
+	case bsontype.Double:
+		d, err := vr.ReadDouble()
 		if err != nil {
 			return err
 		}
 
-		val.Set(reflect.ValueOf(null.NewTime(time.Unix(0, d*int64(time.Millisecond)), true)))
+		val.Set(reflect.ValueOf(null.NewFloat64(d, d > 0)))
+	case bsontype.Boolean:
+		d, err := vr.ReadBoolean()
+		if err != nil {
+			return err
+		}
 
+		val.Set(reflect.ValueOf(null.NewBool(d, d)))
 	case bsontype.Null:
 		err := vr.ReadNull()
 		if err != nil {
@@ -320,12 +332,18 @@ func DecodeNullValue(dc bsoncodec.DecodeContext, vr bsonrw.ValueReader, val refl
 			val.Set(reflect.ValueOf(null.StringFromPtr(nil)))
 		case null.Time:
 			val.Set(reflect.ValueOf(null.TimeFromPtr(nil)))
-		case null.Uint:
-			val.Set(reflect.ValueOf(null.UintFromPtr(nil)))
-		case null.Uint64:
-			val.Set(reflect.ValueOf(null.Uint64FromPtr(nil)))
 		case null.Float64:
 			val.Set(reflect.ValueOf(null.Float64FromPtr(nil)))
+		case null.Int:
+			val.Set(reflect.ValueOf(null.IntFromPtr(nil)))
+		case null.Uint:
+			val.Set(reflect.ValueOf(null.UintFromPtr(nil)))
+		case null.Int64:
+			val.Set(reflect.ValueOf(null.Int64FromPtr(nil)))
+		case null.Uint64:
+			val.Set(reflect.ValueOf(null.Uint64FromPtr(nil)))
+		case null.Bool:
+			val.Set(reflect.ValueOf(null.BoolFromPtr(nil)))
 		}
 
 	default:

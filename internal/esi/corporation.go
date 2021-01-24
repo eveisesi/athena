@@ -25,7 +25,7 @@ func isCorporationValid(r *athena.Corporation) bool {
 // Cache: 3600 sec (1 Hour)
 func (s *service) GetCorporationsCorporationID(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error) {
 
-	path := fmt.Sprintf("/v4/corporations/%d/", corporation.CorporationID)
+	path := s.endpoints[EndpointGetCorporationsCorporationID](corporation)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(corporation.Etag))
 	if err != nil {
@@ -54,4 +54,21 @@ func (s *service) GetCorporationsCorporationID(ctx context.Context, corporation 
 	corporation.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return corporation, res, nil
+}
+
+func (s *service) resolveGetCorporationsCorporationIDEndpoint(obj interface{}) string {
+
+	if obj == nil {
+		panic("invalid type provided for endpoint resolution, expect *athena.Corporation, received nil")
+	}
+
+	var thing *athena.Corporation
+	var ok bool
+
+	if thing, ok = obj.(*athena.Corporation); !ok {
+		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Corporation, got %T", obj))
+	}
+
+	return fmt.Sprintf("/v4/corporations/%d/", thing.CorporationID)
+
 }

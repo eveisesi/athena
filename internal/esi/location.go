@@ -17,7 +17,7 @@ import (
 // Cache: 5 secs
 func (s *service) GetCharactersCharacterIDLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error) {
 
-	path := fmt.Sprintf("/v1/characters/%d/location/", member.CharacterID)
+	path := s.endpoints[EndpointGetCharactersCharacterIDLocation](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -52,9 +52,26 @@ func (s *service) GetCharactersCharacterIDLocation(ctx context.Context, member *
 
 }
 
+func (s *service) resolveGetCharactersCharacterIDLocationEndpoint(obj interface{}) string {
+
+	if obj == nil {
+		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	}
+
+	var thing *athena.Member
+	var ok bool
+
+	if thing, ok = obj.(*athena.Member); !ok {
+		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+	}
+
+	return fmt.Sprintf("/v1/characters/%d/location/", thing.CharacterID)
+
+}
+
 func (s *service) GetCharactersCharacterIDOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error) {
 
-	path := fmt.Sprintf("/v2/characters/%d/online/", member.CharacterID)
+	path := s.endpoints[EndpointGetCharactersCharacterIDOnline](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -89,9 +106,26 @@ func (s *service) GetCharactersCharacterIDOnline(ctx context.Context, member *at
 
 }
 
+func (s *service) resolveGetCharactersCharacterIDOnlineEndpoint(obj interface{}) string {
+
+	if obj == nil {
+		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	}
+
+	var thing *athena.Member
+	var ok bool
+
+	if thing, ok = obj.(*athena.Member); !ok {
+		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+	}
+
+	return fmt.Sprintf("/v2/characters/%d/online/", thing.CharacterID)
+
+}
+
 func (s *service) GetCharactersCharacterIDShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error) {
 
-	path := fmt.Sprintf("/v1/characters/%d/ship/", member.CharacterID)
+	path := s.endpoints[EndpointGetCharactersCharacterIDShip](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -123,5 +157,22 @@ func (s *service) GetCharactersCharacterIDShip(ctx context.Context, member *athe
 	ship.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return ship, res, nil
+
+}
+
+func (s *service) resolveGetCharactersCharacterIDShipEndpoint(obj interface{}) string {
+
+	if obj == nil {
+		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	}
+
+	var thing *athena.Member
+	var ok bool
+
+	if thing, ok = obj.(*athena.Member); !ok {
+		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+	}
+
+	return fmt.Sprintf("/v1/characters/%d/ship/", thing.CharacterID)
 
 }

@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/99designs/gqlgen v0.13.0
+	github.com/VividCortex/ewma v1.1.1 // indirect
 	github.com/agnivade/levenshtein v1.1.0 // indirect
 	github.com/aws/aws-sdk-go v1.36.29 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
@@ -12,6 +13,7 @@ require (
 	github.com/friendsofgo/errors v0.9.2 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-redis/redis/v8 v8.4.9
+	github.com/go-test/deep v1.0.7
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
@@ -35,7 +37,6 @@ require (
 	github.com/tidwall/pretty v1.0.2 // indirect
 	github.com/urfave/cli v1.22.5
 	github.com/vbauerster/mpb v3.4.0+incompatible
-	github.com/vbauerster/mpb/v6 v6.0.2
 	github.com/vektah/gqlparser/v2 v2.1.0
 	github.com/volatiletech/inflect v0.0.1 // indirect
 	github.com/volatiletech/null v8.0.0+incompatible

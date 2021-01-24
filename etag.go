@@ -2,20 +2,19 @@ package athena
 
 import (
 	"context"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
 )
 
 type EtagRepository interface {
-	MemberEtag(ctx context.Context, endpointID Scope) (*MemberEtag, error)
-	MemberEtags(ctx context.Context, memberID string) ([]*MemberEtag, error)
-	CreateMemberEtag(ctx context.Context, location *MemberEtag) (*MemberEtag, error)
-	UpdateMemberEtag(ctx context.Context, id string, location *MemberEtag) (*MemberEtag, error)
-	DeleteMemberEtag(ctx context.Context, id string) (bool, error)
+	Etag(ctx context.Context, etagID string) (*Etag, error)
+	UpdateEtag(ctx context.Context, etagID string, etag *Etag) (*Etag, error)
+	DeleteEtag(ctx context.Context, etagID string) (bool, error)
 }
 
-type MemberEtag struct {
-	MemberID   primitive.ObjectID `bson:"member_id" json:"member_id"`
-	EndpointID Scope              `bson:"endpoint_id" json:"endpoint_id"`
-	Meta
+type Etag struct {
+	EtagID      string    `bson:"etag_id" json:"etag_id"`
+	Etag        string    `bson:"etag" json:"etag"`
+	CachedUntil time.Time `bson:"cached_until" json:"cached_until"`
+	CreatedAt   time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
 }

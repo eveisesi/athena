@@ -11,8 +11,10 @@ type Service interface {
 	authService
 	characterService
 	cloneService
+	contactService
 	corporationService
 	esiService
+	etagService
 	locationService
 	memberService
 	processorService

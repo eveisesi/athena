@@ -1,20 +1,19 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	nethttp "net/http"
 	"os"
-	"sync"
 	"time"
 
+	"github.com/eveisesi/athena"
+	"github.com/eveisesi/athena/internal/mongodb"
 	"github.com/go-redis/redis/v8"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	mpb "github.com/vbauerster/mpb/v6"
-	"github.com/vbauerster/mpb/v6/decor"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -24,12 +23,25 @@ var (
 )
 
 type app struct {
-	cfg      config
-	newrelic *newrelic.Application
-	logger   *logrus.Logger
-	db       *mongo.Database
-	redis    *redis.Client
-	client   *nethttp.Client
+	cfg          config
+	newrelic     *newrelic.Application
+	logger       *logrus.Logger
+	db           *mongo.Database
+	redis        *redis.Client
+	client       *nethttp.Client
+	repositories repositories
+}
+
+type repositories struct {
+	member      athena.MemberRepository
+	character   athena.CharacterRepository
+	corporation athena.CorporationRepository
+	alliance    athena.AllianceRepository
+	clone       athena.CloneRepository
+	etag        athena.EtagRepository
+	location    athena.MemberLocationRepository
+	universe    athena.UniverseRepository
+	contact     athena.MemberContactRepository
 }
 
 // basics initializes the following
@@ -74,6 +86,73 @@ func basics(command string) *app {
 		Timeout:   time.Second * 5,
 		Transport: newrelic.NewRoundTripper(nil),
 	}
+
+	member, err := mongodb.NewMemberRepository(app.db)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to initialize member repository")
+	}
+
+	character, err := mongodb.NewCharacterRepository(app.db)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to initialize character repository")
+	}
+
+	corporation, err := mongodb.NewCorporationRepository(app.db)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to initialize corporation repository")
+	}
+
+	alliance, err := mongodb.NewAllianceRepository(app.db)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to initialize alliance repository")
+	}
+
+	clone, err := mongodb.NewCloneRepository(app.db)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to initialize alliance repository")
+	}
+
+	etag, err := mongodb.NewEtagRepository(app.db)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to initialize etag repository")
+	}
+
+	location, err := mongodb.NewLocationRepository(app.db)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to initialize location repository")
+	}
+
+	universe, err := mongodb.NewUniverseRepository(app.db)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to initialize universe repository")
+	}
+
+	contact, err := mongodb.NewMemberContactRepository(app.db)
+	if err != nil {
+		var cmdErr mongo.CommandError
+		if errors.As(err, &cmdErr) {
+			// This Repository is consistenly throwing this error locally, no reason to. I think it is because the order
+			// of the fields gets sorted when it is created vs when it is checked. Not sure, but skipping it for now.
+			// https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L121
+			if cmdErr.Code != 86 { // IndexKeySpecsConflict
+				app.logger.WithError(err).Fatal("failed to initialize contact repository")
+			}
+		}
+
+	}
+
+	app.repositories = repositories{
+		member:      member,
+		character:   character,
+		corporation: corporation,
+		alliance:    alliance,
+		clone:       clone,
+		etag:        etag,
+		location:    location,
+		universe:    universe,
+		contact:     contact,
+	}
+
 	return &app
 
 }
@@ -96,53 +175,10 @@ func main() {
 			Name:   "universe",
 			Action: universeCommand,
 		},
-		{
-			Name: "progress",
-			Action: func(c *cli.Context) error {
-				var wg sync.WaitGroup
-				// pass &wg (optional), so p will wait for it eventually
-				p := mpb.New(mpb.WithWaitGroup(&wg))
-				total, numBars := 100, 3
-				wg.Add(numBars)
-
-				for i := 0; i < numBars; i++ {
-					name := fmt.Sprintf("Bar#%d:", i)
-					bar := p.AddBar(int64(total),
-						mpb.PrependDecorators(
-							// simple name decorator
-							decor.Name(name),
-							// decor.DSyncWidth bit enables column width synchronization
-							decor.Percentage(decor.WCSyncSpace),
-						),
-						mpb.AppendDecorators(
-							// replace ETA decorator with "done" message, OnComplete event
-							decor.OnComplete(
-								// ETA decorator with ewma age of 60
-								decor.EwmaETA(decor.ET_STYLE_GO, 60), "done",
-							),
-						),
-					)
-					// simulating some work
-					go func() {
-						defer wg.Done()
-						rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-						max := 100 * time.Millisecond
-						for i := 0; i < total; i++ {
-							// start variable is solely for EWMA calculation
-							// EWMA's unit of measure is an iteration's duration
-							start := time.Now()
-							time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
-							bar.Increment()
-							// we need to call DecoratorEwmaUpdate to fulfill ewma decorator's contract
-							bar.DecoratorEwmaUpdate(time.Since(start))
-						}
-					}()
-				}
-				// Waiting for passed &wg and for all bars to complete and flush
-				p.Wait()
-				return nil
-			},
-		},
+		// {
+		// 	Name:   "test",
+		// 	Action: testCommand,
+		// },
 	}
 
 	err := app.Run(os.Args)

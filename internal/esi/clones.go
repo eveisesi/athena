@@ -17,7 +17,7 @@ import (
 // Cache: 120 (2 min)
 func (s *service) GetCharactersCharacterIDClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error) {
 
-	path := fmt.Sprintf("/v3/characters/%d/clones/", member.CharacterID)
+	path := s.endpoints[EndpointGetCharactersCharacterIDClones](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -52,6 +52,23 @@ func (s *service) GetCharactersCharacterIDClones(ctx context.Context, member *at
 
 }
 
+func (s *service) resolveGetCharactersCharacterIDClonesEndpoint(obj interface{}) string {
+
+	if obj == nil {
+		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	}
+
+	var thing *athena.Member
+	var ok bool
+
+	if thing, ok = obj.(*athena.Member); !ok {
+		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+	}
+
+	return fmt.Sprintf("/v3/characters/%d/clones/", thing.CharacterID)
+
+}
+
 // GetCharactersCharacterIDImplants makes an HTTP GET Request to the /characters/{character_id}/implants/ endpoint for
 // information about the provided members implants
 //
@@ -60,7 +77,7 @@ func (s *service) GetCharactersCharacterIDClones(ctx context.Context, member *at
 // Cache: 120 (2 min)
 func (s *service) GetCharactersCharacterIDImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error) {
 
-	path := fmt.Sprintf("/v1/characters/%d/implants/", member.CharacterID)
+	path := s.endpoints[EndpointGetCharactersCharacterIDImplants](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -93,5 +110,22 @@ func (s *service) GetCharactersCharacterIDImplants(ctx context.Context, member *
 	implants.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return implants, res, nil
+
+}
+
+func (s *service) resolveGetCharactersCharacterIDImplantsEndpoint(obj interface{}) string {
+
+	if obj == nil {
+		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	}
+
+	var thing *athena.Member
+	var ok bool
+
+	if thing, ok = obj.(*athena.Member); !ok {
+		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+	}
+
+	return fmt.Sprintf("/v1/characters/%d/implants/", thing.CharacterID)
 
 }
