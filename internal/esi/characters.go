@@ -16,15 +16,15 @@ func isCharacterValid(r *athena.Character) bool {
 	return true
 }
 
-// GetCharactersCharacterID makes a HTTP GET Request to the /characters/{character_id} endpoint
+// GetCharacter makes a HTTP GET Request to the /characters/{character_id} endpoint
 // for information about the provided character
 //
 // Documentation: https://esi.evetech.net/ui/#/Character/get_characters_character_id
 // Version: v4
 // Cache: 86400 sec (24 Hour)
-func (s *service) GetCharactersCharacterID(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error) {
+func (s *service) GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharactersCharacterID](character)
+	path := s.endpoints[EndpointGetCharacter](character)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(character.Etag))
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *service) GetCharactersCharacterID(ctx context.Context, character *athen
 	return character, res, nil
 }
 
-func (s *service) resolveGetCharactersCharacterIDEndpoint(obj interface{}) string {
+func (s *service) resolveGetCharacterEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Character, received nil")

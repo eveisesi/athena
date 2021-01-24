@@ -68,7 +68,7 @@ func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member
 
 func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]*athena.MemberContact, error) {
 
-	valid, etagID := s.esi.GenerateEndpointHash(esi.EndpointGetCharactersCharacterIDContacts, member)
+	valid, etagID := s.esi.GenerateEndpointHash(esi.EndpointGetCharacterContacts, member)
 	if !valid {
 		return nil, fmt.Errorf("failed to generate valid etag hash")
 	}
@@ -104,7 +104,7 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 		return contacts, nil
 	}
 
-	newContacts, _, _, err := s.esi.GetCharactersCharacterIDContacts(ctx, member, etag, make([]*athena.MemberContact, 0))
+	newContacts, _, _, err := s.esi.GetCharacterContacts(ctx, member, etag, make([]*athena.MemberContact, 0))
 	if err != nil {
 		return nil, fmt.Errorf("[Contacts Service] Failed to fetch contacts for member %s: %w", member.ID.Hex(), err)
 	}
@@ -254,7 +254,7 @@ func (s *service) EmptyMemberContactLabels(ctx context.Context, member *athena.M
 
 func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, error) {
 
-	valid, etagID := s.esi.GenerateEndpointHash(esi.EndpointGetCharactersCharacterIDContactLabels, member)
+	valid, etagID := s.esi.GenerateEndpointHash(esi.EndpointGetCharacterContactLabels, member)
 	if !valid {
 		return nil, fmt.Errorf("failed to generate valid etag hash")
 	}
@@ -290,7 +290,7 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 		return labels, nil
 	}
 
-	newLabels, etag, _, err := s.esi.GetCharactersCharacterIDContactLabels(ctx, member, etag, make([]*athena.MemberContactLabel, 0))
+	newLabels, etag, _, err := s.esi.GetCharacterContactLabels(ctx, member, etag, make([]*athena.MemberContactLabel, 0))
 	if err != nil {
 		return nil, fmt.Errorf("[Contacts Service] Failed to fetch labels for member %s: %w", member.ID.Hex(), err)
 	}

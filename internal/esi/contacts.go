@@ -9,9 +9,9 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-func (s *service) GetCharactersCharacterIDContacts(ctx context.Context, member *athena.Member, etag *athena.Etag, contacts []*athena.MemberContact) ([]*athena.MemberContact, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Member, etag *athena.Etag, contacts []*athena.MemberContact) ([]*athena.MemberContact, *athena.Etag, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharactersCharacterIDContacts](member)
+	path := s.endpoints[EndpointGetCharacterContacts](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -44,9 +44,9 @@ func (s *service) GetCharactersCharacterIDContacts(ctx context.Context, member *
 
 }
 
-func (s *service) GetCharactersCharacterIDContactLabels(ctx context.Context, member *athena.Member, etag *athena.Etag, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.Member, etag *athena.Etag, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *athena.Etag, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharactersCharacterIDContactLabels](member)
+	path := s.endpoints[EndpointGetCharacterContactLabels](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -79,7 +79,7 @@ func (s *service) GetCharactersCharacterIDContactLabels(ctx context.Context, mem
 
 }
 
-func (s *service) resolveGetCharactersCharacterIDContactsEndpoint(obj interface{}) string {
+func (s *service) resolveGetCharacterContactsEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
@@ -96,7 +96,7 @@ func (s *service) resolveGetCharactersCharacterIDContactsEndpoint(obj interface{
 
 }
 
-func (s *service) resolveGetCharactersCharacterIDContactLabelsEndpoint(obj interface{}) string {
+func (s *service) resolveGetCharacterContactLabelsEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")

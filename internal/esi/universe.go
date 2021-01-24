@@ -9,9 +9,9 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-func (s *service) GetUniverseAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error) {
+func (s *service) GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseAncestries](nil)
+	path := s.endpoints[EndpointGetAncestries](nil)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -38,9 +38,9 @@ func (s *service) resolveUniverseAncestriesEndpoint(obj interface{}) string {
 	return "/v1/universe/ancestries/"
 }
 
-func (s *service) GetUniverseBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error) {
+func (s *service) GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseBloodlines](nil)
+	path := s.endpoints[EndpointGetBloodlines](nil)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -67,9 +67,9 @@ func (s *service) resolveUniverseBloodlinesEndpoint(obj interface{}) string {
 	return "/v1/universe/bloodlines/"
 }
 
-func (s *service) GetUniverseRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error) {
+func (s *service) GetRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseRaces](nil)
+	path := s.endpoints[EndpointGetRaces](nil)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -96,9 +96,9 @@ func (s *service) resolveUniverseRacesEndpoint(obj interface{}) string {
 	return "/v1/universe/bloodlines/"
 }
 
-func (s *service) GetUniverseFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error) {
+func (s *service) GetFaction(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseFactions](nil)
+	path := s.endpoints[EndpointGetFaction](nil)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -125,9 +125,9 @@ func (s *service) resolveUniverseFactionsEndpoint(obj interface{}) string {
 	return "/v2/universe/factions/"
 }
 
-func (s *service) GetUniverseCategories(ctx context.Context, ids []int) ([]int, *http.Response, error) {
+func (s *service) GetCategories(ctx context.Context, ids []int) ([]int, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseCategories](nil)
+	path := s.endpoints[EndpointGetCategories](nil)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -154,9 +154,9 @@ func (s *service) resolveUniverseCategoriesEndpoint(obj interface{}) string {
 	return "/v1/universe/categories/"
 }
 
-func (s *service) GetUniverseCategoriesCategoryID(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error) {
+func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseCategoriesCategoryID](category)
+	path := s.endpoints[EndpointGetCategory](category)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -195,9 +195,9 @@ func (s *service) resolveUniverseCategoriesCategoryIDEndpoint(obj interface{}) s
 
 }
 
-func (s *service) GetUniverseGroupsGroupID(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error) {
+func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseGroupsGroupID](group)
+	path := s.endpoints[EndpointGetGroup](group)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -237,9 +237,9 @@ func (s *service) resolveUniverseGroupsGroupIDEndpoint(obj interface{}) string {
 
 }
 
-func (s *service) GetUniverseTypesTypeID(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error) {
+func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseTypesTypeID](item)
+	path := s.endpoints[EndpointGetType](item)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -262,7 +262,7 @@ func (s *service) GetUniverseTypesTypeID(ctx context.Context, item *athena.Type)
 
 }
 
-func (s *service) resolveGetUniverseTypesTypeIDEndpoint(obj interface{}) string {
+func (s *service) resolveGetTypeEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Type, received nil")
@@ -279,9 +279,9 @@ func (s *service) resolveGetUniverseTypesTypeIDEndpoint(obj interface{}) string 
 
 }
 
-func (s *service) GetUniverseRegions(ctx context.Context, ids []int) ([]int, *http.Response, error) {
+func (s *service) GetRegions(ctx context.Context, ids []int) ([]int, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseRegions](nil)
+	path := s.endpoints[EndpointGetRegions](nil)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -304,15 +304,15 @@ func (s *service) GetUniverseRegions(ctx context.Context, ids []int) ([]int, *ht
 
 }
 
-func (s *service) resolveGetUniverseRegionsEndpoint(obj interface{}) string {
+func (s *service) resolveGetRegionsEndpoint(obj interface{}) string {
 
 	return "/v1/universe/regions/"
 
 }
 
-func (s *service) GetUniverseRegionsRegionID(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error) {
+func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseRegionsRegionID](region)
+	path := s.endpoints[EndpointGetRegion](region)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -335,7 +335,7 @@ func (s *service) GetUniverseRegionsRegionID(ctx context.Context, region *athena
 
 }
 
-func (s *service) resolveGetUniverseRegionsRegionIDEndpoint(obj interface{}) string {
+func (s *service) resolveGetRegionEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Region, received nil")
@@ -352,9 +352,9 @@ func (s *service) resolveGetUniverseRegionsRegionIDEndpoint(obj interface{}) str
 
 }
 
-func (s *service) GetUniverseConstellationsConstellationID(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error) {
+func (s *service) GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseConstellationsConstellationID](constellation)
+	path := s.endpoints[EndpointGetConstellation](constellation)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -377,7 +377,7 @@ func (s *service) GetUniverseConstellationsConstellationID(ctx context.Context, 
 
 }
 
-func (s *service) resolveGetUniverseConstellationsConstellationIDEndpoint(obj interface{}) string {
+func (s *service) resolveGetConstellationEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Constellation, received nil")
@@ -394,9 +394,9 @@ func (s *service) resolveGetUniverseConstellationsConstellationIDEndpoint(obj in
 
 }
 
-func (s *service) GetUniverseSolarSystemsSolarSystemID(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error) {
+func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseSolarSystemsSolarSystemID](solarSystem)
+	path := s.endpoints[EndpointGetSolarSystem](solarSystem)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -419,7 +419,7 @@ func (s *service) GetUniverseSolarSystemsSolarSystemID(ctx context.Context, sola
 
 }
 
-func (s *service) resolveGetUniverseSolarSystemsSolarSystemIDEndpoint(obj interface{}) string {
+func (s *service) resolveGetSolarSystemEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.SolarSystem, received nil")
@@ -436,9 +436,9 @@ func (s *service) resolveGetUniverseSolarSystemsSolarSystemIDEndpoint(obj interf
 
 }
 
-func (s *service) GetUniverseStationsStationID(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error) {
+func (s *service) GetStation(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseStationsStationID](station)
+	path := s.endpoints[EndpointGetStation](station)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
@@ -461,7 +461,7 @@ func (s *service) GetUniverseStationsStationID(ctx context.Context, station *ath
 
 }
 
-func (s *service) resolveGetUniverseStationsStationIDEndpoint(obj interface{}) string {
+func (s *service) resolveGetStationEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Station, received nil")
@@ -478,9 +478,9 @@ func (s *service) resolveGetUniverseStationsStationIDEndpoint(obj interface{}) s
 
 }
 
-func (s *service) GetUniverseStructuresStructureID(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error) {
+func (s *service) GetStructure(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetUniverseStructuresStructureID](structure)
+	path := s.endpoints[EndpointGetStructure](structure)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithAuthorization(member.AccessToken))
 	if err != nil {
@@ -503,7 +503,7 @@ func (s *service) GetUniverseStructuresStructureID(ctx context.Context, member *
 
 }
 
-func (s *service) resolveGetUniverseStructuresStructureIDEndpoint(obj interface{}) string {
+func (s *service) resolveGetStructureEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Structure, received nil")

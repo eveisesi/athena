@@ -43,7 +43,7 @@ func (s *service) CorporationByCorporationID(ctx context.Context, id uint, optio
 		return corporations[0], nil
 	}
 
-	corporation, _, err := s.esi.GetCorporationsCorporationID(ctx, &athena.Corporation{CorporationID: id})
+	corporation, _, err := s.esi.GetCorporation(ctx, &athena.Corporation{CorporationID: id})
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
 		return nil, err

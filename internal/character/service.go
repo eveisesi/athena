@@ -42,7 +42,7 @@ func (s *service) CharacterByCharacterID(ctx context.Context, id uint64, options
 		return characters[0], nil
 	}
 
-	character, _, err := s.esi.GetCharactersCharacterID(ctx, &athena.Character{CharacterID: id})
+	character, _, err := s.esi.GetCharacter(ctx, &athena.Character{CharacterID: id})
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
 		return nil, err

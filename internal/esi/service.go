@@ -27,20 +27,20 @@ type (
 		GenerateEndpointHash(endpoint Endpoint, obj interface{}) (bool, string)
 
 		// Alliances
-		GetAlliancesAllianceID(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error)
+		GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error)
 
 		// Characters
-		GetCharactersCharacterID(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error)
-		GetCharactersCharacterIDClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error)
-		GetCharactersCharacterIDContacts(ctx context.Context, member *athena.Member, etag *athena.Etag, contacts []*athena.MemberContact) ([]*athena.MemberContact, *athena.Etag, *http.Response, error)
-		GetCharactersCharacterIDContactLabels(ctx context.Context, member *athena.Member, etag *athena.Etag, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *athena.Etag, *http.Response, error)
-		GetCharactersCharacterIDImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error)
-		GetCharactersCharacterIDLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error)
-		GetCharactersCharacterIDOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error)
-		GetCharactersCharacterIDShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error)
+		GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error)
+		GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error)
+		GetCharacterContacts(ctx context.Context, member *athena.Member, etag *athena.Etag, contacts []*athena.MemberContact) ([]*athena.MemberContact, *athena.Etag, *http.Response, error)
+		GetCharacterContactLabels(ctx context.Context, member *athena.Member, etag *athena.Etag, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *athena.Etag, *http.Response, error)
+		GetCharacterImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error)
+		GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error)
+		GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error)
+		GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error)
 
 		// Corporations
-		GetCorporationsCorporationID(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error)
+		GetCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error)
 
 		// 		// Killmails
 		// 		GetKillmailsKillmailIDKillmailHash(ctx context.Context, id uint, hash string) (*athena.Killmail, *http.Response, error)
@@ -57,20 +57,20 @@ type (
 		// 		GetStatus(ctx context.Context) (*athena.ServerStatus, *http.Response, error)
 
 		// Universe
-		GetUniverseAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error)
-		GetUniverseBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error)
-		GetUniverseCategories(ctx context.Context, ids []int) ([]int, *http.Response, error)
-		GetUniverseCategoriesCategoryID(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error)
-		GetUniverseConstellationsConstellationID(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error)
-		GetUniverseFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error)
-		GetUniverseGroupsGroupID(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error)
-		GetUniverseRegions(ctx context.Context, ids []int) ([]int, *http.Response, error)
-		GetUniverseRegionsRegionID(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error)
-		GetUniverseRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error)
-		GetUniverseSolarSystemsSolarSystemID(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error)
-		GetUniverseStationsStationID(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error)
-		GetUniverseStructuresStructureID(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error)
-		GetUniverseTypesTypeID(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error)
+		GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error)
+		GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error)
+		GetCategories(ctx context.Context, ids []int) ([]int, *http.Response, error)
+		GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error)
+		GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error)
+		GetFaction(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error)
+		GetGroup(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error)
+		GetRegions(ctx context.Context, ids []int) ([]int, *http.Response, error)
+		GetRegion(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error)
+		GetRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error)
+		GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error)
+		GetStation(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error)
+		GetStructure(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error)
+		GetType(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error)
 	}
 
 	endpointMap map[Endpoint]func(obj interface{}) string
@@ -101,57 +101,57 @@ func NewService(cache cache.Service, client *http.Client, uagent string) Service
 type Endpoint string
 
 const (
-	EndpointGetAlliancesAllianceID                   Endpoint = "GetAlliancesAllianceID"
-	EndpointGetCharactersCharacterID                 Endpoint = "GetCharactersCharacterID"
-	EndpointGetCharactersCharacterIDClones           Endpoint = "GetCharactersCharacterIDClones"
-	EndpointGetCharactersCharacterIDContacts         Endpoint = "GetCharactersCharacterIDContacts"
-	EndpointGetCharactersCharacterIDContactLabels    Endpoint = "GetCharactersCharacterIDContactLabels"
-	EndpointGetCharactersCharacterIDImplants         Endpoint = "GetCharactersCharacterIDImplants"
-	EndpointGetCharactersCharacterIDLocation         Endpoint = "GetCharactersCharacterIDLocation"
-	EndpointGetCharactersCharacterIDOnline           Endpoint = "GetCharactersCharacterIDOnline"
-	EndpointGetCharactersCharacterIDShip             Endpoint = "GetCharactersCharacterIDShip"
-	EndpointGetCorporationsCorporationID             Endpoint = "GetCorporationsCorporationID"
-	EndpointGetUniverseAncestries                    Endpoint = "GetUniverseAncestries"
-	EndpointGetUniverseBloodlines                    Endpoint = "GetUniverseBloodlines"
-	EndpointGetUniverseCategories                    Endpoint = "GetUniverseCategories"
-	EndpointGetUniverseCategoriesCategoryID          Endpoint = "GetUniverseCategoriesCategoryID"
-	EndpointGetUniverseConstellationsConstellationID Endpoint = "GetUniverseConstellationsConstellationID"
-	EndpointGetUniverseFactions                      Endpoint = "GetUniverseFactions"
-	EndpointGetUniverseGroupsGroupID                 Endpoint = "GetUniverseGroupsGroupID"
-	EndpointGetUniverseRaces                         Endpoint = "GetUniverseRaces"
-	EndpointGetUniverseRegions                       Endpoint = "GetUniverseRegions"
-	EndpointGetUniverseRegionsRegionID               Endpoint = "GetUniverseRegionsRegionID"
-	EndpointGetUniverseSolarSystemsSolarSystemID     Endpoint = "GetUniverseSolarSystemsSolarSystemID"
-	EndpointGetUniverseStationsStationID             Endpoint = "GetUniverseStationsStationID"
-	EndpointGetUniverseStructuresStructureID         Endpoint = "GetUniverseStructuresStructureID"
-	EndpointGetUniverseTypesTypeID                   Endpoint = "GetUniverseTypesTypeID"
+	EndpointGetAlliance               Endpoint = "GetAlliance"
+	EndpointGetCharacter              Endpoint = "GetCharacter"
+	EndpointGetCharacterClones        Endpoint = "GetCharacterClones"
+	EndpointGetCharacterContacts      Endpoint = "GetCharacterContacts"
+	EndpointGetCharacterContactLabels Endpoint = "GetCharacterContactLabels"
+	EndpointGetCharacterImplants      Endpoint = "GetCharacterImplants"
+	EndpointGetCharacterLocation      Endpoint = "GetCharacterLocation"
+	EndpointGetCharacterOnline        Endpoint = "GetCharacterOnline"
+	EndpointGetCharacterShip          Endpoint = "GetCharacterShip"
+	EndpointGetCorporation            Endpoint = "GetCorporation"
+	EndpointGetAncestries             Endpoint = "GetAncestries"
+	EndpointGetBloodlines             Endpoint = "GetBloodlines"
+	EndpointGetCategories             Endpoint = "GetCategories"
+	EndpointGetCategory               Endpoint = "GetCategory"
+	EndpointGetConstellation          Endpoint = "GetConstellation"
+	EndpointGetFaction                Endpoint = "GetFaction"
+	EndpointGetGroup                  Endpoint = "GetGroup"
+	EndpointGetRaces                  Endpoint = "GetRaces"
+	EndpointGetRegions                Endpoint = "GetRegions"
+	EndpointGetRegion                 Endpoint = "GetRegion"
+	EndpointGetSolarSystem            Endpoint = "GetSolarSystem"
+	EndpointGetStation                Endpoint = "GetStation"
+	EndpointGetStructure              Endpoint = "GetStructure"
+	EndpointGetType                   Endpoint = "GetType"
 )
 
 var AllEndpoints = []Endpoint{
-	EndpointGetAlliancesAllianceID,
-	EndpointGetCharactersCharacterID,
-	EndpointGetCharactersCharacterIDClones,
-	EndpointGetCharactersCharacterIDContacts,
-	EndpointGetCharactersCharacterIDContactLabels,
-	EndpointGetCharactersCharacterIDImplants,
-	EndpointGetCharactersCharacterIDLocation,
-	EndpointGetCharactersCharacterIDOnline,
-	EndpointGetCharactersCharacterIDShip,
-	EndpointGetCorporationsCorporationID,
-	EndpointGetUniverseAncestries,
-	EndpointGetUniverseBloodlines,
-	EndpointGetUniverseCategories,
-	EndpointGetUniverseCategoriesCategoryID,
-	EndpointGetUniverseConstellationsConstellationID,
-	EndpointGetUniverseFactions,
-	EndpointGetUniverseGroupsGroupID,
-	EndpointGetUniverseRaces,
-	EndpointGetUniverseRegions,
-	EndpointGetUniverseRegionsRegionID,
-	EndpointGetUniverseSolarSystemsSolarSystemID,
-	EndpointGetUniverseStationsStationID,
-	EndpointGetUniverseStructuresStructureID,
-	EndpointGetUniverseTypesTypeID,
+	EndpointGetAlliance,
+	EndpointGetCharacter,
+	EndpointGetCharacterClones,
+	EndpointGetCharacterContacts,
+	EndpointGetCharacterContactLabels,
+	EndpointGetCharacterImplants,
+	EndpointGetCharacterLocation,
+	EndpointGetCharacterOnline,
+	EndpointGetCharacterShip,
+	EndpointGetCorporation,
+	EndpointGetAncestries,
+	EndpointGetBloodlines,
+	EndpointGetCategories,
+	EndpointGetCategory,
+	EndpointGetConstellation,
+	EndpointGetFaction,
+	EndpointGetGroup,
+	EndpointGetRaces,
+	EndpointGetRegions,
+	EndpointGetRegion,
+	EndpointGetSolarSystem,
+	EndpointGetStation,
+	EndpointGetStructure,
+	EndpointGetType,
 }
 
 func (e Endpoint) String() string {
@@ -171,30 +171,30 @@ func (e Endpoint) Valid() bool {
 func (s *service) buildEndpointMap() {
 
 	s.endpoints = endpointMap{
-		EndpointGetAlliancesAllianceID:                   s.resolveGetAlliancesAllianceIDEndpoint,
-		EndpointGetCharactersCharacterID:                 s.resolveGetCharactersCharacterIDEndpoint,
-		EndpointGetCharactersCharacterIDClones:           s.resolveGetCharactersCharacterIDClonesEndpoint,
-		EndpointGetCharactersCharacterIDContacts:         s.resolveGetCharactersCharacterIDContactsEndpoint,
-		EndpointGetCharactersCharacterIDContactLabels:    s.resolveGetCharactersCharacterIDContactLabelsEndpoint,
-		EndpointGetCharactersCharacterIDImplants:         s.resolveGetCharactersCharacterIDImplantsEndpoint,
-		EndpointGetCharactersCharacterIDLocation:         s.resolveGetCharactersCharacterIDLocationEndpoint,
-		EndpointGetCharactersCharacterIDOnline:           s.resolveGetCharactersCharacterIDOnlineEndpoint,
-		EndpointGetCharactersCharacterIDShip:             s.resolveGetCharactersCharacterIDShipEndpoint,
-		EndpointGetCorporationsCorporationID:             s.resolveGetCorporationsCorporationIDEndpoint,
-		EndpointGetUniverseAncestries:                    s.resolveUniverseAncestriesEndpoint,
-		EndpointGetUniverseBloodlines:                    s.resolveUniverseBloodlinesEndpoint,
-		EndpointGetUniverseCategories:                    s.resolveUniverseCategoriesEndpoint,
-		EndpointGetUniverseCategoriesCategoryID:          s.resolveUniverseCategoriesCategoryIDEndpoint,
-		EndpointGetUniverseConstellationsConstellationID: s.resolveGetUniverseConstellationsConstellationIDEndpoint,
-		EndpointGetUniverseFactions:                      s.resolveUniverseFactionsEndpoint,
-		EndpointGetUniverseGroupsGroupID:                 s.resolveUniverseGroupsGroupIDEndpoint,
-		EndpointGetUniverseRaces:                         s.resolveUniverseRacesEndpoint,
-		EndpointGetUniverseRegions:                       s.resolveGetUniverseRegionsEndpoint,
-		EndpointGetUniverseRegionsRegionID:               s.resolveGetUniverseRegionsRegionIDEndpoint,
-		EndpointGetUniverseSolarSystemsSolarSystemID:     s.resolveGetUniverseSolarSystemsSolarSystemIDEndpoint,
-		EndpointGetUniverseStationsStationID:             s.resolveGetUniverseStationsStationIDEndpoint,
-		EndpointGetUniverseStructuresStructureID:         s.resolveGetUniverseStructuresStructureIDEndpoint,
-		EndpointGetUniverseTypesTypeID:                   s.resolveGetUniverseTypesTypeIDEndpoint,
+		EndpointGetAlliance:               s.resolveGetAllianceEndpoint,
+		EndpointGetCharacter:              s.resolveGetCharacterEndpoint,
+		EndpointGetCharacterClones:        s.resolveGetCharacterClonesEndpoint,
+		EndpointGetCharacterContacts:      s.resolveGetCharacterContactsEndpoint,
+		EndpointGetCharacterContactLabels: s.resolveGetCharacterContactLabelsEndpoint,
+		EndpointGetCharacterImplants:      s.resolveGetCharacterImplantsEndpoint,
+		EndpointGetCharacterLocation:      s.resolveGetCharacterLocationEndpoint,
+		EndpointGetCharacterOnline:        s.resolveGetCharacterOnlineEndpoint,
+		EndpointGetCharacterShip:          s.resolveGetCharacterShipEndpoint,
+		EndpointGetCorporation:            s.resolveGetCorporationEndpoint,
+		EndpointGetAncestries:             s.resolveUniverseAncestriesEndpoint,
+		EndpointGetBloodlines:             s.resolveUniverseBloodlinesEndpoint,
+		EndpointGetCategories:             s.resolveUniverseCategoriesEndpoint,
+		EndpointGetCategory:               s.resolveUniverseCategoriesCategoryIDEndpoint,
+		EndpointGetConstellation:          s.resolveGetConstellationEndpoint,
+		EndpointGetFaction:                s.resolveUniverseFactionsEndpoint,
+		EndpointGetGroup:                  s.resolveUniverseGroupsGroupIDEndpoint,
+		EndpointGetRaces:                  s.resolveUniverseRacesEndpoint,
+		EndpointGetRegions:                s.resolveGetRegionsEndpoint,
+		EndpointGetRegion:                 s.resolveGetRegionEndpoint,
+		EndpointGetSolarSystem:            s.resolveGetSolarSystemEndpoint,
+		EndpointGetStation:                s.resolveGetStationEndpoint,
+		EndpointGetStructure:              s.resolveGetStructureEndpoint,
+		EndpointGetType:                   s.resolveGetTypeEndpoint,
 	}
 
 }

@@ -9,15 +9,15 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-// GetCharactersCharacterIDLocation makes an HTTP GET Request to the /characters/{character_id}/location endpoint for
+// GetCharacterLocation makes an HTTP GET Request to the /characters/{character_id}/location endpoint for
 // information about the provided members current location
 //
 // Documentation: https://esi.evetech.net/ui/#/Location/get_characters_character_id_location
 // Version: v1
 // Cache: 5 secs
-func (s *service) GetCharactersCharacterIDLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error) {
+func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharactersCharacterIDLocation](member)
+	path := s.endpoints[EndpointGetCharacterLocation](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -52,7 +52,7 @@ func (s *service) GetCharactersCharacterIDLocation(ctx context.Context, member *
 
 }
 
-func (s *service) resolveGetCharactersCharacterIDLocationEndpoint(obj interface{}) string {
+func (s *service) resolveGetCharacterLocationEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
@@ -69,9 +69,9 @@ func (s *service) resolveGetCharactersCharacterIDLocationEndpoint(obj interface{
 
 }
 
-func (s *service) GetCharactersCharacterIDOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error) {
+func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharactersCharacterIDOnline](member)
+	path := s.endpoints[EndpointGetCharacterOnline](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -106,7 +106,7 @@ func (s *service) GetCharactersCharacterIDOnline(ctx context.Context, member *at
 
 }
 
-func (s *service) resolveGetCharactersCharacterIDOnlineEndpoint(obj interface{}) string {
+func (s *service) resolveGetCharacterOnlineEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
@@ -123,9 +123,9 @@ func (s *service) resolveGetCharactersCharacterIDOnlineEndpoint(obj interface{})
 
 }
 
-func (s *service) GetCharactersCharacterIDShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error) {
+func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharactersCharacterIDShip](member)
+	path := s.endpoints[EndpointGetCharacterShip](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -160,7 +160,7 @@ func (s *service) GetCharactersCharacterIDShip(ctx context.Context, member *athe
 
 }
 
-func (s *service) resolveGetCharactersCharacterIDShipEndpoint(obj interface{}) string {
+func (s *service) resolveGetCharacterShipEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
