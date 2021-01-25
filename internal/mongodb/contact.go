@@ -203,7 +203,7 @@ func (r *memberContactRepository) DeleteMemberContacts(ctx context.Context, memb
 
 	if len(contactIDs) > 0 {
 		filter = append(filter, primitive.E{
-			Key: "label_id",
+			Key: "contact_id",
 			Value: primitive.D{
 				primitive.E{
 					Key:   "$in",

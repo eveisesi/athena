@@ -86,6 +86,8 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 	}
 
 	if contacts == nil {
+		cached = false
+
 		contacts, err = s.contacts.MemberContacts(ctx, member.ID.Hex())
 		if err != nil && err != mongo.ErrNoDocuments {
 			return nil, err
