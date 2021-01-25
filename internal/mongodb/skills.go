@@ -197,12 +197,23 @@ func (r *memberSkillRepository) MemberSkillQueue(ctx context.Context, memberID s
 
 }
 
-func (r *memberSkillRepository) CreateMemberSkillQueue(ctx context.Context, skillQueue *athena.MemberSkillQueue) (*athena.MemberSkillQueue, error) {
+func (r *memberSkillRepository) CreateMemberSkillQueue(ctx context.Context, memberID string, skillQueue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, error) {
 
-	skillQueue.CreatedAt = time.Now()
-	skillQueue.UpdatedAt = time.Now()
+	pid, err := primitive.ObjectIDFromHex(memberID)
+	if err != nil {
+		return nil, fmt.Errorf("[Skill Repository] Failed to cast id to objectID: %w", err)
+	}
 
-	_, err := r.skillQueue.InsertOne(ctx, skillQueue)
+	now := time.Now()
+	documents := make([]interface{}, len(skillQueue))
+	for i, entry := range skillQueue {
+		entry.MemberID = pid
+		entry.CreatedAt = now
+		entry.UpdatedAt = now
+		documents[i] = entry
+	}
+
+	_, err = r.skillQueue.InsertMany(ctx, documents)
 	if err != nil {
 		return nil, fmt.Errorf("[Skill Repository] Failed to insert record into skillQueue collection: %w", err)
 	}
@@ -237,7 +248,7 @@ func (r *memberSkillRepository) UpdateMemberSkillQueue(ctx context.Context, memb
 
 }
 
-func (r *memberSkillRepository) DeleteMemberSkillQueue(ctx context.Context, memberID string) (bool, error) {
+func (r *memberSkillRepository) DeleteMemberSkillQueue(ctx context.Context, memberID string, entries []*athena.MemberSkillQueue) (bool, error) {
 
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
@@ -245,6 +256,25 @@ func (r *memberSkillRepository) DeleteMemberSkillQueue(ctx context.Context, memb
 	}
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
+
+	if len(entries) > 0 {
+		queuePositions := make([]int, len(entries))
+		for i, entry := range entries {
+			queuePositions[i] = entry.QueuePosition
+		}
+
+		if len(queuePositions) > 0 {
+			filter = append(filter, primitive.E{
+				Key: "queue_position",
+				Value: primitive.D{
+					primitive.E{
+						Key:   "$in",
+						Value: queuePositions,
+					},
+				},
+			})
+		}
+	}
 
 	results, err := r.skillQueue.DeleteOne(ctx, filter)
 	if err != nil {
@@ -275,17 +305,23 @@ func (r *memberSkillRepository) MemberSkills(ctx context.Context, memberID strin
 
 }
 
-func (r *memberSkillRepository) CreateMemberSkills(ctx context.Context, skills []*athena.MemberSkill) ([]*athena.MemberSkill, error) {
+func (r *memberSkillRepository) CreateMemberSkills(ctx context.Context, memberID string, skills []*athena.MemberSkill) ([]*athena.MemberSkill, error) {
+
+	pid, err := primitive.ObjectIDFromHex(memberID)
+	if err != nil {
+		return nil, fmt.Errorf("[Skill Repository] Failed to cast id to objectID: %w", err)
+	}
 
 	now := time.Now()
 	insert := make([]interface{}, len(skills))
 	for i, skill := range skills {
+		skill.MemberID = pid
 		skill.CreatedAt = now
 		skill.UpdatedAt = now
 		insert[i] = skill
 	}
 
-	_, err := r.skills.InsertMany(ctx, insert)
+	_, err = r.skills.InsertMany(ctx, insert)
 	if err != nil {
 		return nil, fmt.Errorf("[Skill Repository] Failed to insert record into skills collection: %w", err)
 	}
@@ -329,7 +365,7 @@ func (r *memberSkillRepository) DeleteMemberSkills(ctx context.Context, memberID
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 
-	results, err := r.skills.DeleteOne(ctx, filter)
+	results, err := r.skills.DeleteMany(ctx, filter)
 	if err != nil {
 		err = fmt.Errorf("[Skill Repository] Failed to delete record from skills collection: %w", err)
 	}
@@ -376,12 +412,21 @@ func (r *memberSkillRepository) UpdateMemberSkillMeta(ctx context.Context, membe
 	}
 
 	meta.MemberID = pid
-	meta.UpdatedAt = time.Now()
+	if meta.CreatedAt.IsZero() {
+		meta.CreatedAt = time.Now()
+
+	}
+	if meta.UpdatedAt.IsZero() {
+		meta.UpdatedAt = time.Now()
+	}
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
 	update := primitive.D{primitive.E{Key: "$set", Value: meta}}
+	options := &options.UpdateOptions{
+		Upsert: newBool(true),
+	}
 
-	_, err = r.skillMeta.UpdateOne(ctx, filter, update)
+	_, err = r.skillMeta.UpdateOne(ctx, filter, update, options)
 	if err != nil {
 		err = fmt.Errorf("[Skill Repository] Failed to insert record into skillMeta collection: %w", err)
 	}
