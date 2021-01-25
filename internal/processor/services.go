@@ -7,10 +7,6 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
-	"github.com/eveisesi/athena/internal/clone"
-	"github.com/eveisesi/athena/internal/contact"
-	"github.com/eveisesi/athena/internal/esi"
-	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/korovkin/limiter"
 	"github.com/sirupsen/logrus"
@@ -24,27 +20,19 @@ type Service interface {
 type service struct {
 	logger *logrus.Logger
 
-	cache    cache.Service
-	esi      esi.Service
-	member   member.Service
-	location location.Service
-	clone    clone.Service
-	contact  contact.Service
+	cache  cache.Service
+	member member.Service
 
 	scopes athena.ScopeMap
 }
 
-func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, member member.Service, location location.Service, clone clone.Service, contact contact.Service) Service {
+func NewService(logger *logrus.Logger, cache cache.Service, member member.Service) Service {
 
 	s := &service{
 		logger: logger,
 
-		cache:    cache,
-		esi:      esi,
-		member:   member,
-		location: location,
-		clone:    clone,
-		contact:  contact,
+		cache:  cache,
+		member: member,
 	}
 
 	return s
@@ -55,6 +43,10 @@ func (s *service) SetScopeMap(scopes athena.ScopeMap) {
 }
 
 func (s *service) Run() {
+
+	if len(s.scopes) == 0 {
+		panic("scopes are not set. Please run SetScopeMap and provide a list of scopes and pointers to their resolvers")
+	}
 
 	s.logger.Info("Processor is running")
 

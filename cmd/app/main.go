@@ -42,6 +42,7 @@ type repositories struct {
 	location    athena.MemberLocationRepository
 	universe    athena.UniverseRepository
 	contact     athena.MemberContactRepository
+	skill       athena.MemberSkillRepository
 }
 
 // basics initializes the following
@@ -131,7 +132,7 @@ func basics(command string) *app {
 	if err != nil {
 		var cmdErr mongo.CommandError
 		if errors.As(err, &cmdErr) {
-			// This Repository is consistenly throwing this error locally, no reason to. I think it is because the order
+			// This Repository is consistently throwing this error locally, no reason to. I think it is because the order
 			// of the fields gets sorted when it is created vs when it is checked. Not sure, but skipping it for now.
 			// https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L121
 			if cmdErr.Code != 86 { // IndexKeySpecsConflict
@@ -139,6 +140,11 @@ func basics(command string) *app {
 			}
 		}
 
+	}
+
+	skill, err := mongodb.NewMemberSkillRepository(app.db)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to initialize skill repository")
 	}
 
 	app.repositories = repositories{
@@ -151,6 +157,7 @@ func basics(command string) *app {
 		location:    location,
 		universe:    universe,
 		contact:     contact,
+		skill:       skill,
 	}
 
 	return &app

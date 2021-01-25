@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/esi"
@@ -16,7 +17,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Service interface{}
+type Service interface {
+	EmptyMemberSkills(ctx context.Context, member *athena.Member) error
+	MemberSkills(ctx context.Context, member *athena.Member) (*athena.MemberSkillMeta, []*athena.MemberSkill, error)
+	EmptyMemberSkillQueue(ctx context.Context, member *athena.Member) error
+	MemberSkillQueue(ctx context.Context, member *athena.Member) ([]*athena.MemberSkillQueue, error)
+}
 
 type service struct {
 	logger *logrus.Logger
@@ -114,26 +120,42 @@ func (s *service) MemberSkills(ctx context.Context, member *athena.Member) (*ath
 		return nil, nil, fmt.Errorf("[Skills Service] Failed to fetch skills for member %s: %w", member.ID.Hex(), err)
 	}
 
-	_, _ = s.etag.UpdateEtag(ctx, etagID, etag)
-
+	// _, _ = s.etag.UpdateEtag(ctx, etagID, etag)
+	var newSkills []*athena.MemberSkill
 	if newMeta.Valid() {
+		newSkills = newMeta.Skills
 		meta, err = s.skills.UpdateMemberSkillMeta(ctx, member.ID.Hex(), newMeta)
 		if err != nil {
 			return nil, nil, fmt.Errorf("[Skills Service] Failed to update skill meta for member %s: %w", member.ID.Hex(), err)
 		}
-
+		meta.Skills = nil
 		_ = s.cache.SetMemberSkillMeta(ctx, member.ID.Hex(), meta)
 
 	}
 
-	if len(newMeta.Skills) > 0 {
-		skills, err = s.diffAndUpdateSkills(ctx, member, skills, newMeta.Skills)
+	if len(newSkills) > 0 {
+		s.resolveSkillAttributes(ctx, newSkills)
+		skills, err = s.diffAndUpdateSkills(ctx, member, skills, newSkills)
 		if err != nil {
 			return nil, nil, fmt.Errorf("[Skills Service] Failed to update skill meta for member %s: %w", member.ID.Hex(), err)
 		}
 	}
 
 	return meta, skills, nil
+}
+
+func (s *service) resolveSkillAttributes(ctx context.Context, skills []*athena.MemberSkill) {
+
+	for _, skill := range skills {
+		_, err := s.universe.Type(ctx, skill.SkillID)
+		if err != nil {
+			s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
+				"skill_id": skill.SkillID,
+			}).Error("failed to resolve skill type")
+			continue
+		}
+	}
+
 }
 
 func (s *service) diffAndUpdateSkills(ctx context.Context, member *athena.Member, old []*athena.MemberSkill, new []*athena.MemberSkill) ([]*athena.MemberSkill, error) {
@@ -167,14 +189,24 @@ func (s *service) diffAndUpdateSkills(ctx context.Context, member *athena.Member
 	}
 
 	if len(skillsToUpdate) > 0 {
-		updatedSkills, err := s.skills.UpdateMemberSkills(ctx, member.ID.Hex(), skillsToUpdate)
-		if err != nil {
-			return nil, err
+		for _, skill := range skillsToUpdate {
+			updatedSkill, err := s.skills.UpdateMemberSkills(ctx, member.ID.Hex(), skill)
+			if err != nil {
+				return nil, err
+			}
+			final = append(final, updatedSkill)
 		}
-		final = append(final, updatedSkills...)
 	}
 
 	return final, nil
+
+}
+
+func (s *service) EmptyMemberSkillQueue(ctx context.Context, member *athena.Member) error {
+
+	_, err := s.MemberSkillQueue(ctx, member)
+
+	return err
 
 }
 
@@ -182,38 +214,147 @@ func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) (
 
 	valid, etagID := s.esi.GenerateEndpointHash(esi.EndpointGetCharacterSkillQueue, member)
 	if !valid {
-		return nil, fmt.Errorf("failed to generate valid etag hash")
+		return nil, fmt.Errorf("[Skill Service] Failed to generate valid etag hash")
 	}
 
 	etag, err := s.etag.Etag(ctx, etagID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
+		return nil, fmt.Errorf("[Skill Service] Failed to fetch etag object: %w", err)
 	}
 
 	cached := true
 
-	skillQueue, err := s.cache.MemberSkillQueue(ctx, member.ID.Hex())
+	positions, err := s.cache.MemberSkillQueue(ctx, member.ID.Hex())
 	if err != nil {
 		return nil, err
 	}
 
-	if skillQueue == nil {
+	if positions == nil {
 		cached = false
-		skillQueue, err = s.skills.MemberSkillQueue(ctx, member.ID.Hex())
+		positions, err = s.skills.MemberSkillQueue(ctx, member.ID.Hex())
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if etag.CachedUntil.After(time.Now()) && len(skillQueue) > 0 {
+	if etag.CachedUntil.After(time.Now()) && len(positions) > 0 {
 		if !cached {
-			err = s.cache.SetMemberContactLabels(ctx, member.ID.Hex(), labels)
+			err = s.cache.SetMemberSkillQueue(ctx, member.ID.Hex(), positions)
 			if err != nil {
 				newrelic.FromContext(ctx).NoticeError(err)
 			}
 		}
 
-		return labels, nil
+		return positions, nil
 	}
+
+	newPositions, etag, _, err := s.esi.GetCharacterSkillQueue(ctx, member, etag, make([]*athena.MemberSkillQueue, 0))
+	if err != nil {
+		return nil, fmt.Errorf("[Skill Service] Failed to fetch skillQueue for member %s: %w", member.ID.Hex(), err)
+	}
+
+	// _, _ = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+
+	if len(newPositions) > 0 {
+		s.resolveSkillQueueAttributes(ctx, newPositions)
+		positions, err = s.diffAndUpdateSkillQueue(ctx, member, positions, newPositions)
+		if err != nil {
+			return nil, fmt.Errorf("[Skill Service] Failed to execute diffing options: %w", err)
+		}
+
+		if len(positions) > 0 {
+			err = s.cache.SetMemberSkillQueue(ctx, member.ID.Hex(), positions)
+			if err != nil {
+				newrelic.FromContext(ctx).NoticeError(err)
+			}
+		}
+	}
+
+	return positions, nil
+
+}
+
+func (s *service) resolveSkillQueueAttributes(ctx context.Context, positions []*athena.MemberSkillQueue) {
+
+	for _, position := range positions {
+		_, err := s.universe.Type(ctx, position.SkillID)
+		if err != nil {
+			s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
+				"skill_id": position.SkillID,
+			}).Error("failed to resolve skill type")
+			continue
+		}
+	}
+
+}
+
+func (s *service) diffAndUpdateSkillQueue(ctx context.Context, member *athena.Member, old []*athena.MemberSkillQueue, new []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, error) {
+
+	positionsToCreate := make([]*athena.MemberSkillQueue, 0)
+	positionsToUpdate := make([]*athena.MemberSkillQueue, 0)
+	positionsToDelete := make([]*athena.MemberSkillQueue, 0)
+
+	oldContactMap := make(map[int]*athena.MemberSkillQueue)
+	for _, position := range old {
+		oldContactMap[position.QueuePosition] = position
+	}
+
+	for _, position := range new {
+		var ok bool
+		// This is an unknown position, so lets flag it to be created
+		if _, ok = oldContactMap[position.QueuePosition]; !ok {
+			positionsToCreate = append(positionsToCreate, position)
+
+			// We've seen this position before for this member, lets compare it to the existing position to see
+			// if it needs to be updated
+		} else if diff := deep.Equal(oldContactMap[position.QueuePosition], position); len(diff) > 0 {
+			spew.Dump(position.QueuePosition, position)
+			positionsToUpdate = append(positionsToUpdate, position)
+		}
+	}
+
+	newContactMap := make(map[int]*athena.MemberSkillQueue)
+	for _, position := range new {
+		newContactMap[position.QueuePosition] = position
+	}
+
+	for _, position := range old {
+		// This label is not in the list of new label, must've been deleted by the user in game
+		if _, ok := newContactMap[position.QueuePosition]; !ok {
+			positionsToDelete = append(positionsToDelete, position)
+		}
+	}
+
+	var final = make([]*athena.MemberSkillQueue, 0)
+	if len(positionsToCreate) > 0 {
+		createdPositions, err := s.skills.CreateMemberSkillQueue(ctx, member.ID.Hex(), positionsToCreate)
+		if err != nil {
+			return nil, fmt.Errorf("[Skill Service] Failed to create member skill queue positions: %w", err)
+		}
+		final = append(final, createdPositions...)
+	}
+
+	if len(positionsToUpdate) > 0 {
+		for _, position := range positionsToUpdate {
+			updatedPosition, err := s.skills.UpdateMemberSkillQueue(ctx, member.ID.Hex(), position)
+			if err != nil {
+				return nil, fmt.Errorf("[Skill Service] Failed to update member skill queue positions: %w", err)
+			}
+			final = append(final, updatedPosition)
+		}
+	}
+
+	if len(positionsToDelete) > 0 {
+		deleteOK, err := s.skills.DeleteMemberSkillQueue(ctx, member.ID.Hex(), positionsToDelete)
+		if err != nil {
+			return nil, fmt.Errorf("[Skill Service] Failed to delete member skill queue positions: %w", err)
+		}
+
+		if !deleteOK {
+			return nil, fmt.Errorf("[Skill Service] Expected to delete %d documents, deleted none", len(positionsToDelete))
+		}
+	}
+
+	return final, nil
 
 }

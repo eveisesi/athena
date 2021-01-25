@@ -111,7 +111,7 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 		return nil, fmt.Errorf("[Contacts Service] Failed to fetch contacts for member %s: %w", member.ID.Hex(), err)
 	}
 
-	// _, _ = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	_, _ = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 
 	if len(newContacts) > 0 {
 		s.resolveContactAttributes(ctx, newContacts)
@@ -174,11 +174,13 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 	}
 
 	if len(contactsToUpdate) > 0 {
-		updatedContacts, err := s.contacts.UpdateMemberContacts(ctx, member.ID.Hex(), contactsToUpdate)
-		if err != nil {
-			return nil, err
+		for _, contact := range contactsToUpdate {
+			updated, err := s.contacts.UpdateMemberContact(ctx, member.ID.Hex(), contact)
+			if err != nil {
+				return nil, err
+			}
+			final = append(final, updated)
 		}
-		final = append(final, updatedContacts...)
 	}
 
 	if len(contactsToDelete) > 0 {
@@ -360,11 +362,13 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 	}
 
 	if len(labelsToUpdate) > 0 {
-		updatedLabels, err := s.contacts.UpdateMemberContactLabels(ctx, member.ID.Hex(), labelsToUpdate)
-		if err != nil {
-			return nil, err
+		for _, label := range labelsToUpdate {
+			updated, err := s.contacts.UpdateMemberContactLabel(ctx, member.ID.Hex(), label)
+			if err != nil {
+				return nil, err
+			}
+			final = append(final, updated)
 		}
-		final = append(final, updatedLabels...)
 	}
 
 	if len(labelsToDelete) > 0 {

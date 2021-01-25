@@ -13,6 +13,7 @@ import (
 	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/eveisesi/athena/internal/processor"
+	"github.com/eveisesi/athena/internal/skill"
 	"github.com/eveisesi/athena/internal/universe"
 	"github.com/urfave/cli"
 )
@@ -41,10 +42,13 @@ func processorCommand(c *cli.Context) error {
 	location := location.NewService(basics.logger, cache, esi, universe, basics.repositories.location)
 	clone := clone.NewService(basics.logger, cache, esi, universe, basics.repositories.clone)
 	contact := contact.NewService(basics.logger, cache, esi, etag, universe, alliance, character, corporation, basics.repositories.contact)
+	skill := skill.NewService(basics.logger, cache, esi, etag, universe, basics.repositories.skill)
 
-	processor := processor.NewService(basics.logger, cache, esi, member, location, clone, contact)
+	processor := processor.NewService(basics.logger, cache, member)
 
-	processor.SetScopeMap(buildScopeMap(location, clone, contact))
+	processor.SetScopeMap(buildScopeMap(location, clone, contact, skill))
+
+	listScopes()
 
 	processor.Run()
 

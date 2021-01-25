@@ -16,20 +16,15 @@ type MemberContactRepository interface {
 type memberContactRepository interface {
 	MemberContact(ctx context.Context, memberID string, contactID int) (*MemberContact, error)
 	MemberContacts(ctx context.Context, memberID string) ([]*MemberContact, error)
-
 	CreateMemberContacts(ctx context.Context, memberID string, contacts []*MemberContact) ([]*MemberContact, error)
-
 	UpdateMemberContact(ctx context.Context, memberID string, contact *MemberContact) (*MemberContact, error)
-	UpdateMemberContacts(ctx context.Context, memberID string, contacts []*MemberContact) ([]*MemberContact, error)
-
-	DeleteMemberContact(ctx context.Context, memberID string, contactID int) (bool, error)
 	DeleteMemberContacts(ctx context.Context, memberID string, contacts []*MemberContact) (bool, error)
 }
 
 type memberContactLabelRepository interface {
 	MemberContactLabels(ctx context.Context, memberID string) ([]*MemberContactLabel, error)
 	CreateMemberContactLabels(ctx context.Context, memberID string, labels []*MemberContactLabel) ([]*MemberContactLabel, error)
-	UpdateMemberContactLabels(ctx context.Context, memberID string, labels []*MemberContactLabel) ([]*MemberContactLabel, error)
+	UpdateMemberContactLabel(ctx context.Context, memberID string, label *MemberContactLabel) (*MemberContactLabel, error)
 	DeleteMemberContactLabels(ctx context.Context, memberID string, labels []*MemberContactLabel) (bool, error)
 }
 

@@ -119,7 +119,7 @@ func (s *service) resolveGetCharacterSkills(obj interface{}) string {
 		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
 	}
 
-	return fmt.Sprintf("/v1/characters/%d/skills/", thing.CharacterID)
+	return fmt.Sprintf("/v4/characters/%d/skills/", thing.CharacterID)
 
 }
 
@@ -175,6 +175,6 @@ func (s *service) resolveGetCharacterSkillQueue(obj interface{}) string {
 		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
 	}
 
-	return fmt.Sprintf("/v1/characters/%d/skillqueue/", thing.CharacterID)
+	return fmt.Sprintf("/v2/characters/%d/skillqueue/", thing.CharacterID)
 
 }

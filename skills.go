@@ -24,9 +24,9 @@ type memberAttributesRepository interface {
 
 type memberSkillQueueRepository interface {
 	MemberSkillQueue(ctx context.Context, memberID string) ([]*MemberSkillQueue, error)
-	CreateMemberSkillQueue(ctx context.Context, memberID string, skillQueue []*MemberSkillQueue) ([]*MemberSkillQueue, error)
-	UpdateMemberSkillQueue(ctx context.Context, memberID string, skillQueue []*MemberSkillQueue) ([]*MemberSkillQueue, error)
-	DeleteMemberSkillQueue(ctx context.Context, memberID string, entries []*MemberSkillQueue) (bool, error)
+	CreateMemberSkillQueue(ctx context.Context, memberID string, positions []*MemberSkillQueue) ([]*MemberSkillQueue, error)
+	UpdateMemberSkillQueue(ctx context.Context, memberID string, position *MemberSkillQueue) (*MemberSkillQueue, error)
+	DeleteMemberSkillQueue(ctx context.Context, memberID string, positions []*MemberSkillQueue) (bool, error)
 }
 
 type memberSkillMetaRepository interface {
@@ -39,7 +39,7 @@ type memberSkillMetaRepository interface {
 type memberSkillsRepository interface {
 	MemberSkills(ctx context.Context, memberID string) ([]*MemberSkill, error)
 	CreateMemberSkills(ctx context.Context, memberID string, skills []*MemberSkill) ([]*MemberSkill, error)
-	UpdateMemberSkills(ctx context.Context, memberID string, skills []*MemberSkill) ([]*MemberSkill, error)
+	UpdateMemberSkills(ctx context.Context, memberID string, skills *MemberSkill) (*MemberSkill, error)
 	DeleteMemberSkills(ctx context.Context, memberID string) (bool, error)
 }
 
