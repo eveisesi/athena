@@ -23,10 +23,10 @@ type memberAttributesRepository interface {
 }
 
 type memberSkillQueueRepository interface {
-	MemberSkillQueue(ctx context.Context, memberID string) (*MemberSkillQueue, error)
-	CreateMemberSkillQueue(ctx context.Context, skillQueue *MemberSkillQueue) (*MemberSkillQueue, error)
+	MemberSkillQueue(ctx context.Context, memberID string) ([]*MemberSkillQueue, error)
+	CreateMemberSkillQueue(ctx context.Context, memberID string, skillQueue []*MemberSkillQueue) ([]*MemberSkillQueue, error)
 	UpdateMemberSkillQueue(ctx context.Context, memberID string, skillQueue []*MemberSkillQueue) ([]*MemberSkillQueue, error)
-	DeleteMemberSkillQueue(ctx context.Context, memberID string) (bool, error)
+	DeleteMemberSkillQueue(ctx context.Context, memberID string, entries []*MemberSkillQueue) (bool, error)
 }
 
 type memberSkillMetaRepository interface {
@@ -38,7 +38,7 @@ type memberSkillMetaRepository interface {
 
 type memberSkillsRepository interface {
 	MemberSkills(ctx context.Context, memberID string) ([]*MemberSkill, error)
-	CreateMemberSkills(ctx context.Context, skills []*MemberSkill) ([]*MemberSkill, error)
+	CreateMemberSkills(ctx context.Context, memberID string, skills []*MemberSkill) ([]*MemberSkill, error)
 	UpdateMemberSkills(ctx context.Context, memberID string, skills []*MemberSkill) ([]*MemberSkill, error)
 	DeleteMemberSkills(ctx context.Context, memberID string) (bool, error)
 }
@@ -57,7 +57,7 @@ type MemberSkillAttributes struct {
 }
 
 type MemberSkillQueue struct {
-	MemberID        primitive.ObjectID `bson:"member_id" json:"member_id"`
+	MemberID        primitive.ObjectID `bson:"member_id" json:"member_id" deep:"-"`
 	SkillID         int                `bson:"skill_id" json:"skill_id"`
 	QueuePosition   int                `bson:"queue_position" json:"queue_position"`
 	FinishedLevel   int                `bson:"finished_level" json:"finished_level"`
@@ -66,24 +66,37 @@ type MemberSkillQueue struct {
 	LevelEndSp      null.Int           `bson:"level_end_sp,omitempty" json:"level_end_sp,omitempty"`
 	StartDate       null.Time          `bson:"start_date,omitempty" json:"start_date,omitempty"`
 	FinishDate      null.Time          `bson:"finish_date,omitempty" json:"finish_date,omitempty"`
-	CreatedAt       time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt       time.Time          `bson:"updated_at" json:"updated_at"`
+	CreatedAt       time.Time          `bson:"created_at" json:"created_at" deep:"-"`
+	UpdatedAt       time.Time          `bson:"updated_at" json:"updated_at" deep:"-"`
+}
+
+func (m *MemberSkillQueue) Valid() bool {
+	return m.SkillID > 0 && m.QueuePosition > 0
 }
 
 type MemberSkillMeta struct {
-	MemberID      primitive.ObjectID `bson:"member_id" json:"member_id"`
+	MemberID      primitive.ObjectID `bson:"member_id" json:"member_id" deep:"-"`
 	TotalSP       int64              `bson:"total_sp" json:"total_sp"`
+	Skills        []*MemberSkill     `bson:"-" json:"skills"`
 	UnallocatedSP null.Int           `bson:"unallocated_sp,omitempty" json:"unallocated_sp,omitempty"`
-	CreatedAt     time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt     time.Time          `bson:"updated_at" json:"updated_at"`
+	CreatedAt     time.Time          `bson:"created_at" json:"created_at" deep:"-"`
+	UpdatedAt     time.Time          `bson:"updated_at" json:"updated_at" deep:"-"`
+}
+
+func (m *MemberSkillMeta) Valid() bool {
+	return m.TotalSP > 0
 }
 
 type MemberSkill struct {
-	MemberID           primitive.ObjectID `bson:"member_id" json:"member_id"`
+	MemberID           primitive.ObjectID `bson:"member_id" json:"member_id" deep:"-"`
 	ActiveSkillLevel   int                `bson:"active_skill_level" json:"active_skill_level"`
 	SkillID            int                `bson:"skill_id" json:"skill_id"`
 	SkillpointsInSkill int                `bson:"skillpoints_in_skill" json:"skillpoints_in_skill"`
 	TrainedSkillLevel  int                `bson:"trained_skill_level" json:"trained_skill_level"`
-	CreatedAt          time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt          time.Time          `bson:"updated_at" json:"updated_at"`
+	CreatedAt          time.Time          `bson:"created_at" json:"created_at" deep:"-"`
+	UpdatedAt          time.Time          `bson:"updated_at" json:"updated_at" deep:"-"`
+}
+
+func (m *MemberSkill) Valid() bool {
+	return m.SkillID > 0
 }
