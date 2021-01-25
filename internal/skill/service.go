@@ -120,7 +120,8 @@ func (s *service) MemberSkills(ctx context.Context, member *athena.Member) (*ath
 		return nil, nil, fmt.Errorf("[Skills Service] Failed to fetch skills for member %s: %w", member.ID.Hex(), err)
 	}
 
-	// _, _ = s.etag.UpdateEtag(ctx, etagID, etag)
+	_, _ = s.etag.UpdateEtag(ctx, etagID, etag)
+
 	var newSkills []*athena.MemberSkill
 	if newMeta.Valid() {
 		newSkills = newMeta.Skills
@@ -253,7 +254,7 @@ func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) (
 		return nil, fmt.Errorf("[Skill Service] Failed to fetch skillQueue for member %s: %w", member.ID.Hex(), err)
 	}
 
-	// _, _ = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	_, _ = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 
 	if len(newPositions) > 0 {
 		s.resolveSkillQueueAttributes(ctx, newPositions)
