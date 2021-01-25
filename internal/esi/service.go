@@ -31,6 +31,7 @@ type (
 
 		// Characters
 		GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error)
+		GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberSkillAttributes) (*athena.MemberSkillAttributes, *http.Response, error)
 		GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error)
 		GetCharacterContacts(ctx context.Context, member *athena.Member, etag *athena.Etag, contacts []*athena.MemberContact) ([]*athena.MemberContact, *athena.Etag, *http.Response, error)
 		GetCharacterContactLabels(ctx context.Context, member *athena.Member, etag *athena.Etag, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *athena.Etag, *http.Response, error)
@@ -38,6 +39,8 @@ type (
 		GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error)
 		GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error)
 		GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error)
+		GetCharacterSkills(ctx context.Context, member *athena.Member, etag *athena.Etag, meta *athena.MemberSkillMeta) (*athena.MemberSkillMeta, *athena.Etag, *http.Response, error)
+		GetCharacterSkillQueue(ctx context.Context, member *athena.Member, etag *athena.Etag, queue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, *athena.Etag, *http.Response, error)
 
 		// Corporations
 		GetCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error)
@@ -103,6 +106,7 @@ type Endpoint string
 const (
 	EndpointGetAlliance               Endpoint = "GetAlliance"
 	EndpointGetCharacter              Endpoint = "GetCharacter"
+	EndpointGetCharacterAttributes    Endpoint = "GetCharacterAttributes"
 	EndpointGetCharacterClones        Endpoint = "GetCharacterClones"
 	EndpointGetCharacterContacts      Endpoint = "GetCharacterContacts"
 	EndpointGetCharacterContactLabels Endpoint = "GetCharacterContactLabels"
@@ -110,6 +114,8 @@ const (
 	EndpointGetCharacterLocation      Endpoint = "GetCharacterLocation"
 	EndpointGetCharacterOnline        Endpoint = "GetCharacterOnline"
 	EndpointGetCharacterShip          Endpoint = "GetCharacterShip"
+	EndpointGetCharacterSkills        Endpoint = "GetCharacterSkills"
+	EndpointGetCharacterSkillQueue    Endpoint = "GetCharacterSkillQueue"
 	EndpointGetCorporation            Endpoint = "GetCorporation"
 	EndpointGetAncestries             Endpoint = "GetAncestries"
 	EndpointGetBloodlines             Endpoint = "GetBloodlines"
@@ -130,6 +136,7 @@ const (
 var AllEndpoints = []Endpoint{
 	EndpointGetAlliance,
 	EndpointGetCharacter,
+	EndpointGetCharacterAttributes,
 	EndpointGetCharacterClones,
 	EndpointGetCharacterContacts,
 	EndpointGetCharacterContactLabels,
@@ -137,6 +144,8 @@ var AllEndpoints = []Endpoint{
 	EndpointGetCharacterLocation,
 	EndpointGetCharacterOnline,
 	EndpointGetCharacterShip,
+	EndpointGetCharacterSkills,
+	EndpointGetCharacterSkillQueue,
 	EndpointGetCorporation,
 	EndpointGetAncestries,
 	EndpointGetBloodlines,
@@ -173,6 +182,7 @@ func (s *service) buildEndpointMap() {
 	s.endpoints = endpointMap{
 		EndpointGetAlliance:               s.resolveGetAllianceEndpoint,
 		EndpointGetCharacter:              s.resolveGetCharacterEndpoint,
+		EndpointGetCharacterAttributes:    s.resolveGetCharacterAttributes,
 		EndpointGetCharacterClones:        s.resolveGetCharacterClonesEndpoint,
 		EndpointGetCharacterContacts:      s.resolveGetCharacterContactsEndpoint,
 		EndpointGetCharacterContactLabels: s.resolveGetCharacterContactLabelsEndpoint,
@@ -180,6 +190,8 @@ func (s *service) buildEndpointMap() {
 		EndpointGetCharacterLocation:      s.resolveGetCharacterLocationEndpoint,
 		EndpointGetCharacterOnline:        s.resolveGetCharacterOnlineEndpoint,
 		EndpointGetCharacterShip:          s.resolveGetCharacterShipEndpoint,
+		EndpointGetCharacterSkills:        s.resolveGetCharacterSkills,
+		EndpointGetCharacterSkillQueue:    s.resolveGetCharacterSkillQueue,
 		EndpointGetCorporation:            s.resolveGetCorporationEndpoint,
 		EndpointGetAncestries:             s.resolveUniverseAncestriesEndpoint,
 		EndpointGetBloodlines:             s.resolveUniverseBloodlinesEndpoint,
