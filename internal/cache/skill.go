@@ -7,21 +7,25 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 type skillService interface {
 	MemberSkillAttributes(ctx context.Context, memberID string) (*athena.MemberSkillAttributes, error)
 	SetMemberSkillAttributes(ctx context.Context, memberID string, attributes *athena.MemberSkillAttributes, options ...OptionFunc) error
-	MemberSkillQueue(ctx context.Context, memberID string) (*athena.MemberSkillQueue, error)
-	SetMemberSkillQueue(ctx context.Context, memberID string, skillQueue *athena.MemberSkillQueue, options ...OptionFunc) error
-	MemberSkills(ctx context.Context, memberID string) (*athena.MemberSkill, error)
-	SetMemberSkills(ctx context.Context, memberID string, skills *athena.MemberSkill, options ...OptionFunc) error
+	MemberSkillQueue(ctx context.Context, memberID string) ([]*athena.MemberSkillQueue, error)
+	SetMemberSkillQueue(ctx context.Context, memberID string, skillQueue []*athena.MemberSkillQueue, options ...OptionFunc) error
+	MemberSkills(ctx context.Context, memberID string) ([]*athena.MemberSkill, error)
+	SetMemberSkills(ctx context.Context, memberID string, skills []*athena.MemberSkill, options ...OptionFunc) error
+	MemberSkillMeta(ctx context.Context, memberID string) (*athena.MemberSkillMeta, error)
+	SetMemberSkillMeta(ctx context.Context, memberID string, meta *athena.MemberSkillMeta, optionFuncs ...OptionFunc) error
 }
 
 const (
 	keyMemberSkillAttributes = "athena::member::%s::skill::attributes"
-	keyMemberSkillQueue      = "athena::member::%s::skill::queue"
+	keyMemberSkillQueue      = "athena::member::%s::skillqueue"
 	keyMemberSkills          = "athena::member::%s::skills"
+	keyMemberSkillMeta       = "athena::member::%s::skill::meta"
 )
 
 func (s *service) MemberSkillAttributes(ctx context.Context, memberID string) (*athena.MemberSkillAttributes, error) {
@@ -64,49 +68,116 @@ func (s *service) SetMemberSkillAttributes(ctx context.Context, memberID string,
 
 }
 
-func (s *service) MemberSkillQueue(ctx context.Context, memberID string) (*athena.MemberSkillQueue, error) {
+func (s *service) MemberSkillQueue(ctx context.Context, memberID string) ([]*athena.MemberSkillQueue, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyMemberSkillQueue, memberID)).Bytes()
+	key := fmt.Sprintf(keyMemberSkillQueue, memberID)
+	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
 
-	if len(result) == 0 {
+	if len(members) == 0 {
 		return nil, nil
 	}
 
-	var skillQueue = new(athena.MemberSkillQueue)
+	positions := make([]*athena.MemberSkillQueue, len(members))
+	for i, member := range members {
+		var position = new(athena.MemberSkillQueue)
+		err = json.Unmarshal([]byte(member), position)
+		if err != nil {
+			err = fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s onto struct: %w", key, err)
+			newrelic.FromContext(ctx).NoticeError(err)
+			continue
+		}
 
-	err = json.Unmarshal(result, skillQueue)
-	if err != nil {
-		return nil, err
+		positions[i] = position
 	}
 
-	return skillQueue, nil
+	return positions, nil
 
 }
 
-func (s *service) SetMemberSkillQueue(ctx context.Context, memberID string, skillQueue *athena.MemberSkillQueue, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberSkillQueue(ctx context.Context, memberID string, positions []*athena.MemberSkillQueue, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	data, err := json.Marshal(skillQueue)
-	if err != nil {
-		return fmt.Errorf("failed to marshal struct: %w", err)
+	members := make([]interface{}, len(positions))
+	for i, position := range positions {
+		members[i] = position
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberSkillQueue, memberID), data, options.expiry).Result()
+	key := fmt.Sprintf(keyMemberSkillQueue, memberID)
+	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache: %w", err)
+	}
+
+	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
 
 }
 
-func (s *service) MemberSkills(ctx context.Context, memberID string) (*athena.MemberSkill, error) {
+func (s *service) MemberSkills(ctx context.Context, memberID string) ([]*athena.MemberSkill, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyMemberSkills, memberID)).Bytes()
+	key := fmt.Sprintf(keyMemberSkills, memberID)
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	skills := make([]*athena.MemberSkill, len(members))
+	for i, member := range members {
+		var skill = new(athena.MemberSkill)
+		err = json.Unmarshal([]byte(member), skill)
+		if err != nil {
+			err = fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s onto struct: %w", key, err)
+			newrelic.FromContext(ctx).NoticeError(err)
+			continue
+		}
+
+		skills[i] = skill
+	}
+
+	return skills, nil
+
+}
+
+func (s *service) SetMemberSkills(ctx context.Context, memberID string, skills []*athena.MemberSkill, optionFuncs ...OptionFunc) error {
+
+	options := applyOptionFuncs(nil, optionFuncs)
+
+	members := make([]interface{}, len(skills))
+	for i, skill := range skills {
+		members[i] = skill
+	}
+
+	key := fmt.Sprintf(keyMemberSkills, memberID)
+	_, err := s.client.SAdd(ctx, key, members...).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to cache skills for member %s: %w", memberID, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) MemberSkillMeta(ctx context.Context, memberID string) (*athena.MemberSkillMeta, error) {
+
+	key := fmt.Sprintf(keyMemberSkillMeta, memberID)
+	result, err := s.client.Get(ctx, key).Bytes()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
@@ -115,27 +186,27 @@ func (s *service) MemberSkills(ctx context.Context, memberID string) (*athena.Me
 		return nil, nil
 	}
 
-	var skills = new(athena.MemberSkill)
+	var meta = new(athena.MemberSkillMeta)
 
-	err = json.Unmarshal(result, skills)
+	err = json.Unmarshal(result, meta)
 	if err != nil {
 		return nil, err
 	}
 
-	return skills, nil
+	return meta, nil
 
 }
 
-func (s *service) SetMemberSkills(ctx context.Context, memberID string, skills *athena.MemberSkill, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberSkillMeta(ctx context.Context, memberID string, meta *athena.MemberSkillMeta, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	data, err := json.Marshal(skills)
+	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberSkills, memberID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberSkillMeta, memberID), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
