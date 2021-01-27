@@ -53,6 +53,21 @@ func (r *etagRepository) Etag(ctx context.Context, etagID string) (*athena.Etag,
 	return etag, err
 
 }
+func (r *etagRepository) Etags(ctx context.Context, operators ...*athena.Operator) ([]*athena.Etag, error) {
+
+	filters := BuildFilters(operators...)
+	options := BuildFindOptions(operators...)
+
+	results, err := r.etag.Find(ctx, filters, options)
+	if err != nil {
+		return nil, err
+	}
+
+	var etags = make([]*athena.Etag, 0)
+
+	return etags, results.All(ctx, &etags)
+
+}
 
 func (r *etagRepository) UpdateEtag(ctx context.Context, etagID string, etag *athena.Etag) (*athena.Etag, error) {
 

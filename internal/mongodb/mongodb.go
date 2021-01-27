@@ -56,7 +56,7 @@ const (
 )
 
 func BuildFilters(operators ...*athena.Operator) primitive.D {
-
+	// Mongo Like Statement https://stackoverflow.com/questions/55398792/find-entries-via-substring-regex-query-in-mongodb-go-driver
 	var ops = make(primitive.D, 0)
 	for _, a := range operators {
 		switch a.Operation {

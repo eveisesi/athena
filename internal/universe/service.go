@@ -48,7 +48,7 @@ type service struct {
 }
 
 func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, universe athena.UniverseRepository) Service {
-	// localLogger := *logger
+
 	logger.SetFormatter(&logrus.TextFormatter{})
 
 	return &service{
@@ -57,6 +57,7 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, uni
 		esi:      esi,
 		universe: universe,
 	}
+
 }
 
 func (s *service) InitializeUniverse() error {

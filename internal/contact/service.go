@@ -11,7 +11,6 @@ import (
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/esi"
-	"github.com/eveisesi/athena/internal/etag"
 	"github.com/eveisesi/athena/internal/universe"
 	"github.com/go-test/deep"
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -31,7 +30,6 @@ type service struct {
 
 	cache       cache.Service
 	esi         esi.Service
-	etag        etag.Service
 	alliance    alliance.Service
 	character   character.Service
 	corporation corporation.Service
@@ -40,14 +38,13 @@ type service struct {
 	contacts athena.MemberContactRepository
 }
 
-func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, etag etag.Service, universe universe.Service, alliance alliance.Service, character character.Service, corporation corporation.Service, contacts athena.MemberContactRepository) Service {
+func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, universe universe.Service, alliance alliance.Service, character character.Service, corporation corporation.Service, contacts athena.MemberContactRepository) Service {
 
 	return &service{
 		logger: logger,
 
 		cache:       cache,
 		esi:         esi,
-		etag:        etag,
 		universe:    universe,
 		alliance:    alliance,
 		character:   character,
@@ -75,7 +72,7 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 
 	cached := true
 
-	etag, err := s.etag.Etag(ctx, etagID)
+	etag, err := s.esi.Etag(ctx, esi.EndpointGetCharactersCharacterIDContacts, member)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}

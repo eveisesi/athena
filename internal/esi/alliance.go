@@ -55,11 +55,11 @@ func (s *service) GetAlliancesAllianceID(ctx context.Context, alliance *athena.A
 	return alliance, res, nil
 }
 
-func (s *service) resolveGetAlliancesAllianceIDEndpoint(obj interface{}) string {
+func (s *service) resolveGetAlliancesAllianceIDEndpoint(modFuncs ...ModifierFunc) (string, *athena.Etag, error) {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Alliance, received nil")
-	}
+	mods := s.modifiers(modFuncs)
+
+	if mods
 
 	var thing *athena.Alliance
 	var ok bool

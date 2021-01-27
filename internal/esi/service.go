@@ -24,6 +24,8 @@ const (
 
 type (
 	Service interface {
+		Etag(ctx context.Context, endpoint Endpoint)
+
 		GenerateEndpointHash(endpoint Endpoint, obj interface{}) (bool, string)
 
 		// Alliances
@@ -72,8 +74,6 @@ type (
 		GetUniverseStructuresStructureID(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error)
 		GetUniverseTypesTypeID(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error)
 	}
-
-	endpointMap map[Endpoint]func(obj interface{}) string
 
 	service struct {
 		client    *http.Client

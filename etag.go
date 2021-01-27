@@ -7,6 +7,7 @@ import (
 
 type EtagRepository interface {
 	Etag(ctx context.Context, etagID string) (*Etag, error)
+	Etags(ctx context.Context, operators ...*Operator) ([]*Etag, error)
 	UpdateEtag(ctx context.Context, etagID string, etag *Etag) (*Etag, error)
 	DeleteEtag(ctx context.Context, etagID string) (bool, error)
 }

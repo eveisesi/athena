@@ -9,38 +9,41 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-func (s *service) GetCharactersCharacterIDContacts(ctx context.Context, member *athena.Member, etag *athena.Etag, contacts []*athena.MemberContact) ([]*athena.MemberContact, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharactersCharacterIDContacts(ctx context.Context, member *athena.Member, contacts []*athena.MemberContact) ([]*athena.MemberContact, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharactersCharacterIDContacts](member)
+	iterator := 0
+	for {
+		path := s.endpoints[EndpointGetCharactersCharacterIDContacts](member)
 
-	b, res, err := s.request(
-		ctx,
-		WithMethod(http.MethodGet),
-		WithPath(path),
-		WithEtag(etag.Etag),
-		WithAuthorization(member.AccessToken),
-	)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &contacts)
+		b, res, err := s.request(
+			ctx,
+			WithMethod(http.MethodGet),
+			WithPath(path),
+			WithEtag(etag.Etag),
+			WithAuthorization(member.AccessToken),
+		)
 		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		switch sc := res.StatusCode; {
+		case sc == http.StatusOK:
+			err = json.Unmarshal(b, &contacts)
+			if err != nil {
+				err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+				return nil, nil, nil, err
+			}
 
-	case sc >= http.StatusBadRequest:
-		return contacts, etag, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.CharacterID, sc)
+			etag.Etag = s.retrieveEtagHeader(res.Header)
+
+		case sc >= http.StatusBadRequest:
+			return contacts, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.CharacterID, sc)
+		}
+
+		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
-
-	return contacts, etag, res, nil
+	return contacts, res, nil
 
 }
 
