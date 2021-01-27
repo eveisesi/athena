@@ -76,8 +76,6 @@ type (
 		GetType(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error)
 	}
 
-	endpointMap map[Endpoint]func(obj interface{}) string
-
 	service struct {
 		client    *http.Client
 		cache     cache.Service

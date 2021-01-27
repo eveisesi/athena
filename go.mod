@@ -32,6 +32,7 @@ require (
 	github.com/nxadm/tail v1.4.6 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/sirkon/go-format v0.1.2
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/tidwall/pretty v1.0.2 // indirect
