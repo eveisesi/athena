@@ -82,7 +82,7 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 		return location, nil
 	}
 
-	location, _, err = s.esi.GetCharactersCharacterIDLocation(ctx, member, location)
+	location, _, err = s.esi.GetCharacterLocation(ctx, member, location)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch location for member")
 		return nil, err
@@ -173,7 +173,7 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 		return ship, nil
 	}
 
-	ship, _, err = s.esi.GetCharactersCharacterIDShip(ctx, member, ship)
+	ship, _, err = s.esi.GetCharacterShip(ctx, member, ship)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch location for member")
 		return nil, err
@@ -246,7 +246,7 @@ func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*ath
 		return nil, err
 	}
 
-	online, _, err = s.esi.GetCharactersCharacterIDOnline(ctx, member, online)
+	online, _, err = s.esi.GetCharacterOnline(ctx, member, online)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch location for member")
 		return nil, err

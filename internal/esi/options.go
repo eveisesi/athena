@@ -87,6 +87,7 @@ func WithBody(d []byte) OptionFunc {
 // some sort of if check to ensure the value is not empty before
 // calling one of the func above
 
+// MODIFY THIS TO TAKE A SLICE OF ETAG and a page
 func WithEtag(etag string) OptionFunc {
 	if etag == "" {
 		return emptyApplicator()

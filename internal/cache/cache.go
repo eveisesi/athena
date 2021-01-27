@@ -12,6 +12,7 @@ type Service interface {
 	characterService
 	cloneService
 	contactService
+	contractService
 	corporationService
 	esiService
 	etagService

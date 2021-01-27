@@ -65,7 +65,7 @@ func (r *memberContactRepository) MemberContact(ctx context.Context, memberID st
 
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return nil, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return nil, fmt.Errorf("[Contact Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	err = r.contacts.FindOne(ctx, primitive.D{primitive.E{Key: "member_id", Value: pid}, primitive.E{Key: "contact_id", Value: contactID}}).Decode(contact)
@@ -80,7 +80,7 @@ func (r *memberContactRepository) MemberContacts(ctx context.Context, memberID s
 
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return nil, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return nil, fmt.Errorf("[Contact Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	results, err := r.contacts.Find(ctx, primitive.D{primitive.E{Key: "member_id", Value: pid}})
@@ -96,7 +96,7 @@ func (r *memberContactRepository) CreateMemberContacts(ctx context.Context, memb
 
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return nil, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return nil, fmt.Errorf("[Contact Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	documents := make([]interface{}, len(contacts))
@@ -123,13 +123,13 @@ func (r *memberContactRepository) UpdateMemberContact(ctx context.Context, membe
 
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return nil, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return nil, fmt.Errorf("[Contact Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}, primitive.E{Key: "contact_id", Value: contact.ContactID}}
 	update := primitive.D{primitive.E{Key: "$set", Value: contact}}
 
-	_, err = r.contacts.UpdateMany(ctx, filter, update)
+	_, err = r.contacts.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return nil, fmt.Errorf("[Contact Repository] Failed to update record in the member contacts collection: %w", err)
 	}
@@ -138,38 +138,10 @@ func (r *memberContactRepository) UpdateMemberContact(ctx context.Context, membe
 
 }
 
-func (r *memberContactRepository) UpdateMemberContacts(ctx context.Context, memberID string, contacts []*athena.MemberContact) ([]*athena.MemberContact, error) {
-
-	pid, err := primitive.ObjectIDFromHex(memberID)
-	if err != nil {
-		return nil, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
-	}
-
-	documents := make(primitive.D, len(contacts))
-	now := time.Now()
-	for i, contact := range contacts {
-		contact.MemberID = pid
-		contact.UpdatedAt = now
-
-		documents[i] = primitive.E{Key: "$set", Value: contact}
-
-	}
-
-	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
-
-	_, err = r.contacts.UpdateMany(ctx, filter, documents)
-	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to update records in the member contacts collection: %w", err)
-	}
-
-	return contacts, nil
-
-}
-
 func (r *memberContactRepository) DeleteMemberContact(ctx context.Context, memberID string, contactID int) (bool, error) {
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return false, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return false, fmt.Errorf("[Contact Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}, primitive.E{Key: "contact_id", Value: pid}}
@@ -186,7 +158,7 @@ func (r *memberContactRepository) DeleteMemberContacts(ctx context.Context, memb
 
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return false, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return false, fmt.Errorf("[Contact Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	contactIDs := make([]int, len(contacts))
@@ -203,7 +175,7 @@ func (r *memberContactRepository) DeleteMemberContacts(ctx context.Context, memb
 
 	if len(contactIDs) > 0 {
 		filter = append(filter, primitive.E{
-			Key: "label_id",
+			Key: "contact_id",
 			Value: primitive.D{
 				primitive.E{
 					Key:   "$in",
@@ -233,7 +205,7 @@ func (r *memberContactRepository) MemberContactLabels(ctx context.Context, membe
 
 	results, err := r.labels.Find(ctx, primitive.D{primitive.E{Key: "member_id", Value: pid}})
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to fetch records from the member contact labels collection: %w", err)
+		return nil, fmt.Errorf("[Contact Repository] Failed to fetch records from the member_contact_labels collection: %w", err)
 	}
 
 	return labels, results.All(ctx, &labels)
@@ -244,7 +216,7 @@ func (r *memberContactRepository) CreateMemberContactLabels(ctx context.Context,
 
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return nil, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return nil, fmt.Errorf("[Contact Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	documents := make([]interface{}, len(labels))
@@ -260,38 +232,29 @@ func (r *memberContactRepository) CreateMemberContactLabels(ctx context.Context,
 
 	_, err = r.labels.InsertMany(ctx, documents)
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to insert record into the member contact labels collection: %w", err)
+		return nil, fmt.Errorf("[Contact Repository] Failed to insert record into the member_contact_labels collection: %w", err)
 	}
 
 	return labels, nil
 
 }
 
-func (r *memberContactRepository) UpdateMemberContactLabels(ctx context.Context, memberID string, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, error) {
+func (r *memberContactRepository) UpdateMemberContactLabel(ctx context.Context, memberID string, label *athena.MemberContactLabel) (*athena.MemberContactLabel, error) {
 
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return nil, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return nil, fmt.Errorf("[Contact Repository] Failed to cast id to objectID: %w", err)
 	}
 
-	documents := make(primitive.D, len(labels))
-	now := time.Now()
-	for i, label := range labels {
-		label.MemberID = pid
-		label.UpdatedAt = now
+	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}, primitive.E{Key: "label_id", Value: label.LabelID}}
+	update := primitive.D{primitive.E{Key: "$set", Value: label}}
 
-		documents[i] = primitive.E{Key: "$set", Value: label}
-
-	}
-
-	filter := primitive.D{primitive.E{Key: "member_id", Value: pid}}
-
-	_, err = r.labels.UpdateMany(ctx, filter, documents)
+	_, err = r.labels.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to update record in the member contact labels collection: %w", err)
+		return nil, fmt.Errorf("[Contact Repository] Failed to update record in the member_contact_labels collection: %w", err)
 	}
 
-	return labels, nil
+	return label, nil
 
 }
 
@@ -299,7 +262,7 @@ func (r *memberContactRepository) DeleteMemberContactLabels(ctx context.Context,
 
 	pid, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return false, fmt.Errorf("[Clone Repository] Failed to cast id to objectID: %w", err)
+		return false, fmt.Errorf("[Contact Repository] Failed to cast id to objectID: %w", err)
 	}
 
 	labelIDs := make([]int64, len(labels))
@@ -328,7 +291,7 @@ func (r *memberContactRepository) DeleteMemberContactLabels(ctx context.Context,
 
 	results, err := r.contacts.DeleteMany(ctx, filter)
 	if err != nil {
-		return false, fmt.Errorf("[Contact Repository] Failed to delete record from the member contact labels collection: %w", err)
+		return false, fmt.Errorf("[Contact Repository] Failed to delete record from the member_contact_labels collection: %w", err)
 	}
 
 	return results.DeletedCount > 0, err

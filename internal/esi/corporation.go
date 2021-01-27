@@ -17,15 +17,15 @@ func isCorporationValid(r *athena.Corporation) bool {
 	return true
 }
 
-// GetCorporationsCorporationID makes a HTTP GET Request to the /corporations/{corporation_id} endpoint
+// GetCorporation makes a HTTP GET Request to the /corporations/{corporation_id} endpoint
 // for information about the provided corporation
 //
 // Documentation: https://esi.evetech.net/ui/#/Corporation/get_corporations_corporation_id
 // Version: v4
 // Cache: 3600 sec (1 Hour)
-func (s *service) GetCorporationsCorporationID(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error) {
+func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCorporationsCorporationID](corporation)
+	path := s.endpoints[EndpointGetCorporation](corporation)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(corporation.Etag))
 	if err != nil {
@@ -56,7 +56,7 @@ func (s *service) GetCorporationsCorporationID(ctx context.Context, corporation 
 	return corporation, res, nil
 }
 
-func (s *service) resolveGetCorporationsCorporationIDEndpoint(obj interface{}) string {
+func (s *service) resolveGetCorporationEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Corporation, received nil")

@@ -16,15 +16,15 @@ func isAllianceValid(r *athena.Alliance) bool {
 	return true
 }
 
-// GetAlliancesAllianceID makes a HTTP GET Request to the /alliances/{alliance_id} endpoint
+// GetAlliance makes a HTTP GET Request to the /alliances/{alliance_id} endpoint
 // for information about the provided alliance
 //
 // Documentation: https://esi.evetech.net/ui/#/Alliance/get_alliances_alliance_id
 // Version: v3
 // Cache: 3600 sec (1 Hour)
-func (s *service) GetAlliancesAllianceID(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error) {
+func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetAlliancesAllianceID](alliance)
+	path := s.endpoints[EndpointGetAlliance](alliance)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(alliance.Etag))
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *service) GetAlliancesAllianceID(ctx context.Context, alliance *athena.A
 	return alliance, res, nil
 }
 
-func (s *service) resolveGetAlliancesAllianceIDEndpoint(modFuncs ...ModifierFunc) (string, *athena.Etag, error) {
+func (s *service) resolveGetAllianceEndpoint(obj interface{}) string {
 
 	mods := s.modifiers(modFuncs)
 

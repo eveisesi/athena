@@ -43,7 +43,7 @@ func (s *service) AllianceByAllianceID(ctx context.Context, id uint, options []O
 		return alliances[0], nil
 	}
 
-	alliance, _, err := s.esi.GetAlliancesAllianceID(ctx, &athena.Alliance{AllianceID: id})
+	alliance, _, err := s.esi.GetAlliance(ctx, &athena.Alliance{AllianceID: id})
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
 		return nil, err

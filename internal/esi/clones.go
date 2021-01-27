@@ -9,15 +9,15 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-// GetCharactersCharacterIDClones makes an HTTP GET Request to the /characters/{character_id}/clones/ endpoint for
+// GetCharacterClones makes an HTTP GET Request to the /characters/{character_id}/clones/ endpoint for
 // information about the provided members clones
 //
 // Documentation: https://esi.evetech.net/ui/#/Clones/get_characters_character_id_clones
 // Version: v3
 // Cache: 120 (2 min)
-func (s *service) GetCharactersCharacterIDClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error) {
+func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharactersCharacterIDClones](member)
+	path := s.endpoints[EndpointGetCharacterClones](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -52,7 +52,7 @@ func (s *service) GetCharactersCharacterIDClones(ctx context.Context, member *at
 
 }
 
-func (s *service) resolveGetCharactersCharacterIDClonesEndpoint(obj interface{}) string {
+func (s *service) resolveGetCharacterClonesEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
@@ -69,15 +69,15 @@ func (s *service) resolveGetCharactersCharacterIDClonesEndpoint(obj interface{})
 
 }
 
-// GetCharactersCharacterIDImplants makes an HTTP GET Request to the /characters/{character_id}/implants/ endpoint for
+// GetCharacterImplants makes an HTTP GET Request to the /characters/{character_id}/implants/ endpoint for
 // information about the provided members implants
 //
 // Documentation: https://esi.evetech.net/ui/#/Clones/get_characters_character_id_implants
 // Version: v1
 // Cache: 120 (2 min)
-func (s *service) GetCharactersCharacterIDImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error) {
+func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharactersCharacterIDImplants](member)
+	path := s.endpoints[EndpointGetCharacterImplants](member)
 
 	b, res, err := s.request(
 		ctx,
@@ -113,7 +113,7 @@ func (s *service) GetCharactersCharacterIDImplants(ctx context.Context, member *
 
 }
 
-func (s *service) resolveGetCharactersCharacterIDImplantsEndpoint(obj interface{}) string {
+func (s *service) resolveGetCharacterImplantsEndpoint(obj interface{}) string {
 
 	if obj == nil {
 		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")

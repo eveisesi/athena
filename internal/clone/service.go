@@ -71,7 +71,7 @@ func (s *service) MemberClones(ctx context.Context, member *athena.Member) (*ath
 		return clones, nil
 	}
 
-	clones, _, err = s.esi.GetCharactersCharacterIDClones(ctx, member, clones)
+	clones, _, err = s.esi.GetCharacterClones(ctx, member, clones)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch clones for member")
 		return nil, err
@@ -171,7 +171,7 @@ func (s *service) MemberImplants(ctx context.Context, member *athena.Member) (*a
 		return implants, nil
 	}
 
-	implants, _, err = s.esi.GetCharactersCharacterIDImplants(ctx, member, implants)
+	implants, _, err = s.esi.GetCharacterImplants(ctx, member, implants)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch implants for member")
 		return nil, err
