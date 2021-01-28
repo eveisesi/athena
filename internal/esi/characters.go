@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/eveisesi/athena"
 )
@@ -24,9 +26,18 @@ func isCharacterValid(r *athena.Character) bool {
 // Cache: 86400 sec (24 Hour)
 func (s *service) GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharacter](character)
+	endpoint := s.endpoints[GetCharacter.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(character.Etag))
+	mods := s.modifiers(ModWithCharacter(character))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(etag))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,19 +66,30 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 	return character, res, nil
 }
 
-func (s *service) resolveGetCharacterEndpoint(obj interface{}) string {
+func (s *service) newGetCharacterEndpoint() *endpoint {
+	GetCharacter.KeyFunc = s.characterKeyFunc
+	GetCharacter.PathFunc = s.characterPathFunc
+	return GetCharacter
+}
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Character, received nil")
+func (s *service) characterKeyFunc(mods *modifiers) string {
+	if mods.character == nil {
+		panic("expected type *athena.Character to be provided, received nil for alliance instead")
 	}
 
-	var thing *athena.Character
-	var ok bool
+	return buildKey(GetCharacter.Name, strconv.Itoa(int(mods.character.CharacterID)))
+}
 
-	if thing, ok = obj.(*athena.Character); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Character, got %T", obj))
+func (s *service) characterPathFunc(mods *modifiers) string {
+
+	if mods.alliance == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return fmt.Sprintf("/v4/characters/%d/", thing.CharacterID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetCharacter.FmtPath, mods.alliance.AllianceID),
+	}
+
+	return u.String()
 
 }

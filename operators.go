@@ -19,6 +19,7 @@ const (
 	LessThanEqualToOp    Operation = "<="
 	InOp                 Operation = "in"
 	NotInOp              Operation = "not in"
+	LikeOp               Operation = "like"
 
 	LimitOp  Operation = "limit"
 	OrderOp  Operation = "order"
@@ -37,6 +38,7 @@ var AllOperations = []Operation{
 	LessThanEqualToOp,
 	InOp,
 	NotInOp,
+	LikeOp,
 	LimitOp,
 	OrderOp,
 	SkipOp,
@@ -62,6 +64,14 @@ func (o Operation) Value() string {
 
 func NewOperators(operators ...*Operator) []*Operator {
 	return operators
+}
+
+func NewLikeOperator(column string, value interface{}) *Operator {
+	return &Operator{
+		Column:    column,
+		Operation: LikeOp,
+		Value:     value,
+	}
 }
 
 func NewEqualOperator(column string, value interface{}) *Operator {

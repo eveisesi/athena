@@ -1,6 +1,8 @@
 package esi
 
-import "github.com/eveisesi/athena"
+import (
+	"github.com/eveisesi/athena"
+)
 
 type (
 	modifiers struct {
@@ -19,12 +21,15 @@ type (
 		structure     *athena.Structure
 	}
 
-	ModifierFunc func(mod *modifiers) *modifiers
+	modifierFunc func(mod *modifiers) *modifiers
 
-	endpointMap map[Endpoint]func(modFuncs ...ModifierFunc) string
+	pathFunc func(mod *modifiers) string
+	keyFunc  func(mod *modifiers) string
+
+	endpointMap map[string]*endpoint
 )
 
-func (s *service) modifiers(modFuncs []ModifierFunc) *modifiers {
+func (s *service) modifiers(modFuncs ...modifierFunc) *modifiers {
 
 	mod := &modifiers{}
 	for _, modFunc := range modFuncs {
@@ -35,65 +40,86 @@ func (s *service) modifiers(modFuncs []ModifierFunc) *modifiers {
 
 }
 
-func ModWithPage(page *int) ModifierFunc {
+func ModWithPage(page *int) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.page = page
 		return mod
 	}
 }
 
-func ModWithMember(member *athena.Member) ModifierFunc {
+func ModWithMember(member *athena.Member) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.member = member
 		return mod
 	}
 }
 
-func ModWithAlliance(alliance *athena.Alliance) ModifierFunc {
+func ModWithAlliance(alliance *athena.Alliance) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.alliance = alliance
 		return mod
 	}
 }
 
-func ModWithCategory(category *athena.Category) ModifierFunc {
+func ModWithCategory(category *athena.Category) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.category = category
 		return mod
 	}
 }
 
-func ModWithCharacter(character *athena.Character) ModifierFunc {
+func ModWithCharacter(character *athena.Character) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.character = character
 		return mod
 	}
 }
 
-func ModWithCorporation(corporation *athena.Corporation) ModifierFunc {
+func ModWithCorporation(corporation *athena.Corporation) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.corporation = corporation
 		return mod
 	}
 }
 
-func ModWithConstellation(constellation *athena.Constellation) ModifierFunc {
+func ModWithConstellation(constellation *athena.Constellation) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.constellation = constellation
 		return mod
 	}
 }
 
-func ModWithGroup(group *athena.Group) ModifierFunc {
+func ModWithGroup(group *athena.Group) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.group = group
 		return mod
 	}
 }
 
-func ModWithItem(item *athena.Type) ModifierFunc {
+func ModWithItem(item *athena.Type) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.item = item
+		return mod
+	}
+}
+
+func ModWithSystem(system *athena.SolarSystem) modifierFunc {
+	return func(mod *modifiers) *modifiers {
+		mod.solarSystem = system
+		return mod
+	}
+}
+
+func ModWithStation(station *athena.Station) modifierFunc {
+	return func(mod *modifiers) *modifiers {
+		mod.station = station
+		return mod
+	}
+}
+
+func ModWithStructure(structure *athena.Structure) modifierFunc {
+	return func(mod *modifiers) *modifiers {
+		mod.structure = structure
 		return mod
 	}
 }

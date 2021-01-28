@@ -5,61 +5,109 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/eveisesi/athena"
 )
 
-func (s *service) GetCharactersCharacterIDContacts(ctx context.Context, member *athena.Member, contacts []*athena.MemberContact) ([]*athena.MemberContact, *http.Response, error) {
+func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Member, contacts []*athena.MemberContact) ([]*athena.MemberContact, *http.Response, error) {
 
-	iterator := 0
-	for {
-		path := s.endpoints[EndpointGetCharactersCharacterIDContacts](member)
+	endpoint := s.endpoints[GetCharacterContacts.Name]
 
-		b, res, err := s.request(
-			ctx,
-			WithMethod(http.MethodGet),
-			WithPath(path),
-			WithEtag(etag.Etag),
-			WithAuthorization(member.AccessToken),
-		)
-		if err != nil {
-			return nil, nil, err
-		}
+	mods := s.modifiers(ModWithMember(member))
 
-		switch sc := res.StatusCode; {
-		case sc == http.StatusOK:
-			err = json.Unmarshal(b, &contacts)
-			if err != nil {
-				err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-				return nil, nil, nil, err
-			}
-
-			etag.Etag = s.retrieveEtagHeader(res.Header)
-
-		case sc >= http.StatusBadRequest:
-			return contacts, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.CharacterID, sc)
-		}
-
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return contacts, res, nil
-
-}
-
-func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.Member, etag *athena.Etag, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *athena.Etag, *http.Response, error) {
-
-	path := s.endpoints[EndpointGetCharacterContactLabels](member)
+	path := endpoint.PathFunc(mods)
 
 	b, res, err := s.request(
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag.Etag),
+		WithEtag(etag),
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
+	}
+
+	switch sc := res.StatusCode; {
+	case sc == http.StatusOK:
+		err = json.Unmarshal(b, &contacts)
+		if err != nil {
+			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+			return nil, nil, err
+		}
+
+		etag.Etag = s.retrieveEtagHeader(res.Header)
+
+	case sc >= http.StatusBadRequest:
+		return contacts, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.CharacterID, sc)
+	}
+
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+
+	return contacts, res, nil
+
+}
+
+func (s *service) characterContactsKeyFunc(mods *modifiers) string {
+
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+	}
+
+	return buildKey(GetCharacterContacts.Name, strconv.Itoa(int(mods.member.CharacterID)))
+}
+
+func (s *service) characterContactsPathFunc(mods *modifiers) string {
+
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+	}
+
+	u := url.URL{
+		Path: fmt.Sprintf(GetCharacterContacts.FmtPath, mods.member.CharacterID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetCharacterContactsEndpoint() *endpoint {
+
+	GetCharacterContacts.KeyFunc = s.characterContactsKeyFunc
+	GetCharacterContacts.PathFunc = s.characterContactsPathFunc
+	return GetCharacterContacts
+
+}
+
+func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.Member, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *http.Response, error) {
+
+	endpoint := s.endpoints[GetCharacterContactLabels.Name]
+
+	mods := s.modifiers(ModWithMember(member))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+		WithAuthorization(member.AccessToken),
+	)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	switch sc := res.StatusCode; {
@@ -67,51 +115,48 @@ func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.
 		err = json.Unmarshal(b, &labels)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return labels, etag, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.CharacterID, sc)
+		return labels, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.CharacterID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
-	return labels, etag, res, nil
+	return labels, res, nil
 
 }
 
-func (s *service) resolveGetCharacterContactsEndpoint(obj interface{}) string {
+func (s *service) characterContactLabelsKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	var thing *athena.Member
-	var ok bool
+	return buildKey(GetCharacterContactLabels.Name, strconv.Itoa(int(mods.member.CharacterID)))
+}
 
-	if thing, ok = obj.(*athena.Member); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+func (s *service) characterContactLabelsPathFunc(mods *modifiers) string {
+
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return fmt.Sprintf("/v2/characters/%d/contacts/", thing.CharacterID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetCharacterContactLabels.FmtPath, mods.member.CharacterID),
+	}
+
+	return u.String()
 
 }
 
-func (s *service) resolveGetCharacterContactLabelsEndpoint(obj interface{}) string {
+func (s *service) newGetCharacterContactLabelsEndpoint() *endpoint {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
-	}
-
-	var thing *athena.Member
-	var ok bool
-
-	if thing, ok = obj.(*athena.Member); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
-	}
-
-	return fmt.Sprintf("/v1/characters/%d/contacts/labels", thing.CharacterID)
+	GetCharacterContactLabels.KeyFunc = s.characterContactLabelsKeyFunc
+	GetCharacterContactLabels.PathFunc = s.characterContactLabelsPathFunc
+	return GetCharacterContactLabels
 
 }

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/eveisesi/athena"
 )
@@ -17,13 +19,22 @@ import (
 // Cache: 120 (2 min)
 func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharacterClones](member)
+	endpoint := s.endpoints[GetCharacterClones.Name]
+
+	mods := s.modifiers(ModWithMember(member))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
 
 	b, res, err := s.request(
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(clones.Etag),
+		WithEtag(etag),
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
@@ -52,20 +63,34 @@ func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member,
 
 }
 
-func (s *service) resolveGetCharacterClonesEndpoint(obj interface{}) string {
+func (s *service) characterClonesKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	var thing *athena.Member
-	var ok bool
+	return buildKey(GetCharacterClones.Name, strconv.Itoa(int(mods.member.CharacterID)))
+}
 
-	if thing, ok = obj.(*athena.Member); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+func (s *service) characterClonesPathFunc(mods *modifiers) string {
+
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return fmt.Sprintf("/v3/characters/%d/clones/", thing.CharacterID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetCharacterClones.FmtPath, mods.member.CharacterID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetCharacterClonesEndpoint() *endpoint {
+
+	GetCharacterClones.KeyFunc = s.characterClonesKeyFunc
+	GetCharacterClones.PathFunc = s.characterClonesPathFunc
+	return GetCharacterClones
 
 }
 
@@ -77,13 +102,22 @@ func (s *service) resolveGetCharacterClonesEndpoint(obj interface{}) string {
 // Cache: 120 (2 min)
 func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharacterImplants](member)
+	endpoint := s.endpoints[GetCharacterImplants.Name]
+
+	mods := s.modifiers(ModWithMember(member))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
 
 	b, res, err := s.request(
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(implants.Etag),
+		WithEtag(etag),
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
@@ -113,19 +147,33 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 
 }
 
-func (s *service) resolveGetCharacterImplantsEndpoint(obj interface{}) string {
+func (s *service) characterImplantsKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	var thing *athena.Member
-	var ok bool
+	return buildKey(GetCharacterImplants.Name, strconv.Itoa(int(mods.member.CharacterID)))
+}
 
-	if thing, ok = obj.(*athena.Member); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+func (s *service) characterImplantsPathFunc(mods *modifiers) string {
+
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return fmt.Sprintf("/v1/characters/%d/implants/", thing.CharacterID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetCharacterImplants.FmtPath, mods.member.CharacterID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetCharacterImplantsEndpoint() *endpoint {
+
+	GetCharacterImplants.KeyFunc = s.characterImplantsKeyFunc
+	GetCharacterImplants.PathFunc = s.characterImplantsPathFunc
+	return GetCharacterImplants
 
 }

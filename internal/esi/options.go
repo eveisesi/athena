@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/eveisesi/athena"
 )
 
 type options struct {
@@ -87,13 +89,13 @@ func WithBody(d []byte) OptionFunc {
 // some sort of if check to ensure the value is not empty before
 // calling one of the func above
 
-// MODIFY THIS TO TAKE A SLICE OF ETAG and a page
-func WithEtag(etag string) OptionFunc {
-	if etag == "" {
+func WithEtag(etag *athena.Etag) OptionFunc {
+
+	if etag == nil || etag.Etag == "" {
 		return emptyApplicator()
 	}
 
-	return WithHeader("if-none-match", etag)
+	return WithHeader("if-none-match", etag.Etag)
 
 }
 

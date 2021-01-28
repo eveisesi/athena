@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/esi"
+	"github.com/eveisesi/athena/internal/etag"
 	"github.com/eveisesi/athena/internal/mongodb"
 	"github.com/eveisesi/athena/internal/universe"
 	"github.com/urfave/cli"
@@ -18,7 +19,8 @@ func universeCommand(c *cli.Context) error {
 	}
 
 	cache := cache.NewService(basics.redis)
-	esi := esi.NewService(cache, basics.client, basics.cfg.UserAgent)
+	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
+	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
 	universe := universe.NewService(basics.logger, cache, esi, universeRepo)
 

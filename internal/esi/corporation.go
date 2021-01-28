@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/eveisesi/athena"
 )
@@ -25,9 +27,18 @@ func isCorporationValid(r *athena.Corporation) bool {
 // Cache: 3600 sec (1 Hour)
 func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCorporation](corporation)
+	endpoint := s.endpoints[GetCorporation.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(corporation.Etag))
+	mods := s.modifiers(ModWithCorporation(corporation))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(etag))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -56,19 +67,33 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 	return corporation, res, nil
 }
 
-func (s *service) resolveGetCorporationEndpoint(obj interface{}) string {
+func (s *service) corporationKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Corporation, received nil")
+	if mods.corporation == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	var thing *athena.Corporation
-	var ok bool
+	return buildKey(GetCorporation.Name, strconv.Itoa(int(mods.corporation.CorporationID)))
+}
 
-	if thing, ok = obj.(*athena.Corporation); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Corporation, got %T", obj))
+func (s *service) corporationPathFunc(mods *modifiers) string {
+
+	if mods.corporation == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return fmt.Sprintf("/v4/corporations/%d/", thing.CorporationID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetCorporation.FmtPath, mods.corporation.CorporationID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetCorporationEndpoint() *endpoint {
+
+	GetCorporation.KeyFunc = s.corporationKeyFunc
+	GetCorporation.PathFunc = s.corporationPathFunc
+	return GetCorporation
 
 }

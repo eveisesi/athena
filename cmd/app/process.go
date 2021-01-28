@@ -23,8 +23,8 @@ func processorCommand(c *cli.Context) error {
 	basics := basics("processor")
 
 	cache := cache.NewService(basics.redis)
-	esi := esi.NewService(cache, basics.client, basics.cfg.UserAgent)
 	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
+	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
 	character := character.NewService(cache, esi, basics.repositories.character)
 	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
@@ -41,7 +41,7 @@ func processorCommand(c *cli.Context) error {
 	member := member.NewService(auth, cache, alliance, character, corporation, basics.repositories.member)
 	location := location.NewService(basics.logger, cache, esi, universe, basics.repositories.location)
 	clone := clone.NewService(basics.logger, cache, esi, universe, basics.repositories.clone)
-	contact := contact.NewService(basics.logger, cache, esi, etag, universe, alliance, character, corporation, basics.repositories.contact)
+	contact := contact.NewService(basics.logger, cache, esi, universe, alliance, character, corporation, basics.repositories.contact)
 	skill := skill.NewService(basics.logger, cache, esi, etag, universe, basics.repositories.skill)
 
 	processor := processor.NewService(basics.logger, cache, member)

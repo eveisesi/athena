@@ -58,17 +58,12 @@ func (s *service) EmptyMemberSkills(ctx context.Context, member *athena.Member) 
 
 func (s *service) MemberSkills(ctx context.Context, member *athena.Member) (*athena.MemberSkillMeta, []*athena.MemberSkill, error) {
 
-	valid, etagID := s.esi.GenerateEndpointHash(esi.EndpointGetCharacterSkills, member)
-	if !valid {
-		return nil, nil, fmt.Errorf("[Skills Service] Failed to generate valid etag hash")
-	}
-
-	cached := true
-
-	etag, err := s.etag.Etag(ctx, etagID)
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkills, esi.ModWithMember(member))
 	if err != nil {
 		return nil, nil, fmt.Errorf("[Skills Service] Failed to fetch etag object: %w", err)
 	}
+
+	cached := true
 
 	meta, err := s.cache.MemberSkillMeta(ctx, member.ID.Hex())
 	if err != nil {
@@ -115,12 +110,10 @@ func (s *service) MemberSkills(ctx context.Context, member *athena.Member) (*ath
 		return meta, skills, nil
 	}
 
-	newMeta, etag, _, err := s.esi.GetCharacterSkills(ctx, member, etag, &athena.MemberSkillMeta{})
+	newMeta, _, err := s.esi.GetCharacterSkills(ctx, member, &athena.MemberSkillMeta{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("[Skills Service] Failed to fetch skills for member %s: %w", member.ID.Hex(), err)
 	}
-
-	_, _ = s.etag.UpdateEtag(ctx, etagID, etag)
 
 	var newSkills []*athena.MemberSkill
 	if newMeta.Valid() {
@@ -213,12 +206,7 @@ func (s *service) EmptyMemberSkillQueue(ctx context.Context, member *athena.Memb
 
 func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) ([]*athena.MemberSkillQueue, error) {
 
-	valid, etagID := s.esi.GenerateEndpointHash(esi.EndpointGetCharacterSkillQueue, member)
-	if !valid {
-		return nil, fmt.Errorf("[Skill Service] Failed to generate valid etag hash")
-	}
-
-	etag, err := s.etag.Etag(ctx, etagID)
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkillQueue, esi.ModWithMember(member))
 	if err != nil {
 		return nil, fmt.Errorf("[Skill Service] Failed to fetch etag object: %w", err)
 	}
@@ -249,12 +237,10 @@ func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) (
 		return positions, nil
 	}
 
-	newPositions, etag, _, err := s.esi.GetCharacterSkillQueue(ctx, member, etag, make([]*athena.MemberSkillQueue, 0))
+	newPositions, _, err := s.esi.GetCharacterSkillQueue(ctx, member, make([]*athena.MemberSkillQueue, 0))
 	if err != nil {
 		return nil, fmt.Errorf("[Skill Service] Failed to fetch skillQueue for member %s: %w", member.ID.Hex(), err)
 	}
-
-	_, _ = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 
 	if len(newPositions) > 0 {
 		s.resolveSkillQueueAttributes(ctx, newPositions)

@@ -11,6 +11,7 @@ import (
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/esi"
+	"github.com/eveisesi/athena/internal/etag"
 	"github.com/eveisesi/athena/internal/member"
 
 	"github.com/eveisesi/athena/internal/auth"
@@ -25,8 +26,8 @@ func serverCommand(c *cli.Context) error {
 	basics := basics("server")
 
 	cache := cache.NewService(basics.redis)
-	esi := esi.NewService(cache, basics.client, basics.cfg.UserAgent)
-	// etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
+	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
+	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
 	// universe := universe.NewService(basics.logger, cache, esi, basics.repositories.universe)
 	// location := location.NewService(basics.logger, cache, esi, universe, basics.repositories.location)

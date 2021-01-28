@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/eveisesi/athena"
 )
@@ -17,13 +19,22 @@ import (
 // Cache: 5 secs
 func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharacterLocation](member)
+	endpoint := s.endpoints[GetCharacterLocation.Name]
+
+	mods := s.modifiers(ModWithMember(member))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
 
 	b, res, err := s.request(
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(location.Etag),
+		WithEtag(etag),
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
@@ -52,34 +63,60 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 
 }
 
-func (s *service) resolveGetCharacterLocationEndpoint(obj interface{}) string {
+func (s *service) characterLocationsKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	var thing *athena.Member
-	var ok bool
+	return buildKey(GetCharacterLocation.Name, strconv.Itoa(int(mods.member.CharacterID)))
+}
 
-	if thing, ok = obj.(*athena.Member); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+func (s *service) characterLocationsPathFunc(mods *modifiers) string {
+
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return fmt.Sprintf("/v1/characters/%d/location/", thing.CharacterID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetCharacterLocation.FmtPath, mods.member.CharacterID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetCharacterLocationEndpoint() *endpoint {
+
+	GetCharacterLocation.KeyFunc = s.characterLocationsKeyFunc
+	GetCharacterLocation.PathFunc = s.characterLocationsPathFunc
+	return GetCharacterLocation
 
 }
 
 func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharacterOnline](member)
+	endpoint := s.endpoints[GetCharacterOnline.Name]
+
+	mods := s.modifiers(ModWithMember(member))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
 
 	b, res, err := s.request(
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(online.Etag),
+		WithEtag(etag),
 		WithAuthorization(member.AccessToken),
 	)
+	if err != nil {
+		return nil, nil, err
+	}
 	if err != nil {
 		return nil, nil, err
 	}
@@ -106,32 +143,55 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 
 }
 
-func (s *service) resolveGetCharacterOnlineEndpoint(obj interface{}) string {
+func (s *service) characterOnlinesKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	var thing *athena.Member
-	var ok bool
+	return buildKey(GetCharacterOnline.Name, strconv.Itoa(int(mods.member.CharacterID)))
+}
 
-	if thing, ok = obj.(*athena.Member); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+func (s *service) characterOnlinesPathFunc(mods *modifiers) string {
+
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return fmt.Sprintf("/v2/characters/%d/online/", thing.CharacterID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetCharacterOnline.FmtPath, mods.member.CharacterID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetCharacterOnlineEndpoint() *endpoint {
+
+	GetCharacterOnline.KeyFunc = s.characterOnlinesKeyFunc
+	GetCharacterOnline.PathFunc = s.characterOnlinesPathFunc
+	return GetCharacterOnline
 
 }
 
 func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCharacterShip](member)
+	endpoint := s.endpoints[GetCharacterShip.Name]
+
+	mods := s.modifiers(ModWithMember(member))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
 
 	b, res, err := s.request(
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(ship.Etag),
+		WithEtag(etag),
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
@@ -160,19 +220,33 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 
 }
 
-func (s *service) resolveGetCharacterShipEndpoint(obj interface{}) string {
+func (s *service) characterShipsKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Member, received nil")
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	var thing *athena.Member
-	var ok bool
+	return buildKey(GetCharacterShip.Name, strconv.Itoa(int(mods.member.CharacterID)))
+}
 
-	if thing, ok = obj.(*athena.Member); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Member, got %T", obj))
+func (s *service) characterShipsPathFunc(mods *modifiers) string {
+
+	if mods.member == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return fmt.Sprintf("/v1/characters/%d/ship/", thing.CharacterID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetCharacterShip.FmtPath, mods.member.CharacterID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetCharacterShipEndpoint() *endpoint {
+
+	GetCharacterShip.KeyFunc = s.characterShipsKeyFunc
+	GetCharacterShip.PathFunc = s.characterShipsPathFunc
+	return GetCharacterShip
 
 }

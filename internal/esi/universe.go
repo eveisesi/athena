@@ -5,15 +5,31 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/eveisesi/athena"
 )
 
 func (s *service) GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetAncestries](nil)
+	endpoint := s.endpoints[GetAncestries.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers()
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -34,15 +50,45 @@ func (s *service) GetAncestries(ctx context.Context, ancestries []*athena.Ancest
 
 }
 
-func (s *service) resolveUniverseAncestriesEndpoint(obj interface{}) string {
-	return "/v1/universe/ancestries/"
+func (s *service) ancestriesKeyFunc(mods *modifiers) string {
+
+	return buildKey(GetAncestries.Name)
+
+}
+
+func (s *service) ancestriesPathFunc(mods *modifiers) string {
+
+	return GetAncestries.FmtPath
+
+}
+
+func (s *service) newGetAncestriesEndpoint() *endpoint {
+
+	GetAncestries.KeyFunc = s.ancestriesKeyFunc
+	GetAncestries.PathFunc = s.ancestriesPathFunc
+	return GetAncestries
+
 }
 
 func (s *service) GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetBloodlines](nil)
+	endpoint := s.endpoints[GetBloodlines.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers()
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -63,15 +109,45 @@ func (s *service) GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodl
 
 }
 
-func (s *service) resolveUniverseBloodlinesEndpoint(obj interface{}) string {
-	return "/v1/universe/bloodlines/"
+func (s *service) racesKeyFunc(mods *modifiers) string {
+
+	return buildKey(GetRaces.Name)
+
+}
+
+func (s *service) racesPathFunc(mods *modifiers) string {
+
+	return GetRaces.FmtPath
+
+}
+
+func (s *service) newGetRacesEndpoint() *endpoint {
+
+	GetRaces.KeyFunc = s.racesKeyFunc
+	GetRaces.PathFunc = s.racesPathFunc
+	return GetRaces
+
 }
 
 func (s *service) GetRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetRaces](nil)
+	endpoint := s.endpoints[GetRaces.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers()
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,15 +168,45 @@ func (s *service) GetRaces(ctx context.Context, races []*athena.Race) ([]*athena
 
 }
 
-func (s *service) resolveUniverseRacesEndpoint(obj interface{}) string {
-	return "/v1/universe/bloodlines/"
+func (s *service) bloodlinesKeyFunc(mods *modifiers) string {
+
+	return buildKey(GetBloodlines.Name)
+
 }
 
-func (s *service) GetFaction(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error) {
+func (s *service) bloodlinesPathFunc(mods *modifiers) string {
 
-	path := s.endpoints[EndpointGetFaction](nil)
+	return GetBloodlines.FmtPath
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+}
+
+func (s *service) newGetBloodlinesEndpoint() *endpoint {
+
+	GetBloodlines.KeyFunc = s.bloodlinesKeyFunc
+	GetBloodlines.PathFunc = s.bloodlinesPathFunc
+	return GetBloodlines
+
+}
+
+func (s *service) GetFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error) {
+
+	endpoint := s.endpoints[GetFactions.Name]
+
+	mods := s.modifiers()
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -121,15 +227,45 @@ func (s *service) GetFaction(ctx context.Context, factions []*athena.Faction) ([
 
 }
 
-func (s *service) resolveUniverseFactionsEndpoint(obj interface{}) string {
-	return "/v2/universe/factions/"
+func (s *service) factionsKeyFunc(mods *modifiers) string {
+
+	return buildKey(GetFactions.Name)
+
+}
+
+func (s *service) factionsPathFunc(mods *modifiers) string {
+
+	return GetFactions.FmtPath
+
+}
+
+func (s *service) newGetFactionsEndpoint() *endpoint {
+
+	GetFactions.KeyFunc = s.factionsKeyFunc
+	GetFactions.PathFunc = s.factionsPathFunc
+	return GetFactions
+
 }
 
 func (s *service) GetCategories(ctx context.Context, ids []int) ([]int, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCategories](nil)
+	endpoint := s.endpoints[GetCategories.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers()
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -150,15 +286,45 @@ func (s *service) GetCategories(ctx context.Context, ids []int) ([]int, *http.Re
 
 }
 
-func (s *service) resolveUniverseCategoriesEndpoint(obj interface{}) string {
-	return "/v1/universe/categories/"
+func (s *service) categoriesKeyFunc(mods *modifiers) string {
+
+	return buildKey(GetCategories.Name)
+
+}
+
+func (s *service) categoriesPathFunc(mods *modifiers) string {
+
+	return GetCategories.FmtPath
+
+}
+
+func (s *service) newGetCategoriesEndpoint() *endpoint {
+
+	GetCategories.KeyFunc = s.categoriesKeyFunc
+	GetCategories.PathFunc = s.categoriesPathFunc
+	return GetCategories
+
 }
 
 func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetCategory](category)
+	endpoint := s.endpoints[GetCategories.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers(ModWithCategory(category))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -179,27 +345,57 @@ func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*
 
 }
 
-func (s *service) resolveUniverseCategoriesCategoryIDEndpoint(obj interface{}) string {
+func (s *service) categoryKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Category, received nil")
+	if mods.category == nil {
+		panic("expected type *athena.Category to be provided, received nil for category instead")
 	}
 
-	var thing *athena.Category
-	var ok bool
-	if thing, ok = obj.(*athena.Category); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Category, got %T", obj))
+	return buildKey(GetCategory.Name, strconv.Itoa(mods.category.CategoryID))
+
+}
+
+func (s *service) categoryPathFunc(mods *modifiers) string {
+
+	if mods.category == nil {
+		panic("expected type *athena.Category to be provided, received nil for category instead")
 	}
 
-	return fmt.Sprintf("/v1/universe/categories/%d/", thing.CategoryID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetCharacterClones.FmtPath, mods.category.CategoryID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetCategoryEndpoint() *endpoint {
+
+	GetCategory.KeyFunc = s.categoryKeyFunc
+	GetCategory.PathFunc = s.categoryPathFunc
+	return GetCategory
 
 }
 
 func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetGroup](group)
+	endpoint := s.endpoints[GetGroup.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers(ModWithGroup(group))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -220,28 +416,57 @@ func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Gr
 
 }
 
-func (s *service) resolveUniverseGroupsGroupIDEndpoint(obj interface{}) string {
+func (s *service) groupKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Group, received nil")
+	if mods.group == nil {
+		panic("expected type *athena.Group to be provided, received nil for group instead")
 	}
 
-	var thing *athena.Group
-	var ok bool
+	return buildKey(GetGroup.Name, strconv.Itoa(int(mods.group.GroupID)))
 
-	if thing, ok = obj.(*athena.Group); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Group, got %T", obj))
+}
+
+func (s *service) groupPathFunc(mods *modifiers) string {
+
+	if mods.group == nil {
+		panic("expected type *athena.Group to be provided, received nil for group instead")
 	}
 
-	return fmt.Sprintf("/v1/universe/groups/%d/", thing.GroupID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetGroup.FmtPath, mods.group.GroupID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetGroupEndpoint() *endpoint {
+
+	GetGroup.KeyFunc = s.groupKeyFunc
+	GetGroup.PathFunc = s.groupPathFunc
+	return GetGroup
 
 }
 
 func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetType](item)
+	endpoint := s.endpoints[GetType.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers(ModWithItem(item))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -262,28 +487,57 @@ func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type,
 
 }
 
-func (s *service) resolveGetTypeEndpoint(obj interface{}) string {
+func (s *service) typeKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Type, received nil")
+	if mods.item == nil {
+		panic("expected type *athena.Type to be provided, received nil for item instead")
 	}
 
-	var thing *athena.Type
-	var ok bool
+	return buildKey(GetType.Name, strconv.Itoa(int(mods.item.TypeID)))
 
-	if thing, ok = obj.(*athena.Type); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Type, got %T", obj))
+}
+
+func (s *service) typePathFunc(mods *modifiers) string {
+
+	if mods.item == nil {
+		panic("expected type *athena.Type to be provided, received nil for item instead")
 	}
 
-	return fmt.Sprintf("/v3/universe/types/%d/", thing.TypeID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetType.FmtPath, mods.item.TypeID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetTypeEndpoint() *endpoint {
+
+	GetType.KeyFunc = s.typeKeyFunc
+	GetType.PathFunc = s.typePathFunc
+	return GetType
 
 }
 
 func (s *service) GetRegions(ctx context.Context, ids []int) ([]int, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetRegions](nil)
+	endpoint := s.endpoints[GetRegions.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers()
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -304,17 +558,45 @@ func (s *service) GetRegions(ctx context.Context, ids []int) ([]int, *http.Respo
 
 }
 
-func (s *service) resolveGetRegionsEndpoint(obj interface{}) string {
+func (s *service) regionsKeyFunc(mods *modifiers) string {
 
-	return "/v1/universe/regions/"
+	return buildKey(GetRegions.Name)
+
+}
+
+func (s *service) regionsPathFunc(mods *modifiers) string {
+
+	return GetRegions.FmtPath
+
+}
+
+func (s *service) newGetRegionsEndpoint() *endpoint {
+
+	GetRegions.KeyFunc = s.regionsKeyFunc
+	GetRegions.PathFunc = s.regionsPathFunc
+	return GetRegions
 
 }
 
 func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetRegion](region)
+	endpoint := s.endpoints[GetRegion.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers()
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -335,28 +617,57 @@ func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena
 
 }
 
-func (s *service) resolveGetRegionEndpoint(obj interface{}) string {
+func (s *service) regionKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Region, received nil")
+	if mods.region == nil {
+		panic("expected type *athena.Region to be provided, received nil for region instead")
 	}
 
-	var thing *athena.Region
-	var ok bool
+	return buildKey(GetRegion.Name, strconv.Itoa(mods.region.RegionID))
 
-	if thing, ok = obj.(*athena.Region); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Region, got %T", obj))
+}
+
+func (s *service) regionPathFunc(mods *modifiers) string {
+
+	if mods.region == nil {
+		panic("expected type *athena.Region to be provided, received nil for region instead")
 	}
 
-	return fmt.Sprintf("/v1/universe/regions/%d/", thing.RegionID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetRegion.FmtPath, mods.region.RegionID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetRegionEndpoint() *endpoint {
+
+	GetRegion.KeyFunc = s.regionKeyFunc
+	GetRegion.PathFunc = s.regionPathFunc
+	return GetRegion
 
 }
 
 func (s *service) GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetConstellation](constellation)
+	endpoint := s.endpoints[GetRaces.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers(ModWithConstellation(constellation))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -377,28 +688,57 @@ func (s *service) GetConstellation(ctx context.Context, constellation *athena.Co
 
 }
 
-func (s *service) resolveGetConstellationEndpoint(obj interface{}) string {
+func (s *service) constellationKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Constellation, received nil")
+	if mods.constellation == nil {
+		panic("expected type *athena.Constellation to be provided, received nil for constellation instead")
 	}
 
-	var thing *athena.Constellation
-	var ok bool
+	return buildKey(GetConstellation.Name, strconv.Itoa(mods.constellation.ConstellationID))
 
-	if thing, ok = obj.(*athena.Constellation); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Constellation, got %T", obj))
+}
+
+func (s *service) constellationPathFunc(mods *modifiers) string {
+
+	if mods.constellation == nil {
+		panic("expected type *athena.Constellation to be provided, received nil for constellation instead")
 	}
 
-	return fmt.Sprintf("/v1/universe/constellations/%d/", thing.ConstellationID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetConstellation.FmtPath, mods.constellation.ConstellationID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetConstellationEndpoint() *endpoint {
+
+	GetConstellation.KeyFunc = s.constellationKeyFunc
+	GetConstellation.PathFunc = s.constellationPathFunc
+	return GetConstellation
 
 }
 
 func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetSolarSystem](solarSystem)
+	endpoint := s.endpoints[GetRaces.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers(ModWithSystem(solarSystem))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -419,28 +759,57 @@ func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarS
 
 }
 
-func (s *service) resolveGetSolarSystemEndpoint(obj interface{}) string {
+func (s *service) solarSystemKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.SolarSystem, received nil")
+	if mods.solarSystem == nil {
+		panic("expected type *athena.SolarSystem to be provided, received nil for solarSystem instead")
 	}
 
-	var thing *athena.SolarSystem
-	var ok bool
+	return buildKey(GetSolarSystem.Name, strconv.Itoa(mods.solarSystem.SystemID))
 
-	if thing, ok = obj.(*athena.SolarSystem); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.SolarSystem, got %T", obj))
+}
+
+func (s *service) solarSystemPathFunc(mods *modifiers) string {
+
+	if mods.solarSystem == nil {
+		panic("expected type *athena.SolarSystem to be provided, received nil for solarSystem instead")
 	}
 
-	return fmt.Sprintf("/v4/universe/systems/%d/", thing.ConstellationID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetSolarSystem.FmtPath, mods.solarSystem.SystemID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetSolarSystemEndpoint() *endpoint {
+
+	GetSolarSystem.KeyFunc = s.solarSystemKeyFunc
+	GetSolarSystem.PathFunc = s.solarSystemPathFunc
+	return GetSolarSystem
 
 }
 
 func (s *service) GetStation(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetStation](station)
+	endpoint := s.endpoints[GetStation.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	mods := s.modifiers(ModWithStation(station))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -461,28 +830,58 @@ func (s *service) GetStation(ctx context.Context, station *athena.Station) (*ath
 
 }
 
-func (s *service) resolveGetStationEndpoint(obj interface{}) string {
+func (s *service) stationKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Station, received nil")
+	if mods.station == nil {
+		panic("expected type *athena.Station to be provided, received nil for station instead")
 	}
 
-	var thing *athena.Station
-	var ok bool
+	return buildKey(GetStation.Name, strconv.Itoa(mods.station.StationID))
 
-	if thing, ok = obj.(*athena.Station); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Station, got %T", obj))
+}
+
+func (s *service) stationPathFunc(mods *modifiers) string {
+
+	if mods.station == nil {
+		panic("expected type *athena.Station to be provided, received nil for station instead")
 	}
 
-	return fmt.Sprintf("/v2/universe/stations/%d/", thing.StationID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetStation.FmtPath, mods.station.StationID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetStationEndpoint() *endpoint {
+
+	GetStation.KeyFunc = s.stationKeyFunc
+	GetStation.PathFunc = s.stationPathFunc
+	return GetStation
 
 }
 
 func (s *service) GetStructure(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetStructure](structure)
+	endpoint := s.endpoints[GetStructure.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithAuthorization(member.AccessToken))
+	mods := s.modifiers(ModWithStructure(structure))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+		WithAuthorization(member.AccessToken),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -503,19 +902,34 @@ func (s *service) GetStructure(ctx context.Context, member *athena.Member, struc
 
 }
 
-func (s *service) resolveGetStructureEndpoint(obj interface{}) string {
+func (s *service) structureKeyFunc(mods *modifiers) string {
 
-	if obj == nil {
-		panic("invalid type provided for endpoint resolution, expect *athena.Structure, received nil")
+	if mods.structure == nil {
+		panic("expected type *athena.Structure to be provided, received nil for structure instead")
 	}
 
-	var thing *athena.Structure
-	var ok bool
+	return buildKey(GetStation.Name, strconv.Itoa(int(mods.structure.StructureID)))
 
-	if thing, ok = obj.(*athena.Structure); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Structure, got %T", obj))
+}
+
+func (s *service) structurePathFunc(mods *modifiers) string {
+
+	if mods.structure == nil {
+		panic("expected type *athena.Structure to be provided, received nil for structure instead")
 	}
 
-	return fmt.Sprintf("/v2/universe/structures/%d/", thing.StructureID)
+	u := url.URL{
+		Path: fmt.Sprintf(GetStructure.FmtPath, mods.structure.StructureID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetStructureEndpoint() *endpoint {
+
+	GetStructure.KeyFunc = s.structureKeyFunc
+	GetStructure.PathFunc = s.structurePathFunc
+	return GetStructure
 
 }

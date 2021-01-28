@@ -65,17 +65,12 @@ func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member
 
 func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]*athena.MemberContact, error) {
 
-	valid, etagID := s.esi.GenerateEndpointHash(esi.EndpointGetCharacterContacts, member)
-	if !valid {
-		return nil, fmt.Errorf("failed to generate valid etag hash")
-	}
-
-	cached := true
-
-	etag, err := s.esi.Etag(ctx, esi.EndpointGetCharactersCharacterIDContacts, member)
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithMember(member))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
+
+	cached := true
 
 	contacts, err := s.cache.MemberContacts(ctx, member.ID.Hex())
 	if err != nil {
@@ -103,12 +98,10 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 		return contacts, nil
 	}
 
-	newContacts, _, _, err := s.esi.GetCharacterContacts(ctx, member, etag, make([]*athena.MemberContact, 0))
+	newContacts, _, err := s.esi.GetCharacterContacts(ctx, member, make([]*athena.MemberContact, 0))
 	if err != nil {
 		return nil, fmt.Errorf("[Contacts Service] Failed to fetch contacts for member %s: %w", member.ID.Hex(), err)
 	}
-
-	_, _ = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 
 	if len(newContacts) > 0 {
 		s.resolveContactAttributes(ctx, newContacts)
@@ -255,12 +248,7 @@ func (s *service) EmptyMemberContactLabels(ctx context.Context, member *athena.M
 
 func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, error) {
 
-	valid, etagID := s.esi.GenerateEndpointHash(esi.EndpointGetCharacterContactLabels, member)
-	if !valid {
-		return nil, fmt.Errorf("failed to generate valid etag hash")
-	}
-
-	etag, err := s.etag.Etag(ctx, etagID)
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterContactLabels, esi.ModWithMember(member))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -291,12 +279,10 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 		return labels, nil
 	}
 
-	newLabels, etag, _, err := s.esi.GetCharacterContactLabels(ctx, member, etag, make([]*athena.MemberContactLabel, 0))
+	newLabels, _, err := s.esi.GetCharacterContactLabels(ctx, member, make([]*athena.MemberContactLabel, 0))
 	if err != nil {
 		return nil, fmt.Errorf("[Contacts Service] Failed to fetch labels for member %s: %w", member.ID.Hex(), err)
 	}
-
-	_, _ = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 
 	if len(newLabels) > 0 {
 		labels, err = s.diffAndUpdateLabels(ctx, member, labels, newLabels)

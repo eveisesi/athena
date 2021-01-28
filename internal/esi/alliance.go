@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/eveisesi/athena"
 )
@@ -24,9 +26,21 @@ func isAllianceValid(r *athena.Alliance) bool {
 // Cache: 3600 sec (1 Hour)
 func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error) {
 
-	path := s.endpoints[EndpointGetAlliance](alliance)
+	// Fetch configuration for this endpoint
+	endpoint := s.endpoints[GetAlliance.Name]
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(alliance.Etag))
+	// Prime modifiers with alliance
+	mods := s.modifiers(ModWithAlliance(alliance))
+
+	// Fetch Etag for request
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(endpoint.PathFunc(mods)), WithEtag(etag))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,19 +69,33 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 	return alliance, res, nil
 }
 
-func (s *service) resolveGetAllianceEndpoint(obj interface{}) string {
+func (s *service) allianceKeyFunc(mods *modifiers) string {
 
-	mods := s.modifiers(modFuncs)
-
-	if mods
-
-	var thing *athena.Alliance
-	var ok bool
-
-	if thing, ok = obj.(*athena.Alliance); !ok {
-		panic(fmt.Sprintf("invalid type received for endpoint resolution, expect *athena.Alliance, got %T", obj))
+	if mods.alliance == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return fmt.Sprintf("/v3/alliances/%d/", thing.AllianceID)
+	return buildKey(GetAlliance.Name, strconv.Itoa(int(mods.alliance.AllianceID)))
+}
+
+func (s *service) alliancePathFunc(mods *modifiers) string {
+
+	if mods.alliance == nil {
+		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+	}
+
+	u := url.URL{
+		Path: fmt.Sprintf(GetAlliance.FmtPath, mods.alliance.AllianceID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) newGetAllianceEndpoint() *endpoint {
+
+	GetAlliance.KeyFunc = s.allianceKeyFunc
+	GetAlliance.PathFunc = s.alliancePathFunc
+	return GetAlliance
 
 }
