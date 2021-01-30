@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -19,8 +18,11 @@ type corporationRepository struct {
 func NewCorporationRepository(d *mongo.Database) (athena.CorporationRepository, error) {
 	corporations := d.Collection("corporations")
 	corporationIndexModel := mongo.IndexModel{
-		Keys: bson.M{
-			"corporation_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "corporation_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("corporations_corporation_id_unique"),

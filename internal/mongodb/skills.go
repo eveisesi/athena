@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -26,21 +25,19 @@ func NewMemberSkillRepository(d *mongo.Database) (athena.MemberSkillRepository, 
 	skills := d.Collection("member_skills")
 	skillIdxMods := []mongo.IndexModel{
 		{
-			Keys: bson.M{
-				"member_id": 1,
-				"skill_id":  1,
+			Keys: primitive.D{
+				primitive.E{
+					Key:   "member_id",
+					Value: 1,
+				},
+				primitive.E{
+					Key:   "skill_id",
+					Value: 1,
+				},
 			},
 			Options: &options.IndexOptions{
 				Name:   newString("member_skills_member_id_skill_id_unique"),
 				Unique: newBool(true),
-			},
-		},
-		{
-			Keys: bson.M{
-				"skills.skill_id": 1,
-			},
-			Options: &options.IndexOptions{
-				Name: newString("member_skills_skills_skill_id_idx"),
 			},
 		},
 	}
@@ -51,8 +48,11 @@ func NewMemberSkillRepository(d *mongo.Database) (athena.MemberSkillRepository, 
 
 	skillMeta := d.Collection("member_skill_meta")
 	skillMetaIdxMod := mongo.IndexModel{
-		Keys: bson.M{
-			"member_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "member_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("member_skill_meta_member_id_unique"),
@@ -67,9 +67,15 @@ func NewMemberSkillRepository(d *mongo.Database) (athena.MemberSkillRepository, 
 	skillQueue := d.Collection("member_skillqueue")
 	skillQueueIdxMods := []mongo.IndexModel{
 		{
-			Keys: bson.M{
-				"member_id":      1,
-				"queue_position": 1,
+			Keys: primitive.D{
+				primitive.E{
+					Key:   "member_id",
+					Value: 1,
+				},
+				primitive.E{
+					Key:   "queue_position",
+					Value: 1,
+				},
 			},
 			Options: &options.IndexOptions{
 				Name: newString("member_skillqueue_member_id_queue_position_idx"),
@@ -82,9 +88,13 @@ func NewMemberSkillRepository(d *mongo.Database) (athena.MemberSkillRepository, 
 	}
 
 	attributes := d.Collection("member_attributes")
+
 	attributeIdxMod := mongo.IndexModel{
-		Keys: bson.M{
-			"member_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "member_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("member_attributes_member_id_unique"),

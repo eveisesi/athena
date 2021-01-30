@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	nethttp "net/http"
@@ -130,16 +129,7 @@ func basics(command string) *app {
 
 	contact, err := mongodb.NewMemberContactRepository(app.db)
 	if err != nil {
-		var cmdErr mongo.CommandError
-		if errors.As(err, &cmdErr) {
-			// This Repository is consistently throwing this error locally, no reason to. I think it is because the order
-			// of the fields gets sorted when it is created vs when it is checked. Not sure, but skipping it for now.
-			// https://github.com/mongodb/mongo/blob/master/src/mongo/base/error_codes.yml#L121
-			if cmdErr.Code != 86 { // IndexKeySpecsConflict
-				app.logger.WithError(err).Fatal("failed to initialize contact repository")
-			}
-		}
-
+		app.logger.WithError(err).Fatal("failed to initialize contact repository")
 	}
 
 	skill, err := mongodb.NewMemberSkillRepository(app.db)

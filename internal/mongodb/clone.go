@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -21,8 +20,11 @@ func NewCloneRepository(d *mongo.Database) (athena.CloneRepository, error) {
 
 	clones := d.Collection("member_clones")
 	clonesIdxModel := mongo.IndexModel{
-		Keys: bson.M{
-			"member_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "member_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("member_clones_member_id_unique"),
@@ -36,8 +38,11 @@ func NewCloneRepository(d *mongo.Database) (athena.CloneRepository, error) {
 
 	implants := d.Collection("member_implants")
 	implantsIdxModel := mongo.IndexModel{
-		Keys: bson.M{
-			"member_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "member_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("member_implants_member_id_unique"),

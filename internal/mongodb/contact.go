@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -22,32 +21,46 @@ func NewMemberContactRepository(d *mongo.Database) (athena.MemberContactReposito
 	var ctx = context.Background()
 
 	contacts := d.Collection("member_contacts")
-	contactsIdxMod := mongo.IndexModel{
-		Keys: bson.M{
-			"contact_id": 1,
-			"member_id":  1,
-		},
-		Options: &options.IndexOptions{
-			Name:   newString("member_contacts_member_id_contact_id_unique"),
-			Unique: newBool(true),
+	contactsIdxMod := []mongo.IndexModel{
+		{
+			Keys: primitive.D{
+				primitive.E{
+					Key:   "member_id",
+					Value: 1,
+				},
+				primitive.E{
+					Key:   "contact_id",
+					Value: 1,
+				},
+			},
+			Options: &options.IndexOptions{
+				Name:   newString("member_contacts_member_id_contact_id_unique"),
+				Unique: newBool(true),
+			},
 		},
 	}
 
-	_, err := contacts.Indexes().CreateOne(ctx, contactsIdxMod)
+	_, err := contacts.Indexes().CreateMany(ctx, contactsIdxMod)
 	if err != nil {
 		return nil, fmt.Errorf("[Contact Repository] Failed to create index on contact repository: %w", err)
 	}
 
 	labels := d.Collection("member_contact_labels")
-	labelsIdxMod := mongo.IndexModel{
-		Keys: bson.M{
-			"member_id": 1,
-		},
-		Options: &options.IndexOptions{
-			Name: newString("member_contact_labels_member_id_idx"),
+	labelsIdxMod := []mongo.IndexModel{
+		{
+			Keys: primitive.D{
+				primitive.E{
+					Key:   "member_id",
+					Value: 1,
+				},
+			},
+			Options: &options.IndexOptions{
+				Name: newString("member_contact_labels_member_id_idx"),
+			},
 		},
 	}
-	_, err = labels.Indexes().CreateOne(ctx, labelsIdxMod)
+
+	_, err = labels.Indexes().CreateMany(ctx, labelsIdxMod)
 	if err != nil {
 		return nil, fmt.Errorf("[Contact Repository] Failed to create index on contact labels repository: %w", err)
 	}

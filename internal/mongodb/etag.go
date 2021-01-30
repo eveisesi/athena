@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -22,8 +21,11 @@ func NewEtagRepository(d *mongo.Database) (athena.EtagRepository, error) {
 
 	etag := d.Collection("etags")
 	etagIdxMod := mongo.IndexModel{
-		Keys: bson.M{
-			"etag_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "etag_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("etags_etag_id_unique"),

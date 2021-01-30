@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -19,8 +18,11 @@ type allianceRepository struct {
 func NewAllianceRepository(d *mongo.Database) (athena.AllianceRepository, error) {
 	alliances := d.Collection("alliances")
 	allianceIndexModel := mongo.IndexModel{
-		Keys: bson.M{
-			"alliance_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "alliance_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("alliances_alliance_id_unique"),

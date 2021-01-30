@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -21,9 +20,15 @@ func NewMemberContractRepository(d *mongo.Database) (athena.MemberContractReposi
 	contracts := d.Collection("member_contracts")
 	contractIdxMods := []mongo.IndexModel{
 		{
-			Keys: bson.M{
-				"member_id":   1,
-				"contract_id": 1,
+			Keys: primitive.D{
+				primitive.E{
+					Key:   "member_id",
+					Value: 1,
+				},
+				primitive.E{
+					Key:   "contract_id",
+					Value: 1,
+				},
 			},
 			Options: &options.IndexOptions{
 				Name:   newString("member_contracts_member_id_contract_id_unique"),

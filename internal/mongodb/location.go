@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/eveisesi/athena"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -23,8 +22,11 @@ func NewLocationRepository(d *mongo.Database) (athena.MemberLocationRepository, 
 
 	location := d.Collection("member_location")
 	locIdxMod := mongo.IndexModel{
-		Keys: bson.M{
-			"member_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "member_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("member_location_member_id_unique"),
@@ -38,8 +40,11 @@ func NewLocationRepository(d *mongo.Database) (athena.MemberLocationRepository, 
 
 	online := d.Collection("member_online")
 	onlineIdxMod := mongo.IndexModel{
-		Keys: bson.M{
-			"member_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "member_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("member_online_member_id_unique"),
@@ -53,8 +58,11 @@ func NewLocationRepository(d *mongo.Database) (athena.MemberLocationRepository, 
 
 	ship := d.Collection("member_ship")
 	shipIdxMod := mongo.IndexModel{
-		Keys: bson.M{
-			"member_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "member_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("member_ship_member_id_unique"),

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -19,8 +18,11 @@ type characterRepository struct {
 func NewCharacterRepository(d *mongo.Database) (athena.CharacterRepository, error) {
 	characters := d.Collection("characters")
 	characterIndexModel := mongo.IndexModel{
-		Keys: bson.M{
-			"character_id": 1,
+		Keys: primitive.D{
+			primitive.E{
+				Key:   "character_id",
+				Value: 1,
+			},
 		},
 		Options: &options.IndexOptions{
 			Name:   newString("characters_character_id_unique"),
