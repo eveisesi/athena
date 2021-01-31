@@ -48,7 +48,7 @@ func (s *service) SetEtag(ctx context.Context, etagID string, etag *athena.Etag,
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyCharacter, etagID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyEtag, etagID), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

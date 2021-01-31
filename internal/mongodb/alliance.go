@@ -97,11 +97,11 @@ func (r *allianceRepository) DeleteAlliance(ctx context.Context, id string) (boo
 
 	filters := BuildFilters(athena.NewEqualOperator("_id", _id))
 
-	result, err := r.alliances.DeleteOne(ctx, filters)
+	_, err = r.alliances.DeleteOne(ctx, filters)
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }

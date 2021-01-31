@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/eveisesi/athena"
 )
@@ -97,6 +98,10 @@ func WithEtag(etag *athena.Etag) OptionFunc {
 
 	return WithHeader("if-none-match", etag.Etag)
 
+}
+
+func WithPage(i int) OptionFunc {
+	return WithQuery("page", strconv.Itoa(i))
 }
 
 func WithAuthorization(token string) OptionFunc {

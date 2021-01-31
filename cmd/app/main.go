@@ -172,6 +172,38 @@ func main() {
 			Name:   "universe",
 			Action: universeCommand,
 		},
+		{
+			Name:  "token",
+			Usage: "Commands for managing tokens",
+			Subcommands: []cli.Command{
+				{
+					Name:   "manual",
+					Usage:  "Provide a MemberID and that ID will be pushed to the Processor Queue",
+					Action: manuallyPushIDToQueue,
+					Flags: []cli.Flag{
+						cli.Int64Flag{
+							Name:     "id",
+							Required: true,
+						},
+					},
+				},
+				{
+					Name:   "add",
+					Usage:  "Will parse and create an account for the prompted access token and refresh token",
+					Action: addMemberByCLI,
+				},
+				{
+					Name:   "refresh",
+					Action: refreshMemberToken,
+					Flags: []cli.Flag{
+						cli.Int64Flag{
+							Name:     "id",
+							Required: true,
+						},
+					},
+				},
+			},
+		},
 		// {
 		// 	Name:   "test",
 		// 	Action: testCommand,

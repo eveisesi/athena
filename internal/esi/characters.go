@@ -73,8 +73,9 @@ func (s *service) newGetCharacterEndpoint() *endpoint {
 }
 
 func (s *service) characterKeyFunc(mods *modifiers) string {
+
 	if mods.character == nil {
-		panic("expected type *athena.Character to be provided, received nil for alliance instead")
+		panic("expected type *athena.Character to be provided, received nil for character instead")
 	}
 
 	return buildKey(GetCharacter.Name, strconv.Itoa(int(mods.character.CharacterID)))
@@ -82,12 +83,12 @@ func (s *service) characterKeyFunc(mods *modifiers) string {
 
 func (s *service) characterPathFunc(mods *modifiers) string {
 
-	if mods.alliance == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+	if mods.character == nil {
+		panic("expected type *athena.Character to be provided, received nil for character instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacter.FmtPath, mods.alliance.AllianceID),
+		Path: fmt.Sprintf(GetCharacter.FmtPath, mods.character.CharacterID),
 	}
 
 	return u.String()

@@ -20,8 +20,11 @@ import (
 
 type Service interface {
 	Member(ctx context.Context, memberID string) (*athena.Member, error)
+	// UpdateMember(ctx context.Context, member *athena.Member) (*athena.Member, error)
 	Login(ctx context.Context, code, state string) error
 	ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error)
+	MemberFromToken(ctx context.Context, token jwt.Token) (*athena.Member, error)
+	// ExpiredTokens(ctx context.Context) ([]*athena.Member, error)
 }
 
 type service struct {
@@ -46,14 +49,23 @@ func NewService(auth auth.Service, cache cache.Service, alliance alliance.Servic
 	}
 }
 
+// func (s *service) ExpiredTokens(ctx context.Context) ([]*athena.Member, error) {
+
+// 	members, err := s.member.Members(ctx, athena.NewLessThanOperator("expires", time.Now()))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	spew.Dump(members)
+
+// }
+
 func (s *service) ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error) {
 
 	currentToken := member.AccessToken
 	member, err := s.auth.ValidateToken(ctx, member)
 	if err != nil {
-
 		return nil, err
-
 	}
 
 	if member.AccessToken != currentToken {
@@ -108,7 +120,7 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 		return fmt.Errorf("failed to parse and/or verify token: %w", err)
 	}
 
-	member, err := s.memberFromToken(ctx, token)
+	member, err := s.MemberFromToken(ctx, token)
 	if err != nil {
 		return err
 	}
@@ -137,7 +149,7 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 
 }
 
-func (s *service) memberFromToken(ctx context.Context, token jwt.Token) (*athena.Member, error) {
+func (s *service) MemberFromToken(ctx context.Context, token jwt.Token) (*athena.Member, error) {
 
 	sub := token.Subject()
 	if sub == "" {

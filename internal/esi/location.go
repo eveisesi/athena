@@ -66,16 +66,16 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 func (s *service) characterLocationsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterLocation.Name, strconv.Itoa(int(mods.member.CharacterID)))
+	return buildKey(GetCharacterLocation.Name, strconv.FormatUint(mods.member.CharacterID, 10))
 }
 
 func (s *service) characterLocationsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
@@ -146,16 +146,16 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 func (s *service) characterOnlinesKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterOnline.Name, strconv.Itoa(int(mods.member.CharacterID)))
+	return buildKey(GetCharacterOnline.Name, strconv.FormatUint(mods.member.CharacterID, 10))
 }
 
 func (s *service) characterOnlinesPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
@@ -223,16 +223,16 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 func (s *service) characterShipsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterShip.Name, strconv.Itoa(int(mods.member.CharacterID)))
+	return buildKey(GetCharacterShip.Name, strconv.FormatUint(mods.member.CharacterID, 10))
 }
 
 func (s *service) characterShipsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{

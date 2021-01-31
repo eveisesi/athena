@@ -157,12 +157,8 @@ func BuildFindOptions(ops ...*athena.Operator) *options.FindOptions {
 	return opts
 }
 
-func newBool(b bool) *bool {
-	return &b
-}
-func newString(s string) *string {
-	return &s
-}
+func newBool(b bool) *bool       { return &b }
+func newString(s string) *string { return &s }
 
 var (
 	typeNullString  = reflect.TypeOf(null.String{})
@@ -175,7 +171,10 @@ var (
 	typeNullUint64  = reflect.TypeOf(null.Uint64{})
 )
 
-var allTypes = []reflect.Type{typeNullString, typeNullTime, typeNullBool, typeNullFloat64, typeNullUint, typeNullInt, typeNullInt64, typeNullUint64}
+var allTypes = []reflect.Type{
+	typeNullString, typeNullTime, typeNullBool, typeNullFloat64,
+	typeNullUint, typeNullInt, typeNullInt64, typeNullUint64,
+}
 
 func customCodecRegistery() *bsoncodec.RegistryBuilder {
 

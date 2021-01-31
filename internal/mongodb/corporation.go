@@ -97,11 +97,11 @@ func (r *corporationRepository) DeleteCorporation(ctx context.Context, id string
 
 	filters := BuildFilters(athena.NewEqualOperator("_id", _id))
 
-	result, err := r.corporations.DeleteOne(ctx, filters)
+	_, err = r.corporations.DeleteOne(ctx, filters)
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }

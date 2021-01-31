@@ -70,7 +70,7 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 func (s *service) corporationKeyFunc(mods *modifiers) string {
 
 	if mods.corporation == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Corporation to be provided, received nil for corporation instead")
 	}
 
 	return buildKey(GetCorporation.Name, strconv.Itoa(int(mods.corporation.CorporationID)))
@@ -79,7 +79,7 @@ func (s *service) corporationKeyFunc(mods *modifiers) string {
 func (s *service) corporationPathFunc(mods *modifiers) string {
 
 	if mods.corporation == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Corporation to be provided, received nil for corporation instead")
 	}
 
 	u := url.URL{

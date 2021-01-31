@@ -114,33 +114,56 @@ type endpoint struct {
 }
 
 var (
-	GetAlliance               = &endpoint{Name: "GetAlliance", FmtPath: "/v3/alliances/%d/"}
-	GetCharacter              = &endpoint{Name: "GetCharacter", FmtPath: "/v4/characters/%d/"}
-	GetCharacterAttributes    = &endpoint{Name: "GetCharacterAttributes", FmtPath: "/v1/characters/%d/attributes/"}
-	GetCharacterClones        = &endpoint{Name: "GetCharacterClones", FmtPath: "/v4/characters/%d/clones/"}
+	// Alliances
+	GetAlliance = &endpoint{Name: "GetAlliance", FmtPath: "/v3/alliances/%d/"}
+
+	// Characters
+	GetCharacter = &endpoint{Name: "GetCharacter", FmtPath: "/v4/characters/%d/"}
+
+	// Skills
+	GetCharacterAttributes = &endpoint{Name: "GetCharacterAttributes", FmtPath: "/v1/characters/%d/attributes/"}
+	GetCharacterSkills     = &endpoint{Name: "GetCharacterSkills", FmtPath: "/v4/characters/%d/skills/"}
+	GetCharacterSkillQueue = &endpoint{Name: "GetCharacterSkillQueue", FmtPath: "/v2/characters/%d/skillqueue/"}
+
+	// Clones
+	GetCharacterClones   = &endpoint{Name: "GetCharacterClones", FmtPath: "/v4/characters/%d/clones/"}
+	GetCharacterImplants = &endpoint{Name: "GetCharacterImplants", FmtPath: "/v2/characters/%d/implants/"}
+
+	// Contacts
 	GetCharacterContacts      = &endpoint{Name: "GetCharacterContacts", FmtPath: "/v2/characters/%d/contacts/"}
 	GetCharacterContactLabels = &endpoint{Name: "GetCharacterContactLabels", FmtPath: "/v1/characters/%d/contacts/labels/"}
-	GetCharacterImplants      = &endpoint{Name: "GetCharacterImplants", FmtPath: "/v2/characters/%d/implants/"}
-	GetCharacterLocation      = &endpoint{Name: "GetCharacterLocation", FmtPath: "/v2/characters/%d/location/"}
-	GetCharacterOnline        = &endpoint{Name: "GetCharacterOnline", FmtPath: "/v3/characters/%d/online/"}
-	GetCharacterShip          = &endpoint{Name: "GetCharacterShip", FmtPath: "/v2/characters/%d/ship/"}
-	GetCharacterSkills        = &endpoint{Name: "GetCharacterSkills", FmtPath: "/v4/characters/%d/skills/"}
-	GetCharacterSkillQueue    = &endpoint{Name: "GetCharacterSkillQueue", FmtPath: "/v2/characters/%d/skillqueue/"}
-	GetCorporation            = &endpoint{Name: "GetCorporation", FmtPath: "/v4/corporations/{corporation_id}/"}
-	GetAncestries             = &endpoint{Name: "GetAncestries", FmtPath: "/v1/universe/ancestries/"}
-	GetBloodlines             = &endpoint{Name: "GetBloodlines", FmtPath: "/v1/universe/bloodlines/"}
-	GetCategories             = &endpoint{Name: "GetCategories", FmtPath: "/v1/universe/categories/"}
-	GetCategory               = &endpoint{Name: "GetCategory", FmtPath: "/v1/universe/categories/%d/"}
-	GetConstellation          = &endpoint{Name: "GetConstellation", FmtPath: "/v1/universe/constellations/%d/"}
-	GetFactions               = &endpoint{Name: "GetFactions", FmtPath: "/v2/universe/factions/"}
-	GetGroup                  = &endpoint{Name: "GetGroup", FmtPath: "/v1/universe/groups/%d/"}
-	GetRaces                  = &endpoint{Name: "GetRaces", FmtPath: "/v1/universe/races/"}
-	GetRegions                = &endpoint{Name: "GetRegions", FmtPath: "/v1/universe/regions/"}
-	GetRegion                 = &endpoint{Name: "GetRegion", FmtPath: "/v1/universe/regions/{region_id}/"}
-	GetSolarSystem            = &endpoint{Name: "GetSolarSystem", FmtPath: "/v4/universe/systems/{system_id}/"}
-	GetStation                = &endpoint{Name: "GetStation", FmtPath: "/v2/universe/stations/{station_id}/"}
-	GetStructure              = &endpoint{Name: "GetStructure", FmtPath: "/v2/universe/structures/{structure_id}/"}
-	GetType                   = &endpoint{Name: "GetType", FmtPath: "/v3/universe/types/{type_id}/"}
+
+	// Contracts
+	GetCharacterContracts     = &endpoint{Name: "GetCharacterContracts", FmtPath: "/v1/characters/%d/contracts/"}
+	GetCharacterContractItems = &endpoint{Name: "GetCharacterContractItems", FmtPath: "/v1/characters/%d/contracts/%d/items/"}
+	GetCharacterContractBids  = &endpoint{Name: "GetCharacterContractBids", FmtPath: "/v1/characters/%d/contracts/%d/bids/"}
+
+	// Fittings
+	GetCharacterFittings = &endpoint{Name: "GetCharacterFittings", FmtPath: "/v2/characters/%d/fittings/"}
+
+	// Locations
+	GetCharacterLocation = &endpoint{Name: "GetCharacterLocation", FmtPath: "/v2/characters/%d/location/"}
+	GetCharacterOnline   = &endpoint{Name: "GetCharacterOnline", FmtPath: "/v3/characters/%d/online/"}
+	GetCharacterShip     = &endpoint{Name: "GetCharacterShip", FmtPath: "/v2/characters/%d/ship/"}
+
+	// Corporations
+	GetCorporation = &endpoint{Name: "GetCorporation", FmtPath: "/v4/corporations/%d/"}
+
+	// Universe
+	GetAncestries    = &endpoint{Name: "GetAncestries", FmtPath: "/v1/universe/ancestries/"}
+	GetBloodlines    = &endpoint{Name: "GetBloodlines", FmtPath: "/v1/universe/bloodlines/"}
+	GetCategories    = &endpoint{Name: "GetCategories", FmtPath: "/v1/universe/categories/"}
+	GetCategory      = &endpoint{Name: "GetCategory", FmtPath: "/v1/universe/categories/%d/"}
+	GetConstellation = &endpoint{Name: "GetConstellation", FmtPath: "/v1/universe/constellations/%d/"}
+	GetFactions      = &endpoint{Name: "GetFactions", FmtPath: "/v2/universe/factions/"}
+	GetGroup         = &endpoint{Name: "GetGroup", FmtPath: "/v1/universe/groups/%d/"}
+	GetRaces         = &endpoint{Name: "GetRaces", FmtPath: "/v1/universe/races/"}
+	GetRegions       = &endpoint{Name: "GetRegions", FmtPath: "/v1/universe/regions/"}
+	GetRegion        = &endpoint{Name: "GetRegion", FmtPath: "/v1/universe/regions/%d/"}
+	GetSolarSystem   = &endpoint{Name: "GetSolarSystem", FmtPath: "/v4/universe/systems/%d/"}
+	GetStation       = &endpoint{Name: "GetStation", FmtPath: "/v2/universe/stations/%d/"}
+	GetStructure     = &endpoint{Name: "GetStructure", FmtPath: "/v2/universe/structures/%d/"}
+	GetType          = &endpoint{Name: "GetType", FmtPath: "/v3/universe/types/%d/"}
 )
 
 var AllEndpoints = []*endpoint{
@@ -150,6 +173,10 @@ var AllEndpoints = []*endpoint{
 	GetCharacterClones,
 	GetCharacterContacts,
 	GetCharacterContactLabels,
+	GetCharacterContracts,
+	GetCharacterContractItems,
+	GetCharacterContractBids,
+	GetCharacterFittings,
 	GetCharacterImplants,
 	GetCharacterLocation,
 	GetCharacterOnline,
@@ -182,6 +209,10 @@ func (s *service) buildEndpointMap() {
 		GetCharacterClones.Name:        s.newGetCharacterClonesEndpoint(),
 		GetCharacterContacts.Name:      s.newGetCharacterContactsEndpoint(),
 		GetCharacterContactLabels.Name: s.newGetCharacterContactLabelsEndpoint(),
+		GetCharacterContracts.Name:     s.newGetCharacterContractsEndpoint(),
+		GetCharacterContractItems.Name: s.newGetCharacterContractItemsEndpoint(),
+		GetCharacterContractBids.Name:  s.newGetCharacterContractBidsEndpoint(),
+		GetCharacterFittings.Name:      s.newGetCharacterFittingsEndpoint(),
 		GetCharacterImplants.Name:      s.newGetCharacterImplantsEndpoint(),
 		GetCharacterLocation.Name:      s.newGetCharacterLocationEndpoint(),
 		GetCharacterOnline.Name:        s.newGetCharacterOnlineEndpoint(),
@@ -296,6 +327,22 @@ func (s *service) retrieveExpiresHeader(h http.Header, duration time.Duration) t
 	}
 
 	return expires
+}
+
+func (s *service) retrieveXPagesFromHeader(h http.Header) int {
+
+	header := h.Get("X-Pages")
+	if header == "" {
+		return 0
+	}
+
+	pages, err := strconv.Atoi(header)
+	if err != nil {
+		return 0
+	}
+
+	return pages
+
 }
 
 // retrieveEtagHeader is a helper method that retrieves an Etag for the most recent request to

@@ -362,7 +362,7 @@ func (s *service) categoryPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterClones.FmtPath, mods.category.CategoryID),
+		Path: fmt.Sprintf(GetCategory.FmtPath, mods.category.CategoryID),
 	}
 
 	return u.String()

@@ -9,9 +9,19 @@ import (
 )
 
 type CharacterRepository interface {
+	characterRepository
+	characterHistoryRepository
+}
+
+type characterRepository interface {
 	Characters(ctx context.Context, operators ...*Operator) ([]*Character, error)
 	CreateCharacter(ctx context.Context, character *Character) (*Character, error)
 	UpdateCharacter(ctx context.Context, id string, character *Character) (*Character, error)
+}
+
+type characterHistoryRepository interface {
+	CharacterCorporationHistory(ctx context.Context, characterID uint64) ([]*CharacterCorporationHistory, error)
+	CreateCharacterCorporationHistory(ctx context.Context, characterID uint64, records []*CharacterCorporationHistory) ([]*CharacterCorporationHistory, error)
 }
 
 type Character struct {
@@ -30,4 +40,14 @@ type Character struct {
 	RaceID         uint               `bson:"race_id" json:"race_id"`
 
 	Meta
+}
+
+type CharacterCorporationHistory struct {
+	CharacterID   uint64    `bson:"character_id" json:"character_id"`
+	RecordID      uint      `bson:"record_id" json:"record_id"`
+	CorporationID uint      `bson:"corporation_id" json:"corporation_id"`
+	IsDeleted     bool      `bson:"is_deleted" json:"is_deleted"`
+	StartDate     time.Time `bson:"start_date" json:"start_date"`
+	CreatedAt     time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt     time.Time `bson:"updated_at" json:"updated_at"`
 }

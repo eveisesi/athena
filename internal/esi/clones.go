@@ -66,16 +66,16 @@ func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member,
 func (s *service) characterClonesKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterClones.Name, strconv.Itoa(int(mods.member.CharacterID)))
+	return buildKey(GetCharacterClones.Name, strconv.FormatUint(mods.member.CharacterID, 10))
 }
 
 func (s *service) characterClonesPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
@@ -150,16 +150,16 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 func (s *service) characterImplantsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterImplants.Name, strconv.Itoa(int(mods.member.CharacterID)))
+	return buildKey(GetCharacterImplants.Name, strconv.FormatUint(mods.member.CharacterID, 10))
 }
 
 func (s *service) characterImplantsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{

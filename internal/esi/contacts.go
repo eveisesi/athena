@@ -24,7 +24,7 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 
 	path := endpoint.PathFunc(mods)
 
-	b, res, err := s.request(
+	_, res, err := s.request(
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
@@ -35,21 +35,68 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &contacts)
+	if res.StatusCode >= http.StatusBadRequest {
+		return contacts, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.CharacterID, res.StatusCode)
+	} else if res.StatusCode == http.StatusNotModified {
+		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+		}
+	}
+
+	pages := s.retrieveXPagesFromHeader(res.Header)
+	if pages == 0 {
+		return nil, nil, fmt.Errorf("received 0 for X-Pages on request %s, expected number greater than 0", path)
+	}
+
+	for i := 1; i <= pages; i++ {
+
+		pageContacts := make([]*athena.MemberContact, 0)
+
+		mods := s.modifiers(ModWithMember(member), ModWithPage(&i))
+
+		etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+		if err != nil {
 			return nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		path := endpoint.PathFunc(mods)
 
-	case sc >= http.StatusBadRequest:
-		return contacts, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.CharacterID, sc)
+		b, res, err := s.request(
+			ctx,
+			WithMethod(http.MethodGet),
+			WithPath(path),
+			WithEtag(etag),
+			WithPage(i),
+			WithAuthorization(member.AccessToken),
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		switch sc := res.StatusCode; {
+		case sc == http.StatusOK:
+			err = json.Unmarshal(b, &pageContacts)
+			if err != nil {
+				err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+				return nil, nil, err
+			}
+
+			contacts = append(contacts, pageContacts...)
+
+			etag.Etag = s.retrieveEtagHeader(res.Header)
+
+		case sc >= http.StatusBadRequest:
+			return contacts, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.CharacterID, sc)
+		}
+
+		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+		}
 	}
-
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return contacts, res, nil
 
@@ -58,16 +105,23 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 func (s *service) characterContactsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterContacts.Name, strconv.Itoa(int(mods.member.CharacterID)))
+	param := append(make([]string, 0), GetCharacterContracts.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+
+	if mods.page != nil {
+		param = append(param, strconv.Itoa(*mods.page))
+	}
+
+	return buildKey(param...)
+
 }
 
 func (s *service) characterContactsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
@@ -133,16 +187,16 @@ func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.
 func (s *service) characterContactLabelsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterContactLabels.Name, strconv.Itoa(int(mods.member.CharacterID)))
+	return buildKey(GetCharacterContactLabels.Name, strconv.FormatUint(mods.member.CharacterID, 10))
 }
 
 func (s *service) characterContactLabelsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{

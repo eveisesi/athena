@@ -24,7 +24,7 @@ func (s *service) Etag(ctx context.Context, endpoint *endpoint, modifierFunc ...
 
 	var oldest *athena.Etag
 	for _, etag := range etags {
-		if etag == nil {
+		if oldest == nil {
 			oldest = etag
 			continue
 		} else if etag.CachedUntil.After(oldest.CachedUntil) {

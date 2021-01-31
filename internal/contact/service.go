@@ -86,7 +86,7 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 		}
 	}
 
-	if etag.CachedUntil.After(time.Now()) && len(contacts) > 0 {
+	if etag != nil && etag.CachedUntil.After(time.Now()) && len(contacts) > 0 {
 
 		if !cached {
 			err = s.cache.SetMemberContacts(ctx, member.ID.Hex(), contacts)
@@ -268,7 +268,7 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 		}
 	}
 
-	if etag.CachedUntil.After(time.Now()) && len(labels) > 0 {
+	if etag != nil && etag.CachedUntil.After(time.Now()) && len(labels) > 0 {
 		if !cached {
 			err = s.cache.SetMemberContactLabels(ctx, member.ID.Hex(), labels)
 			if err != nil {

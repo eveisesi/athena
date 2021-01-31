@@ -101,11 +101,11 @@ func (r *etagRepository) DeleteEtag(ctx context.Context, etagID string) (bool, e
 
 	filter := primitive.D{primitive.E{Key: "etag_id", Value: etagID}}
 
-	result, err := r.etag.DeleteOne(ctx, filter)
+	_, err := r.etag.DeleteOne(ctx, filter)
 	if err != nil {
 		err = fmt.Errorf("[Etag Repository] Failed to delete records from the etag collection: %w", err)
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }

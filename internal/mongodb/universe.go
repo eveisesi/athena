@@ -297,12 +297,12 @@ func (r *universeRepository) UpdateAncestry(ctx context.Context, id int, ancestr
 
 func (r *universeRepository) DeleteAncestry(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.ancestries.DeleteOne(ctx, primitive.D{primitive.E{Key: "ancestry_id", Value: id}})
+	_, err := r.ancestries.DeleteOne(ctx, primitive.D{primitive.E{Key: "ancestry_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -362,12 +362,12 @@ func (r *universeRepository) UpdateBloodline(ctx context.Context, id int, bloodl
 
 func (r *universeRepository) DeleteBloodline(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.bloodlines.DeleteOne(ctx, primitive.D{primitive.E{Key: "bloodline_id", Value: id}})
+	_, err := r.bloodlines.DeleteOne(ctx, primitive.D{primitive.E{Key: "bloodline_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -427,12 +427,12 @@ func (r *universeRepository) UpdateCategory(ctx context.Context, id int, categor
 
 func (r *universeRepository) DeleteCategory(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.categories.DeleteOne(ctx, primitive.D{primitive.E{Key: "category_id", Value: id}})
+	_, err := r.categories.DeleteOne(ctx, primitive.D{primitive.E{Key: "category_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -492,12 +492,12 @@ func (r *universeRepository) UpdateConstellation(ctx context.Context, id int, co
 
 func (r *universeRepository) DeleteConstellation(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.constellations.DeleteOne(ctx, primitive.D{primitive.E{Key: "constellation_id", Value: id}})
+	_, err := r.constellations.DeleteOne(ctx, primitive.D{primitive.E{Key: "constellation_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -557,12 +557,12 @@ func (r *universeRepository) UpdateFaction(ctx context.Context, id int, faction 
 
 func (r *universeRepository) DeleteFaction(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.factions.DeleteOne(ctx, primitive.D{primitive.E{Key: "faction_id", Value: id}})
+	_, err := r.factions.DeleteOne(ctx, primitive.D{primitive.E{Key: "faction_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -622,12 +622,12 @@ func (r *universeRepository) UpdateGroup(ctx context.Context, id int, group *ath
 
 func (r *universeRepository) DeleteGroup(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.groups.DeleteOne(ctx, primitive.D{primitive.E{Key: "group_id", Value: id}})
+	_, err := r.groups.DeleteOne(ctx, primitive.D{primitive.E{Key: "group_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -687,12 +687,12 @@ func (r *universeRepository) UpdateRace(ctx context.Context, id int, race *athen
 
 func (r *universeRepository) DeleteRace(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.races.DeleteOne(ctx, primitive.D{primitive.E{Key: "race_id", Value: id}})
+	_, err := r.races.DeleteOne(ctx, primitive.D{primitive.E{Key: "race_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -752,12 +752,12 @@ func (r *universeRepository) UpdateRegion(ctx context.Context, id int, region *a
 
 func (r *universeRepository) DeleteRegion(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.regions.DeleteOne(ctx, primitive.D{primitive.E{Key: "region_id", Value: id}})
+	_, err := r.regions.DeleteOne(ctx, primitive.D{primitive.E{Key: "region_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -817,12 +817,12 @@ func (r *universeRepository) UpdateSolarSystem(ctx context.Context, id int, sola
 
 func (r *universeRepository) DeleteSolarSystem(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.solarSystems.DeleteOne(ctx, primitive.D{primitive.E{Key: "system_id", Value: id}})
+	_, err := r.solarSystems.DeleteOne(ctx, primitive.D{primitive.E{Key: "system_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -882,12 +882,12 @@ func (r *universeRepository) UpdateStation(ctx context.Context, id int, station 
 
 func (r *universeRepository) DeleteStation(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.stations.DeleteOne(ctx, primitive.D{primitive.E{Key: "station_id", Value: id}})
+	_, err := r.stations.DeleteOne(ctx, primitive.D{primitive.E{Key: "station_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -947,12 +947,12 @@ func (r *universeRepository) UpdateStructure(ctx context.Context, id int64, stru
 
 func (r *universeRepository) DeleteStructure(ctx context.Context, id int64) (bool, error) {
 
-	result, err := r.structures.DeleteOne(ctx, primitive.D{primitive.E{Key: "structure_id", Value: id}})
+	_, err := r.structures.DeleteOne(ctx, primitive.D{primitive.E{Key: "structure_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }
 
@@ -1012,11 +1012,11 @@ func (r *universeRepository) UpdateType(ctx context.Context, id int, item *athen
 
 func (r *universeRepository) DeleteType(ctx context.Context, id int) (bool, error) {
 
-	result, err := r.items.DeleteOne(ctx, primitive.D{primitive.E{Key: "type_id", Value: id}})
+	_, err := r.items.DeleteOne(ctx, primitive.D{primitive.E{Key: "type_id", Value: id}})
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }

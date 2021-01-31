@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/esi"
@@ -93,7 +92,7 @@ func (s *service) MemberSkills(ctx context.Context, member *athena.Member) (*ath
 
 	}
 
-	if etag.CachedUntil.After(time.Now()) && len(skills) > 0 && meta != nil {
+	if etag != nil && etag.CachedUntil.After(time.Now()) && len(skills) > 0 && meta != nil {
 
 		if !cached {
 			err = s.cache.SetMemberSkillMeta(ctx, member.ID.Hex(), meta)
@@ -226,7 +225,7 @@ func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) (
 		}
 	}
 
-	if etag.CachedUntil.After(time.Now()) && len(positions) > 0 {
+	if etag != nil && etag.CachedUntil.After(time.Now()) && len(positions) > 0 {
 		if !cached {
 			err = s.cache.SetMemberSkillQueue(ctx, member.ID.Hex(), positions)
 			if err != nil {
@@ -295,19 +294,18 @@ func (s *service) diffAndUpdateSkillQueue(ctx context.Context, member *athena.Me
 			// We've seen this position before for this member, lets compare it to the existing position to see
 			// if it needs to be updated
 		} else if diff := deep.Equal(oldContactMap[position.QueuePosition], position); len(diff) > 0 {
-			spew.Dump(position.QueuePosition, position)
 			positionsToUpdate = append(positionsToUpdate, position)
 		}
 	}
 
-	newContactMap := make(map[int]*athena.MemberSkillQueue)
+	newSkillQueueMap := make(map[int]*athena.MemberSkillQueue)
 	for _, position := range new {
-		newContactMap[position.QueuePosition] = position
+		newSkillQueueMap[position.QueuePosition] = position
 	}
 
 	for _, position := range old {
 		// This label is not in the list of new label, must've been deleted by the user in game
-		if _, ok := newContactMap[position.QueuePosition]; !ok {
+		if _, ok := newSkillQueueMap[position.QueuePosition]; !ok {
 			positionsToDelete = append(positionsToDelete, position)
 		}
 	}

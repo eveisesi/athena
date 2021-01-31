@@ -95,11 +95,11 @@ func (r *memberRepository) DeleteMember(ctx context.Context, id string) (bool, e
 
 	filters := BuildFilters(athena.NewEqualOperator("_id", _id))
 
-	result, err := r.members.DeleteOne(ctx, filters)
+	_, err = r.members.DeleteOne(ctx, filters)
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
 
 }

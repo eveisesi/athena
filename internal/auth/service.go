@@ -21,6 +21,7 @@ type Service interface {
 	InitializeAttempt(ctx context.Context) (*athena.AuthAttempt, error)
 	AuthAttempt(ctx context.Context, hash string) (*athena.AuthAttempt, error)
 	UpdateAuthAttempt(ctx context.Context, hash string, attempt *athena.AuthAttempt) (*athena.AuthAttempt, error)
+	// RefreshExpiredTokens(ctx context.Context []*athena.Member) ([]*athena.Member, error)
 
 	ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error)
 	AuthorizationURI(ctx context.Context, state string, scopes []string) string

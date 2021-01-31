@@ -13,9 +13,13 @@ import (
 
 type characterRepository struct {
 	characters *mongo.Collection
+	history    *mongo.Collection
 }
 
 func NewCharacterRepository(d *mongo.Database) (athena.CharacterRepository, error) {
+
+	var ctx = context.Background()
+
 	characters := d.Collection("characters")
 	characterIndexModel := mongo.IndexModel{
 		Keys: primitive.D{
@@ -35,8 +39,46 @@ func NewCharacterRepository(d *mongo.Database) (athena.CharacterRepository, erro
 		return nil, fmt.Errorf("[Character Repository]: Failed to Create Index on Characters Collection: %w", err)
 	}
 
+	history := d.Collection("character_corporation_history")
+
+	historyIdxModels := []mongo.IndexModel{
+		{
+			Keys: primitive.D{
+				primitive.E{
+					Key:   "character_id",
+					Value: 1,
+				},
+				primitive.E{
+					Key:   "record_id",
+					Value: 1,
+				},
+			},
+			Options: &options.IndexOptions{
+				Name: newString("character_corporation_history_character_id_record_id_idx"),
+			},
+		},
+		{
+			Keys: primitive.D{
+				primitive.E{
+					Key:   "record_id",
+					Value: 1,
+				},
+			},
+			Options: &options.IndexOptions{
+				Name:   newString("character_corporation_history_record_id_unique"),
+				Unique: newBool(true),
+			},
+		},
+	}
+
+	_, err = history.Indexes().CreateMany(ctx, historyIdxModels)
+	if err != nil {
+		return nil, fmt.Errorf("[Character Repository]: Failed to Create Index on Character History Collection: %w", err)
+	}
+
 	return &characterRepository{
-		characters,
+		characters: characters,
+		history:    history,
 	}, nil
 }
 
@@ -98,11 +140,45 @@ func (r *characterRepository) DeleteCharacter(ctx context.Context, id string) (b
 
 	filters := BuildFilters(athena.NewEqualOperator("_id", _id))
 
-	result, err := r.characters.DeleteOne(ctx, filters)
+	_, err = r.characters.DeleteOne(ctx, filters)
 	if err != nil {
 		return false, err
 	}
 
-	return result.DeletedCount > 0, err
+	return err == nil, err
+
+}
+
+func (r *characterRepository) CharacterCorporationHistory(ctx context.Context, characterID uint64) ([]*athena.CharacterCorporationHistory, error) {
+
+	var history = make([]*athena.CharacterCorporationHistory, 0)
+
+	cursor, err := r.history.Find(ctx, primitive.D{primitive.E{Key: "character_id", Value: characterID}})
+	if err != nil {
+		return history, err
+	}
+
+	return history, cursor.All(ctx, &history)
+
+}
+
+func (r *characterRepository) CreateCharacterCorporationHistory(ctx context.Context, characterID uint64, records []*athena.CharacterCorporationHistory) ([]*athena.CharacterCorporationHistory, error) {
+
+	documents := make([]interface{}, len(records))
+	now := time.Now()
+	for i, record := range records {
+		record.CharacterID = characterID
+		record.CreatedAt = now
+		record.UpdatedAt = now
+
+		documents[i] = record
+	}
+
+	_, err := r.history.InsertMany(ctx, documents)
+	if err != nil {
+		return nil, fmt.Errorf("[Character Repository] Failed to insert records into the characters collection: %w", err)
+	}
+
+	return records, err
 
 }
