@@ -54,7 +54,7 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 		}
 
 	case sc >= http.StatusBadRequest:
-		return location, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.CharacterID, sc)
+		return location, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.ID, sc)
 	}
 
 	location.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -69,7 +69,7 @@ func (s *service) characterLocationsKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterLocation.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterLocation.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterLocationsPathFunc(mods *modifiers) string {
@@ -79,7 +79,7 @@ func (s *service) characterLocationsPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterLocation.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterLocation.FmtPath, mods.member.ID),
 	}
 
 	return u.String()
@@ -134,7 +134,7 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 		}
 
 	case sc >= http.StatusBadRequest:
-		return online, res, fmt.Errorf("failed to fetch online for character %d, received status code of %d", member.CharacterID, sc)
+		return online, res, fmt.Errorf("failed to fetch online for character %d, received status code of %d", member.ID, sc)
 	}
 
 	online.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -149,7 +149,7 @@ func (s *service) characterOnlinesKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterOnline.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterOnline.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterOnlinesPathFunc(mods *modifiers) string {
@@ -159,7 +159,7 @@ func (s *service) characterOnlinesPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterOnline.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterOnline.FmtPath, mods.member.ID),
 	}
 
 	return u.String()
@@ -211,7 +211,7 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 		}
 
 	case sc >= http.StatusBadRequest:
-		return ship, res, fmt.Errorf("failed to fetch ship for character %d, received status code of %d", member.CharacterID, sc)
+		return ship, res, fmt.Errorf("failed to fetch ship for character %d, received status code of %d", member.ID, sc)
 	}
 
 	ship.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -226,7 +226,7 @@ func (s *service) characterShipsKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterShip.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterShip.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterShipsPathFunc(mods *modifiers) string {
@@ -236,7 +236,7 @@ func (s *service) characterShipsPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterShip.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterShip.FmtPath, mods.member.ID),
 	}
 
 	return u.String()

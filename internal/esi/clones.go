@@ -8,8 +8,26 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/eveisesi/athena"
+	"github.com/volatiletech/null"
 )
+
+type CharacterClones struct {
+	HomeLocation struct {
+		LocationID   uint64 `json:"location_id"`
+		LocationType string `json:"location_type"`
+	} `json:"home_location"`
+	JumpClones []struct {
+		Implants     []uint      `json:"implants"`
+		JumpCloneID  uint        `json:"jump_clone_id"`
+		LocationID   uint64      `json:"location_id"`
+		LocationType string      `json:"location_type"`
+		name         null.String `json:"name"`
+	} `json:"jump_clones"`
+	LastCloneJumpDate     null.Time `json:"last_clone_jump_date"`
+	LastStationChangeDate null.Time `json:"last_station_change_date"`
+}
 
 // GetCharacterClones makes an HTTP GET Request to the /characters/{character_id}/clones/ endpoint for
 // information about the provided members clones
@@ -17,7 +35,17 @@ import (
 // Documentation: https://esi.evetech.net/ui/#/Clones/get_characters_character_id_clones
 // Version: v3
 // Cache: 120 (2 min)
-func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error) {
+func (s *service) GetCharacterClones(
+	ctx context.Context,
+	member *athena.Member,
+	clone *athena.MemberHomeClone,
+	clones []*athena.MemberJumpClone,
+) (
+	*athena.MemberHomeClone,
+	[]*athena.MemberJumpClone,
+	*http.Response,
+	error,
+) {
 
 	endpoint := s.endpoints[GetCharacterClones.Name]
 
@@ -25,7 +53,7 @@ func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member,
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -38,28 +66,30 @@ func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member,
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+
+	characterClones := new(CharacterClones)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
-		err = json.Unmarshal(b, clones)
+		err = json.Unmarshal(b, characterClones)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
-		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
-			clones.Etag = etag
-		}
+		spew.Dump(characterClones)
+
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return clones, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.CharacterID, sc)
+		return clone, clones, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.ID, sc)
 	}
 
-	clones.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
-	return clones, res, nil
+	return clone, clones, res, nil
 
 }
 
@@ -69,7 +99,7 @@ func (s *service) characterClonesKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterClones.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterClones.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterClonesPathFunc(mods *modifiers) string {
@@ -79,7 +109,7 @@ func (s *service) characterClonesPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterClones.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterClones.FmtPath, mods.member.ID),
 	}
 
 	return u.String()
@@ -100,7 +130,7 @@ func (s *service) newGetCharacterClonesEndpoint() *endpoint {
 // Documentation: https://esi.evetech.net/ui/#/Clones/get_characters_character_id_implants
 // Version: v1
 // Cache: 120 (2 min)
-func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error) {
+func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCharacterImplants.Name]
 
@@ -126,24 +156,21 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
-		implants.Raw = make([]int, 0)
-		err = json.Unmarshal(b, &implants.Raw)
+		err = json.Unmarshal(b, ids)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 			return nil, nil, err
 		}
 
-		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
-			implants.Etag = etag
-		}
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return implants, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.CharacterID, sc)
+		return ids, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.ID, sc)
 	}
 
-	implants.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
-	return implants, res, nil
+	return ids, res, nil
 
 }
 
@@ -153,7 +180,7 @@ func (s *service) characterImplantsKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterImplants.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterImplants.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterImplantsPathFunc(mods *modifiers) string {
@@ -163,7 +190,7 @@ func (s *service) characterImplantsPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterImplants.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterImplants.FmtPath, mods.member.ID),
 	}
 
 	return u.String()

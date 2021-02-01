@@ -51,9 +51,7 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 			return nil, nil, err
 		}
 
-		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
-			corporation.Etag = etag
-		}
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 		if !isCorporationValid(corporation) {
 			return nil, nil, fmt.Errorf("invalid corporation return from esi, missing name or ticker")
@@ -62,7 +60,7 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 		return corporation, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporation.CorporationID, sc)
 	}
 
-	corporation.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return corporation, res, nil
 }

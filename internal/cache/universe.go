@@ -10,29 +10,29 @@ import (
 )
 
 type universeService interface {
-	Ancestry(ctx context.Context, id int) (*athena.Ancestry, error)
+	Ancestry(ctx context.Context, id uint) (*athena.Ancestry, error)
 	SetAncestry(ctx context.Context, ancestry *athena.Ancestry, optionFuncs ...OptionFunc) error
-	Bloodline(ctx context.Context, id int) (*athena.Bloodline, error)
+	Bloodline(ctx context.Context, id uint) (*athena.Bloodline, error)
 	SetBloodline(ctx context.Context, bloodline *athena.Bloodline, optionFuncs ...OptionFunc) error
-	Race(ctx context.Context, id int) (*athena.Race, error)
+	Race(ctx context.Context, id uint) (*athena.Race, error)
 	SetRace(ctx context.Context, race *athena.Race, optionFuncs ...OptionFunc) error
-	Faction(ctx context.Context, id int) (*athena.Faction, error)
+	Faction(ctx context.Context, id uint) (*athena.Faction, error)
 	SetFaction(ctx context.Context, faction *athena.Faction, optionFuncs ...OptionFunc) error
-	Region(ctx context.Context, id int) (*athena.Region, error)
+	Region(ctx context.Context, id uint) (*athena.Region, error)
 	SetRegion(ctx context.Context, region *athena.Region, optionFuncs ...OptionFunc) error
-	Constellation(ctx context.Context, id int) (*athena.Constellation, error)
+	Constellation(ctx context.Context, id uint) (*athena.Constellation, error)
 	SetConstellation(ctx context.Context, constellation *athena.Constellation, optionFuncs ...OptionFunc) error
-	SolarSystem(ctx context.Context, id int) (*athena.SolarSystem, error)
+	SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem, error)
 	SetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem, optionFuncs ...OptionFunc) error
-	Station(ctx context.Context, id int) (*athena.Station, error)
+	Station(ctx context.Context, id uint) (*athena.Station, error)
 	SetStation(ctx context.Context, station *athena.Station, optionFuncs ...OptionFunc) error
-	Structure(ctx context.Context, id int64) (*athena.Structure, error)
-	SetStructure(ctx context.Context, station *athena.Structure, optionFuncs ...OptionFunc) error
-	Category(ctx context.Context, id int) (*athena.Category, error)
+	Structure(ctx context.Context, id uint64) (*athena.Structure, error)
+	SetStructure(ctx context.Context, structure *athena.Structure, optionFuncs ...OptionFunc) error
+	Category(ctx context.Context, id uint) (*athena.Category, error)
 	SetCategory(ctx context.Context, category *athena.Category, optionFuncs ...OptionFunc) error
-	Group(ctx context.Context, id int) (*athena.Group, error)
+	Group(ctx context.Context, id uint) (*athena.Group, error)
 	SetGroup(ctx context.Context, group *athena.Group, optionFuncs ...OptionFunc) error
-	Type(ctx context.Context, id int) (*athena.Type, error)
+	Type(ctx context.Context, id uint) (*athena.Type, error)
 	SetType(ctx context.Context, item *athena.Type, optionFuncs ...OptionFunc) error
 }
 
@@ -51,11 +51,12 @@ const (
 	keyStructure     = "athena::structure::%d"
 )
 
-func (s *service) Ancestry(ctx context.Context, id int) (*athena.Ancestry, error) {
+func (s *service) Ancestry(ctx context.Context, id uint) (*athena.Ancestry, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyAncestry, id)).Result()
+	key := fmt.Sprintf(keyAncestry, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -63,10 +64,9 @@ func (s *service) Ancestry(ctx context.Context, id int) (*athena.Ancestry, error
 	}
 
 	var ancestry = new(athena.Ancestry)
-
 	err = json.Unmarshal([]byte(result), &ancestry)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return ancestry, nil
@@ -75,26 +75,29 @@ func (s *service) Ancestry(ctx context.Context, id int) (*athena.Ancestry, error
 
 func (s *service) SetAncestry(ctx context.Context, ancestry *athena.Ancestry, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyAncestry, ancestry.ID)
 	data, err := json.Marshal(ancestry)
 	if err != nil {
-		return fmt.Errorf("failed to marshal ancestry: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyAncestry, ancestry.AncestryID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }
 
-func (s *service) Bloodline(ctx context.Context, id int) (*athena.Bloodline, error) {
+func (s *service) Bloodline(ctx context.Context, id uint) (*athena.Bloodline, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyBloodline, id)).Result()
+	key := fmt.Sprintf(keyBloodline, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -102,10 +105,9 @@ func (s *service) Bloodline(ctx context.Context, id int) (*athena.Bloodline, err
 	}
 
 	var bloodline = new(athena.Bloodline)
-
 	err = json.Unmarshal([]byte(result), &bloodline)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return bloodline, nil
@@ -114,26 +116,29 @@ func (s *service) Bloodline(ctx context.Context, id int) (*athena.Bloodline, err
 
 func (s *service) SetBloodline(ctx context.Context, bloodline *athena.Bloodline, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyBloodline, bloodline.ID)
 	data, err := json.Marshal(bloodline)
 	if err != nil {
-		return fmt.Errorf("failed to marshal bloodline: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyBloodline, bloodline.BloodlineID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }
 
-func (s *service) Race(ctx context.Context, id int) (*athena.Race, error) {
+func (s *service) Race(ctx context.Context, id uint) (*athena.Race, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyRace, id)).Result()
+	key := fmt.Sprintf(keyRace, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -141,10 +146,9 @@ func (s *service) Race(ctx context.Context, id int) (*athena.Race, error) {
 	}
 
 	var race = new(athena.Race)
-
 	err = json.Unmarshal([]byte(result), &race)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return race, nil
@@ -153,26 +157,29 @@ func (s *service) Race(ctx context.Context, id int) (*athena.Race, error) {
 
 func (s *service) SetRace(ctx context.Context, race *athena.Race, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyRace, race.ID)
 	data, err := json.Marshal(race)
 	if err != nil {
-		return fmt.Errorf("failed to marshal race: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyRace, race.RaceID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }
 
-func (s *service) Faction(ctx context.Context, id int) (*athena.Faction, error) {
+func (s *service) Faction(ctx context.Context, id uint) (*athena.Faction, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyFaction, id)).Result()
+	key := fmt.Sprintf(keyFaction, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -180,10 +187,9 @@ func (s *service) Faction(ctx context.Context, id int) (*athena.Faction, error) 
 	}
 
 	var faction = new(athena.Faction)
-
 	err = json.Unmarshal([]byte(result), &faction)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return faction, nil
@@ -192,26 +198,29 @@ func (s *service) Faction(ctx context.Context, id int) (*athena.Faction, error) 
 
 func (s *service) SetFaction(ctx context.Context, faction *athena.Faction, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyFaction, faction.ID)
 	data, err := json.Marshal(faction)
 	if err != nil {
-		return fmt.Errorf("failed to marshal faction: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyFaction, faction.FactionID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }
 
-func (s *service) Region(ctx context.Context, id int) (*athena.Region, error) {
+func (s *service) Region(ctx context.Context, id uint) (*athena.Region, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyRegion, id)).Result()
+	key := fmt.Sprintf(keyRegion, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -219,10 +228,9 @@ func (s *service) Region(ctx context.Context, id int) (*athena.Region, error) {
 	}
 
 	var region = new(athena.Region)
-
 	err = json.Unmarshal([]byte(result), &region)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return region, nil
@@ -231,26 +239,29 @@ func (s *service) Region(ctx context.Context, id int) (*athena.Region, error) {
 
 func (s *service) SetRegion(ctx context.Context, region *athena.Region, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyRegion, region.ID)
 	data, err := json.Marshal(region)
 	if err != nil {
-		return fmt.Errorf("failed to marshal region: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyRegion, region.RegionID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }
 
-func (s *service) Constellation(ctx context.Context, id int) (*athena.Constellation, error) {
+func (s *service) Constellation(ctx context.Context, id uint) (*athena.Constellation, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyConstellation, id)).Result()
+	key := fmt.Sprintf(keyConstellation, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -261,7 +272,7 @@ func (s *service) Constellation(ctx context.Context, id int) (*athena.Constellat
 
 	err = json.Unmarshal([]byte(result), &constellation)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return constellation, nil
@@ -270,26 +281,28 @@ func (s *service) Constellation(ctx context.Context, id int) (*athena.Constellat
 
 func (s *service) SetConstellation(ctx context.Context, constellation *athena.Constellation, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyConstellation, constellation.ID)
 	data, err := json.Marshal(constellation)
 	if err != nil {
-		return fmt.Errorf("failed to marshal constellation: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyConstellation, constellation.ConstellationID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }
 
-func (s *service) SolarSystem(ctx context.Context, id int) (*athena.SolarSystem, error) {
+func (s *service) SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keySolarSystem, id)).Result()
+	key := fmt.Sprintf(keySolarSystem, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -300,7 +313,7 @@ func (s *service) SolarSystem(ctx context.Context, id int) (*athena.SolarSystem,
 
 	err = json.Unmarshal([]byte(result), &solarSystem)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return solarSystem, nil
@@ -309,27 +322,29 @@ func (s *service) SolarSystem(ctx context.Context, id int) (*athena.SolarSystem,
 
 func (s *service) SetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keySolarSystem, solarSystem.ID)
 	data, err := json.Marshal(solarSystem)
 	if err != nil {
-		return fmt.Errorf("failed to marshal solarSystem: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keySolarSystem, solarSystem.SystemID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
 
 }
 
-func (s *service) Station(ctx context.Context, id int) (*athena.Station, error) {
+func (s *service) Station(ctx context.Context, id uint) (*athena.Station, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyStation, id)).Result()
+	key := fmt.Sprintf(keyStation, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -340,7 +355,7 @@ func (s *service) Station(ctx context.Context, id int) (*athena.Station, error) 
 
 	err = json.Unmarshal([]byte(result), &station)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return station, nil
@@ -349,27 +364,29 @@ func (s *service) Station(ctx context.Context, id int) (*athena.Station, error) 
 
 func (s *service) SetStation(ctx context.Context, station *athena.Station, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyStation, station.ID)
 	data, err := json.Marshal(station)
 	if err != nil {
-		return fmt.Errorf("failed to marshal station: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyStation, station.StationID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyStation, station.ID), data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
 
 }
 
-func (s *service) Structure(ctx context.Context, id int64) (*athena.Structure, error) {
+func (s *service) Structure(ctx context.Context, id uint64) (*athena.Structure, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyStructure, id)).Result()
+	key := fmt.Sprintf(keyStructure, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -380,7 +397,7 @@ func (s *service) Structure(ctx context.Context, id int64) (*athena.Structure, e
 
 	err = json.Unmarshal([]byte(result), &structure)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return structure, nil
@@ -389,27 +406,29 @@ func (s *service) Structure(ctx context.Context, id int64) (*athena.Structure, e
 
 func (s *service) SetStructure(ctx context.Context, structure *athena.Structure, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyStructure, structure.ID)
 	data, err := json.Marshal(structure)
 	if err != nil {
-		return fmt.Errorf("failed to marshal structure: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyStructure, structure.StructureID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
 
 }
 
-func (s *service) Category(ctx context.Context, id int) (*athena.Category, error) {
+func (s *service) Category(ctx context.Context, id uint) (*athena.Category, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyCategory, id)).Result()
+	key := fmt.Sprintf(keyCategory, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -420,7 +439,7 @@ func (s *service) Category(ctx context.Context, id int) (*athena.Category, error
 
 	err = json.Unmarshal([]byte(result), &category)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return category, nil
@@ -429,26 +448,29 @@ func (s *service) Category(ctx context.Context, id int) (*athena.Category, error
 
 func (s *service) SetCategory(ctx context.Context, category *athena.Category, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyCategory, category.ID)
 	data, err := json.Marshal(category)
 	if err != nil {
-		return fmt.Errorf("failed to marshal category: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyCategory, category.CategoryID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }
 
-func (s *service) Group(ctx context.Context, id int) (*athena.Group, error) {
+func (s *service) Group(ctx context.Context, id uint) (*athena.Group, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyGroup, id)).Result()
+	key := fmt.Sprintf(keyGroup, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -459,7 +481,7 @@ func (s *service) Group(ctx context.Context, id int) (*athena.Group, error) {
 
 	err = json.Unmarshal([]byte(result), &group)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return group, nil
@@ -468,26 +490,29 @@ func (s *service) Group(ctx context.Context, id int) (*athena.Group, error) {
 
 func (s *service) SetGroup(ctx context.Context, group *athena.Group, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyGroup, group.ID)
 	data, err := json.Marshal(group)
 	if err != nil {
-		return fmt.Errorf("failed to marshal group: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyGroup, group.GroupID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }
 
-func (s *service) Type(ctx context.Context, id int) (*athena.Type, error) {
+func (s *service) Type(ctx context.Context, id uint) (*athena.Type, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyType, id)).Result()
+	key := fmt.Sprintf(keyType, id)
+	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -495,7 +520,6 @@ func (s *service) Type(ctx context.Context, id int) (*athena.Type, error) {
 	}
 
 	var item = new(athena.Type)
-
 	err = json.Unmarshal([]byte(result), &item)
 	if err != nil {
 		return nil, err
@@ -507,6 +531,7 @@ func (s *service) Type(ctx context.Context, id int) (*athena.Type, error) {
 
 func (s *service) SetType(ctx context.Context, item *athena.Type, optionFuncs ...OptionFunc) error {
 
+	key := fmt.Sprintf(keyType, item.ID)
 	data, err := json.Marshal(item)
 	if err != nil {
 		return fmt.Errorf("failed to marshal item: %w", err)
@@ -514,10 +539,11 @@ func (s *service) SetType(ctx context.Context, item *athena.Type, optionFuncs ..
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyType, item.TypeID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }

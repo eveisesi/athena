@@ -1,0 +1,21 @@
+CREATE TABLE `stations` (
+    `id` INT UNSIGNED NOT NULL,
+    `name` VARCHAR(255) NOT NULL,
+    `system_id` INT UNSIGNED NOT NULL,
+    `type_id` INT UNSIGNED NOT NULL,
+    `race_id` INT UNSIGNED NULL DEFAULT NULL,
+    `owner_corporation_id` INT UNSIGNED NULL DEFAULT NULL,
+    `max_dockable_ship_volume` FLOAT NOT NULL,
+    `office_rental_cost` FLOAT NOT NULL,
+    `reprocessing_efficiency` FLOAT NOT NULL,
+    `reprocessing_stations_take` FLOAT NOT NULL,
+    `created_at` TIMESTAMP NOT NULL,
+    `updated_at` TIMESTAMP NOT NULL,
+    INDEX `stations_system_id_idx` (`system_id`) USING BTREE,
+    INDEX `stations_type_id_idx` (`type_id`) USING BTREE,
+    INDEX `stations_race_id_idx` (`race_id`) USING BTREE,
+    PRIMARY KEY (`id`) USING BTREE,
+    CONSTRAINT `stations_system_id_solar_systems_id_foreign` FOREIGN KEY (`system_id`) REFERENCES `athena`.`solar_systems` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    CONSTRAINT `stations_type_id_types_id_foreign` FOREIGN KEY (`type_id`) REFERENCES `athena`.`types` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    CONSTRAINT `stations_race_id_races_id_foreign` FOREIGN KEY (`race_id`) REFERENCES `athena`.`races` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+) COLLATE = 'utf8mb4_unicode_ci' ENGINE = InnoDB;

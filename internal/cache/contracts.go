@@ -11,14 +11,14 @@ import (
 )
 
 type contractService interface {
-	MemberContracts(ctx context.Context, memberID string, page int) ([]*athena.MemberContract, error)
-	SetMemberContracts(ctx context.Context, memberID string, page int, contracts []*athena.MemberContract, optionFunc ...OptionFunc) error
+	MemberContracts(ctx context.Context, memberID uint, page int) ([]*athena.MemberContract, error)
+	SetMemberContracts(ctx context.Context, memberID uint, page int, contracts []*athena.MemberContract, optionFunc ...OptionFunc) error
 
-	MemberContractItems(ctx context.Context, memberID string, contractID int) ([]*athena.MemberContractItem, error)
-	SetMemberContractItems(ctx context.Context, memberID string, contractID int, bids []*athena.MemberContractItem, optionFuncs ...OptionFunc) error
+	MemberContractItems(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractItem, error)
+	SetMemberContractItems(ctx context.Context, memberID uint, contractID int, bids []*athena.MemberContractItem, optionFuncs ...OptionFunc) error
 
-	MemberContractBids(ctx context.Context, memberID string, contractID int) ([]*athena.MemberContractBid, error)
-	SetMemberContractBids(ctx context.Context, memberID string, contractID int, items []*athena.MemberContractBid, optionFuncs ...OptionFunc) error
+	MemberContractBids(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractBid, error)
+	SetMemberContractBids(ctx context.Context, memberID uint, contractID int, items []*athena.MemberContractBid, optionFuncs ...OptionFunc) error
 }
 
 const (
@@ -33,12 +33,12 @@ const (
 	// format args included in the string
 	errMaxNumContractsExceeded    = "[Cache Layer] Max number of contracts is limited to %d"
 	errFailedToCacheMembers       = "[Cache Layer] Failed to cache set members for key %s: %w"
-	errFailedToCachePage          = "[Cache Layer] Failed to cache page %d of %s for member %s: %w"
+	errFailedToCachePage          = "[Cache Layer] Failed to cache page %d of %s for member %d: %w"
 	errFailedToUnmarshalSetMember = "[Cache Layer] Failed to unmarshal member of set %s: %w"
 	errFailedToSetExpiry          = "[Cache Layer] Failed to set expiry on key %s: %w"
 )
 
-func (s *service) MemberContracts(ctx context.Context, memberID string, page int) ([]*athena.MemberContract, error) {
+func (s *service) MemberContracts(ctx context.Context, memberID uint, page int) ([]*athena.MemberContract, error) {
 
 	key := format.Formatm(keyMemberContracts, format.Values{
 		"memberID": memberID,
@@ -70,7 +70,7 @@ func (s *service) MemberContracts(ctx context.Context, memberID string, page int
 
 }
 
-func (s *service) SetMemberContracts(ctx context.Context, memberID string, page int, contracts []*athena.MemberContract, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberContracts(ctx context.Context, memberID uint, page int, contracts []*athena.MemberContract, optionFuncs ...OptionFunc) error {
 
 	if len(contracts) > 1000 {
 		return fmt.Errorf(errMaxNumContractsExceeded, 1000)
@@ -102,7 +102,7 @@ func (s *service) SetMemberContracts(ctx context.Context, memberID string, page 
 
 }
 
-func (s *service) MemberContractItems(ctx context.Context, memberID string, contractID int) ([]*athena.MemberContractItem, error) {
+func (s *service) MemberContractItems(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractItem, error) {
 
 	key := format.Formatm(keyMemberContractItems, format.Values{
 		"memberID":   memberID,
@@ -134,7 +134,7 @@ func (s *service) MemberContractItems(ctx context.Context, memberID string, cont
 
 }
 
-func (s *service) SetMemberContractItems(ctx context.Context, memberID string, contractID int, items []*athena.MemberContractItem, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, contractID int, items []*athena.MemberContractItem, optionFuncs ...OptionFunc) error {
 
 	members := make([]interface{}, len(items))
 	for i, item := range items {
@@ -162,7 +162,7 @@ func (s *service) SetMemberContractItems(ctx context.Context, memberID string, c
 
 }
 
-func (s *service) MemberContractBids(ctx context.Context, memberID string, contractID int) ([]*athena.MemberContractBid, error) {
+func (s *service) MemberContractBids(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractBid, error) {
 
 	key := format.Formatm(keyMemberContractBids, format.Values{
 		"memberID":   memberID,
@@ -194,7 +194,7 @@ func (s *service) MemberContractBids(ctx context.Context, memberID string, contr
 
 }
 
-func (s *service) SetMemberContractBids(ctx context.Context, memberID string, contractID int, bids []*athena.MemberContractBid, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberContractBids(ctx context.Context, memberID uint, contractID int, bids []*athena.MemberContractBid, optionFuncs ...OptionFunc) error {
 
 	members := make([]interface{}, len(bids))
 	for i, bid := range bids {

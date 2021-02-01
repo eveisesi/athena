@@ -83,7 +83,7 @@ func (s *service) Run() {
 
 }
 
-func (s *service) processMember(ctx context.Context, memberID string) {
+func (s *service) processMember(ctx context.Context, memberID uint) {
 
 	member, err := s.member.Member(ctx, memberID)
 	if err != nil {
@@ -93,7 +93,7 @@ func (s *service) processMember(ctx context.Context, memberID string) {
 
 	member, err = s.member.ValidateToken(ctx, member)
 	if err != nil {
-		s.logger.WithError(err).WithField("memberID", member.ID.Hex()).Errorln("failed to verify token is valid")
+		s.logger.WithError(err).WithField("memberID", member.ID).Errorln("failed to verify token is valid")
 		return
 	}
 
@@ -115,7 +115,7 @@ func (s *service) processMember(ctx context.Context, memberID string) {
 
 		for _, resolver := range s.scopes[scope.Scope] {
 			s.logger.WithFields(logrus.Fields{
-				"member": member.ID.Hex(),
+				"member": member.ID,
 				"scope":  scope.Scope,
 				"name":   resolver.Name,
 			}).Infoln()

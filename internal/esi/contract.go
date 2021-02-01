@@ -36,7 +36,7 @@ func (s *service) GetCharacterContractItems(ctx context.Context, member *athena.
 	}
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return contracts, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.CharacterID, res.StatusCode)
+		return contracts, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, res.StatusCode)
 	} else if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
@@ -88,7 +88,7 @@ func (s *service) GetCharacterContractItems(ctx context.Context, member *athena.
 			etag.Etag = s.retrieveEtagHeader(res.Header)
 
 		case sc >= http.StatusBadRequest:
-			return contracts, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.CharacterID, sc)
+			return contracts, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, sc)
 		}
 
 		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -108,7 +108,7 @@ func (s *service) characterContractsKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	param := append(make([]string, 0), GetCharacterContracts.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	param := append(make([]string, 0), GetCharacterContracts.Name, strconv.Itoa(int(mods.member.ID)))
 
 	if mods.page != nil {
 		param = append(param, strconv.Itoa(*mods.page))
@@ -124,7 +124,7 @@ func (s *service) characterContractsPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterContracts.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterContracts.FmtPath, mods.member.ID),
 	}
 
 	return u.String()
@@ -143,7 +143,7 @@ func (s *service) characterContractItemsKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterContractItems.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterContractItems.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterContractItemsPathFunc(mods *modifiers) string {
@@ -153,7 +153,7 @@ func (s *service) characterContractItemsPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterContractItems.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterContractItems.FmtPath, mods.member.ID),
 	}
 
 	return u.String()
@@ -172,7 +172,7 @@ func (s *service) characterContractBidsKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterContractBids.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterContractBids.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterContractBidsPathFunc(mods *modifiers) string {
@@ -182,7 +182,7 @@ func (s *service) characterContractBidsPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterContractBids.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterContractBids.FmtPath, mods.member.ID),
 	}
 
 	return u.String()

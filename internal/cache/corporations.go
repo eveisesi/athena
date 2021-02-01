@@ -2,7 +2,6 @@ package cache
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 
@@ -11,18 +10,18 @@ import (
 )
 
 type corporationService interface {
-	Corporation(ctx context.Context, id string) (*athena.Corporation, error)
+	Corporation(ctx context.Context, id uint) (*athena.Corporation, error)
 	SetCorporation(ctx context.Context, corporation *athena.Corporation, optionFuncs ...OptionFunc) error
-	Corporations(ctx context.Context, operators []*athena.Operator) ([]*athena.Corporation, error)
-	SetCorporations(ctx context.Context, operators []*athena.Operator, corporations []*athena.Corporation, optionFuncs ...OptionFunc) error
+	// Corporations(ctx context.Context, operators []*athena.Operator) ([]*athena.Corporation, error)
+	// SetCorporations(ctx context.Context, operators []*athena.Operator, corporations []*athena.Corporation, optionFuncs ...OptionFunc) error
 }
 
 const (
-	keyCorporation  = "athena::corporation::%s"
-	keyCorporations = "athena::corporations::%s"
+	keyCorporation = "athena::corporation::%d"
+	// keyCorporations = "athena::corporations::%s"
 )
 
-func (s *service) Corporation(ctx context.Context, id string) (*athena.Corporation, error) {
+func (s *service) Corporation(ctx context.Context, id uint) (*athena.Corporation, error) {
 
 	result, err := s.client.Get(ctx, fmt.Sprintf(keyCorporation, id)).Result()
 	if err != nil && err != redis.Nil {
@@ -53,7 +52,7 @@ func (s *service) SetCorporation(ctx context.Context, corporation *athena.Corpor
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporation, corporation.ID.Hex()), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporation, corporation.ID), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -61,60 +60,60 @@ func (s *service) SetCorporation(ctx context.Context, corporation *athena.Corpor
 	return nil
 }
 
-func (s *service) Corporations(ctx context.Context, operators []*athena.Operator) ([]*athena.Corporation, error) {
+// func (s *service) Corporations(ctx context.Context, operators []*athena.Operator) ([]*athena.Corporation, error) {
 
-	data, err := json.Marshal(operators)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal operators: %w", err)
-	}
+// 	data, err := json.Marshal(operators)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+// 	}
 
-	h := sha256.New()
-	_, _ = h.Write(data)
-	bs := h.Sum(nil)
+// 	h := sha256.New()
+// 	_, _ = h.Write(data)
+// 	bs := h.Sum(nil)
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyCorporations, fmt.Sprintf("%x", bs))).Result()
-	if err != nil && err != redis.Nil {
-		return nil, err
-	}
+// 	result, err := s.client.Get(ctx, fmt.Sprintf(keyCorporations, fmt.Sprintf("%x", bs))).Result()
+// 	if err != nil && err != redis.Nil {
+// 		return nil, err
+// 	}
 
-	if len(result) > 0 {
-		var corporations = make([]*athena.Corporation, 0)
+// 	if len(result) > 0 {
+// 		var corporations = make([]*athena.Corporation, 0)
 
-		err = json.Unmarshal([]byte(result), &corporations)
-		if err != nil {
-			return nil, err
-		}
+// 		err = json.Unmarshal([]byte(result), &corporations)
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		return corporations, nil
-	}
+// 		return corporations, nil
+// 	}
 
-	return nil, nil
+// 	return nil, nil
 
-}
+// }
 
-func (s *service) SetCorporations(ctx context.Context, operators []*athena.Operator, corporations []*athena.Corporation, optionFuncs ...OptionFunc) error {
+// func (s *service) SetCorporations(ctx context.Context, operators []*athena.Operator, corporations []*athena.Corporation, optionFuncs ...OptionFunc) error {
 
-	data, err := json.Marshal(operators)
-	if err != nil {
-		return fmt.Errorf("failed to marshal operators: %w", err)
-	}
+// 	data, err := json.Marshal(operators)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to marshal operators: %w", err)
+// 	}
 
-	h := sha256.New()
-	_, _ = h.Write(data)
-	bs := h.Sum(nil)
+// 	h := sha256.New()
+// 	_, _ = h.Write(data)
+// 	bs := h.Sum(nil)
 
-	data, err = json.Marshal(corporations)
-	if err != nil {
-		return fmt.Errorf("Failed to marsahl payload: %w", err)
-	}
+// 	data, err = json.Marshal(corporations)
+// 	if err != nil {
+// 		return fmt.Errorf("Failed to marsahl payload: %w", err)
+// 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
+// 	options := applyOptionFuncs(nil, optionFuncs)
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporations, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
-	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
-	}
+// 	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporations, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
+// 	if err != nil {
+// 		return fmt.Errorf("failed to write to cache: %w", err)
+// 	}
 
-	return nil
+// 	return nil
 
-}
+// }

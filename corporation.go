@@ -2,34 +2,35 @@ package athena
 
 import (
 	"context"
+	"time"
 
 	"github.com/volatiletech/null"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CorporationRepository interface {
+	Corporation(ctx context.Context, id uint) (*Corporation, error)
 	Corporations(ctx context.Context, operators ...*Operator) ([]*Corporation, error)
 	CreateCorporation(ctx context.Context, corporation *Corporation) (*Corporation, error)
-	UpdateCorporation(ctx context.Context, id string, corporation *Corporation) (*Corporation, error)
+	UpdateCorporation(ctx context.Context, id uint, corporation *Corporation) (*Corporation, error)
 }
 
 type Corporation struct {
-	ID            primitive.ObjectID `bson:"_id,omitempty" json:"_id"`
-	CorporationID uint               `bson:"corporation_id" json:"corporation_id"`
+	ID            uint `db:"_id,omitempty" json:"_id"`
+	CorporationID uint `db:"corporation_id" json:"corporation_id"`
 
-	AllianceID    null.Uint   `bson:"alliance_id,omitempty" json:"alliance_id,omitempty"`
-	CeoID         uint        `bson:"ceo_id" json:"ceo_id"`
-	CreatorID     uint        `bson:"creator_id" json:"creator_id"`
-	DateFounded   null.Time   `bson:"date_founded,omitempty" json:"date_founded,omitempty"`
-	FactionID     null.Uint   `bson:"faction_id,omitempty" json:"faction_id,omitempty"`
-	HomeStationID null.Uint   `bson:"home_station_id,omitempty" json:"home_station_id,omitempty"`
-	MemberCount   uint        `bson:"member_count" json:"member_count"`
-	Name          string      `bson:"name" json:"name"`
-	Shares        uint64      `bson:"shares,omitempty" json:"shares,omitempty"`
-	TaxRate       float32     `bson:"tax_rate" json:"tax_rate"`
-	Ticker        string      `bson:"ticker" json:"ticker"`
-	URL           null.String `bson:"url,omitempty" json:"url,omitempty"`
-	WarEligible   bool        `bson:"war_eligible" json:"war_eligible"`
-
-	Meta
+	AllianceID    null.Uint   `db:"alliance_id,omitempty" json:"alliance_id,omitempty"`
+	CeoID         uint        `db:"ceo_id" json:"ceo_id"`
+	CreatorID     uint        `db:"creator_id" json:"creator_id"`
+	DateFounded   null.Time   `db:"date_founded,omitempty" json:"date_founded,omitempty"`
+	FactionID     null.Uint   `db:"faction_id,omitempty" json:"faction_id,omitempty"`
+	HomeStationID null.Uint   `db:"home_station_id,omitempty" json:"home_station_id,omitempty"`
+	MemberCount   uint        `db:"member_count" json:"member_count"`
+	Name          string      `db:"name" json:"name"`
+	Shares        uint64      `db:"shares,omitempty" json:"shares,omitempty"`
+	TaxRate       float32     `db:"tax_rate" json:"tax_rate"`
+	Ticker        string      `db:"ticker" json:"ticker"`
+	URL           null.String `db:"url,omitempty" json:"url,omitempty"`
+	WarEligible   bool        `db:"war_eligible" json:"war_eligible"`
+	CreatedAt     time.Time   `db:"created_at" json:"created_at" deep:"-"`
+	UpdatedAt     time.Time   `db:"updated_at" json:"updated_at" deep:"-"`
 }

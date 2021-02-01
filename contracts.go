@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/volatiletech/null"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type MemberContractRepository interface {
@@ -15,53 +14,53 @@ type MemberContractRepository interface {
 }
 
 type memberContractRepository interface {
-	MemberContract(ctx context.Context, memberID string, contractID int) (*MemberContract, error)
-	Contracts(ctx context.Context, memberID string, operators ...*Operator) ([]*MemberContract, error)
-	CreateContracts(ctx context.Context, memberID string, contracts []*MemberContract) ([]*MemberContract, error)
-	UpdateContract(ctx context.Context, memberID string, contractID int, contract *MemberContract) (*MemberContract, error)
-	DeleteContracts(ctx context.Context, memberID string) (bool, error)
+	MemberContract(ctx context.Context, memberID uint, contractID int) (*MemberContract, error)
+	Contracts(ctx context.Context, memberID uint, operators ...*Operator) ([]*MemberContract, error)
+	CreateContracts(ctx context.Context, memberID uint, contracts []*MemberContract) ([]*MemberContract, error)
+	UpdateContract(ctx context.Context, memberID uint, contractID int, contract *MemberContract) (*MemberContract, error)
+	DeleteContracts(ctx context.Context, memberID uint) (bool, error)
 }
 
 type memberContractItemRepository interface {
-	MemberContractItems(ctx context.Context, memberID string, contractID int, operators ...*Operator) ([]*MemberContractItem, error)
-	CreateMemberContractItems(ctx context.Context, memberID string, contractID int, items []*MemberContractItem) ([]*MemberContractItem, error)
-	DeleteMemberContractItems(ctx context.Context, memberID string, contractID int) (bool, error)
-	DeleteMemberContractItemsAll(ctx context.Context, memberID string) (bool, error)
+	MemberContractItems(ctx context.Context, memberID uint, contractID int, operators ...*Operator) ([]*MemberContractItem, error)
+	CreateMemberContractItems(ctx context.Context, memberID uint, contractID int, items []*MemberContractItem) ([]*MemberContractItem, error)
+	DeleteMemberContractItems(ctx context.Context, memberID uint, contractID int) (bool, error)
+	DeleteMemberContractItemsAll(ctx context.Context, memberID uint) (bool, error)
 }
 
 type memberContractBidRepository interface {
-	MemberContractBids(ctx context.Context, memberID string, contractID int, operators ...*Operator) ([]*MemberContractBid, error)
-	CreateMemberContractBids(ctx context.Context, memberID string, contractID int, items []*MemberContractBid) ([]*MemberContractBid, error)
-	DeleteMemberContractBids(ctx context.Context, memberID string, contractID int) (bool, error)
-	DeleteMemberContractBidsAll(ctx context.Context, memberID string) (bool, error)
+	MemberContractBids(ctx context.Context, memberID uint, contractID int, operators ...*Operator) ([]*MemberContractBid, error)
+	CreateMemberContractBids(ctx context.Context, memberID uint, contractID int, items []*MemberContractBid) ([]*MemberContractBid, error)
+	DeleteMemberContractBids(ctx context.Context, memberID uint, contractID int) (bool, error)
+	DeleteMemberContractBidsAll(ctx context.Context, memberID uint) (bool, error)
 }
 
 type MemberContract struct {
-	MemberID            primitive.ObjectID   `bson:"member_id" json:"member_id"`
-	ContractID          int                  `bson:"contract_id" json:"contract_id"`
-	AcceptorID          null.Int             `bson:"acceptor_id" json:"acceptor_id"`
-	AssigneeID          null.Int             `bson:"assignee_id" json:"assignee_id"`
-	Availability        ContractAvailability `bson:"availability" json:"availability"`
-	Buyout              null.Float64         `bson:"buyout,omitempty" json:"buyout,omitempty"`
-	Collateral          null.Float64         `bson:"collateral,omitempty" json:"collateral,omitempty"`
-	DateAccepted        null.Time            `bson:"date_accepted,omitempty" json:"date_accepted,omitempty"`
-	DateCompleted       null.Time            `bson:"date_completed,omitempty" json:"date_completed,omitempty"`
-	DateExpired         time.Time            `bson:"date_expired" json:"date_expired"`
-	DateIssued          time.Time            `bson:"date_issued" json:"date_issued"`
-	DaysToComplete      null.Int             `bson:"days_to_complete,omitempty" json:"days_to_complete,omitempty"`
-	EndLocationID       null.Int64           `bson:"end_location_id,omitempty" json:"end_location_id,omitempty"`
-	ForCorporation      bool                 `bson:"for_corporation" json:"for_corporation"`
-	IssuerCorporationID int                  `bson:"issuer_corporation_id" json:"issuer_corporation_id"`
-	IssuerID            int64                `bson:"issuer_id" json:"issuer_id"`
-	Price               null.Int             `bson:"price,omitempty" json:"price,omitempty"`
-	Reward              null.Int             `bson:"reward,omitempty" json:"reward,omitempty"`
-	StartLocationID     null.Int64           `bson:"start_location_id,omitempty" json:"start_location_id,omitempty"`
-	Status              ContractStatus       `bson:"status" json:"status"`
-	Title               null.String          `bson:"title,omitempty" json:"title,omitempty"`
-	Type                ContractType         `bson:"type" json:"type"`
-	Volume              null.Float64         `bson:"volume,omitempty" json:"volume,omitempty"`
-	CreatedAt           time.Time            `bson:"created_at" json:"created_at"`
-	UpdatedAt           time.Time            `bson:"updated_at" json:"updated_at"`
+	MemberID            uint                 `db:"member_id" json:"member_id"`
+	ContractID          int                  `db:"contract_id" json:"contract_id"`
+	AcceptorID          null.Int             `db:"acceptor_id" json:"acceptor_id"`
+	AssigneeID          null.Int             `db:"assignee_id" json:"assignee_id"`
+	Availability        ContractAvailability `db:"availability" json:"availability"`
+	Buyout              null.Float64         `db:"buyout,omitempty" json:"buyout,omitempty"`
+	Collateral          null.Float64         `db:"collateral,omitempty" json:"collateral,omitempty"`
+	DateAccepted        null.Time            `db:"date_accepted,omitempty" json:"date_accepted,omitempty"`
+	DateCompleted       null.Time            `db:"date_completed,omitempty" json:"date_completed,omitempty"`
+	DateExpired         time.Time            `db:"date_expired" json:"date_expired"`
+	DateIssued          time.Time            `db:"date_issued" json:"date_issued"`
+	DaysToComplete      null.Int             `db:"days_to_complete,omitempty" json:"days_to_complete,omitempty"`
+	EndLocationID       null.Int64           `db:"end_location_id,omitempty" json:"end_location_id,omitempty"`
+	ForCorporation      bool                 `db:"for_corporation" json:"for_corporation"`
+	IssuerCorporationID int                  `db:"issuer_corporation_id" json:"issuer_corporation_id"`
+	IssuerID            int64                `db:"issuer_id" json:"issuer_id"`
+	Price               null.Int             `db:"price,omitempty" json:"price,omitempty"`
+	Reward              null.Int             `db:"reward,omitempty" json:"reward,omitempty"`
+	StartLocationID     null.Int64           `db:"start_location_id,omitempty" json:"start_location_id,omitempty"`
+	Status              ContractStatus       `db:"status" json:"status"`
+	Title               null.String          `db:"title,omitempty" json:"title,omitempty"`
+	Type                ContractType         `db:"type" json:"type"`
+	Volume              null.Float64         `db:"volume,omitempty" json:"volume,omitempty"`
+	CreatedAt           time.Time            `db:"created_at" json:"created_at"`
+	UpdatedAt           time.Time            `db:"updated_at" json:"updated_at"`
 }
 
 type ContractAvailability string
@@ -157,46 +156,46 @@ func (c ContractType) Valid() bool {
 }
 
 type MemberContractBid struct {
-	MemberID   primitive.ObjectID `bson:"member_id" json:"member_id"`
-	ContractID int                `bson:"contract_id" json:"contract_id"`
+	MemberID   uint `db:"member_id" json:"member_id"`
+	ContractID int  `db:"contract_id" json:"contract_id"`
 
 	// Unique ID for the bid
-	BidID int `bson:"bid_id" json:"bid_id"`
+	BidID int `db:"bid_id" json:"bid_id"`
 
 	// Character ID of the bidder
-	BidderID int64 `bson:"bidder" json:"bidder"`
+	BidderID int64 `db:"bidder" json:"bidder"`
 
 	// The amount bid, in ISK
-	Amount float64 `bson:"amount" json:"amount"`
+	Amount float64 `db:"amount" json:"amount"`
 
 	// Datetime when the bid was placed
-	BidDate time.Time `bson:"bid_date" json:"bid_date"`
+	BidDate time.Time `db:"bid_date" json:"bid_date"`
 
-	CreatedAt time.Time `bson:"created_at" json:"created_at"`
-	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type MemberContractItem struct {
-	MemberID   primitive.ObjectID `bson:"member_id" json:"member_id"`
-	ContractID int                `bson:"contract_id" json:"contract_id"`
+	MemberID   uint `db:"member_id" json:"member_id"`
+	ContractID int  `db:"contract_id" json:"contract_id"`
 
 	// UniqueID for the Item
-	RecordID int `bson:"record_id" json:"record_id"`
+	RecordID int `db:"record_id" json:"record_id"`
 
 	// Type ID for item
-	TypeID int `bson:"type_id" json:"type_id"`
+	TypeID int `db:"type_id" json:"type_id"`
 
 	// Number of items in the stack
-	Quantity int `bson:"quantity" json:"quantity"`
+	Quantity int `db:"quantity" json:"quantity"`
 
 	// -1 indicates that the item is a singleton (non-stackable).
 	// If the item happens to be a Blueprint, -1 is an Original and -2 is a Blueprint Copy
-	RawQuantity int `bson:"raw_quantity" json:"raw_quantity"`
+	RawQuantity int `db:"raw_quantity" json:"raw_quantity"`
 
 	// true if the contract issuer has submitted this item with the contract, false if the isser is asking for this item in the contract
-	IsIncluded  bool `bson:"is_included" json:"is_included"`
-	IsSingleton bool `bson:"is_singleton" json:"is_singleton"`
+	IsIncluded  bool `db:"is_included" json:"is_included"`
+	IsSingleton bool `db:"is_singleton" json:"is_singleton"`
 
-	CreatedAt time.Time `bson:"created_at" json:"created_at"`
-	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

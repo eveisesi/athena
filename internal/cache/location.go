@@ -10,21 +10,21 @@ import (
 )
 
 type locationService interface {
-	MemberLocation(ctx context.Context, memberID string) (*athena.MemberLocation, error)
-	SetMemberLocation(ctx context.Context, memberID string, location *athena.MemberLocation, optionFuncs ...OptionFunc) error
-	MemberOnline(ctx context.Context, memberID string) (*athena.MemberOnline, error)
-	SetMemberOnline(ctx context.Context, memberID string, online *athena.MemberOnline, optionFuncs ...OptionFunc) error
-	MemberShip(ctx context.Context, memberID string) (*athena.MemberShip, error)
-	SetMemberShip(ctx context.Context, memberID string, ship *athena.MemberShip, optionFuncs ...OptionFunc) error
+	MemberLocation(ctx context.Context, memberID uint) (*athena.MemberLocation, error)
+	SetMemberLocation(ctx context.Context, memberID uint, location *athena.MemberLocation, optionFuncs ...OptionFunc) error
+	MemberOnline(ctx context.Context, memberID uint) (*athena.MemberOnline, error)
+	SetMemberOnline(ctx context.Context, memberID uint, online *athena.MemberOnline, optionFuncs ...OptionFunc) error
+	MemberShip(ctx context.Context, memberID uint) (*athena.MemberShip, error)
+	SetMemberShip(ctx context.Context, memberID uint, ship *athena.MemberShip, optionFuncs ...OptionFunc) error
 }
 
 const (
-	keyMemberLocation = "athena::member::%s::location"
-	keyMemberOnline   = "athena::member::%s::online"
-	keyMemberShip     = "athena::member::%s::ship"
+	keyMemberLocation = "athena::member::%d::location"
+	keyMemberOnline   = "athena::member::%d::online"
+	keyMemberShip     = "athena::member::%d::ship"
 )
 
-func (s *service) MemberLocation(ctx context.Context, memberID string) (*athena.MemberLocation, error) {
+func (s *service) MemberLocation(ctx context.Context, memberID uint) (*athena.MemberLocation, error) {
 
 	result, err := s.client.Get(ctx, fmt.Sprintf(keyMemberLocation, memberID)).Bytes()
 	if err != nil && err != redis.Nil {
@@ -46,7 +46,7 @@ func (s *service) MemberLocation(ctx context.Context, memberID string) (*athena.
 
 }
 
-func (s *service) SetMemberLocation(ctx context.Context, memberID string, location *athena.MemberLocation, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberLocation(ctx context.Context, memberID uint, location *athena.MemberLocation, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -64,7 +64,7 @@ func (s *service) SetMemberLocation(ctx context.Context, memberID string, locati
 
 }
 
-func (s *service) MemberOnline(ctx context.Context, memberID string) (*athena.MemberOnline, error) {
+func (s *service) MemberOnline(ctx context.Context, memberID uint) (*athena.MemberOnline, error) {
 
 	result, err := s.client.Get(ctx, fmt.Sprintf(keyMemberOnline, memberID)).Bytes()
 	if err != nil && err != redis.Nil {
@@ -86,7 +86,7 @@ func (s *service) MemberOnline(ctx context.Context, memberID string) (*athena.Me
 
 }
 
-func (s *service) SetMemberOnline(ctx context.Context, memberID string, online *athena.MemberOnline, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberOnline(ctx context.Context, memberID uint, online *athena.MemberOnline, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -104,7 +104,7 @@ func (s *service) SetMemberOnline(ctx context.Context, memberID string, online *
 
 }
 
-func (s *service) MemberShip(ctx context.Context, memberID string) (*athena.MemberShip, error) {
+func (s *service) MemberShip(ctx context.Context, memberID uint) (*athena.MemberShip, error) {
 
 	result, err := s.client.Get(ctx, fmt.Sprintf(keyMemberShip, memberID)).Bytes()
 	if err != nil && err != redis.Nil {
@@ -126,7 +126,7 @@ func (s *service) MemberShip(ctx context.Context, memberID string) (*athena.Memb
 
 }
 
-func (s *service) SetMemberShip(ctx context.Context, memberID string, ship *athena.MemberShip, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberShip(ctx context.Context, memberID uint, ship *athena.MemberShip, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 

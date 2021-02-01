@@ -247,7 +247,7 @@ func (s *service) newGetFactionsEndpoint() *endpoint {
 
 }
 
-func (s *service) GetCategories(ctx context.Context, ids []int) ([]int, *http.Response, error) {
+func (s *service) GetCategories(ctx context.Context, ids []uint) ([]uint, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCategories.Name]
 
@@ -338,7 +338,7 @@ func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*
 		}
 
 	case sc >= http.StatusBadRequest:
-		return category, res, fmt.Errorf("failed to fetch category %d, received status code of %d", category.CategoryID, sc)
+		return category, res, fmt.Errorf("failed to fetch category %d, received status code of %d", category.ID, sc)
 	}
 
 	return category, res, nil
@@ -351,7 +351,7 @@ func (s *service) categoryKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Category to be provided, received nil for category instead")
 	}
 
-	return buildKey(GetCategory.Name, strconv.Itoa(mods.category.CategoryID))
+	return buildKey(GetCategory.Name, strconv.FormatUint(uint64(mods.category.ID), 10))
 
 }
 
@@ -362,7 +362,7 @@ func (s *service) categoryPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCategory.FmtPath, mods.category.CategoryID),
+		Path: fmt.Sprintf(GetCategory.FmtPath, mods.category.ID),
 	}
 
 	return u.String()
@@ -409,7 +409,7 @@ func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Gr
 		}
 
 	case sc >= http.StatusBadRequest:
-		return group, res, fmt.Errorf("failed to fetch group %d, received status code of %d", group.GroupID, sc)
+		return group, res, fmt.Errorf("failed to fetch group %d, received status code of %d", group.ID, sc)
 	}
 
 	return group, res, nil
@@ -422,7 +422,7 @@ func (s *service) groupKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Group to be provided, received nil for group instead")
 	}
 
-	return buildKey(GetGroup.Name, strconv.Itoa(int(mods.group.GroupID)))
+	return buildKey(GetGroup.Name, strconv.FormatUint(uint64(mods.group.ID), 10))
 
 }
 
@@ -433,7 +433,7 @@ func (s *service) groupPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetGroup.FmtPath, mods.group.GroupID),
+		Path: fmt.Sprintf(GetGroup.FmtPath, mods.group.ID),
 	}
 
 	return u.String()
@@ -480,7 +480,7 @@ func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type,
 		}
 
 	case sc >= http.StatusBadRequest:
-		return item, res, fmt.Errorf("failed to fetch type %d, received status code of %d", item.TypeID, sc)
+		return item, res, fmt.Errorf("failed to fetch type %d, received status code of %d", item.ID, sc)
 	}
 
 	return item, res, nil
@@ -493,7 +493,7 @@ func (s *service) typeKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Type to be provided, received nil for item instead")
 	}
 
-	return buildKey(GetType.Name, strconv.Itoa(int(mods.item.TypeID)))
+	return buildKey(GetType.Name, strconv.FormatUint(uint64(mods.item.ID), 10))
 
 }
 
@@ -504,7 +504,7 @@ func (s *service) typePathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetType.FmtPath, mods.item.TypeID),
+		Path: fmt.Sprintf(GetType.FmtPath, mods.item.ID),
 	}
 
 	return u.String()
@@ -610,7 +610,7 @@ func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena
 		}
 
 	case sc >= http.StatusBadRequest:
-		return region, res, fmt.Errorf("failed to fetch region %d, received status code of %d", region.RegionID, sc)
+		return region, res, fmt.Errorf("failed to fetch region %d, received status code of %d", region.ID, sc)
 	}
 
 	return region, res, nil
@@ -623,7 +623,7 @@ func (s *service) regionKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Region to be provided, received nil for region instead")
 	}
 
-	return buildKey(GetRegion.Name, strconv.Itoa(mods.region.RegionID))
+	return buildKey(GetRegion.Name, strconv.FormatUint(uint64(mods.region.ID), 10))
 
 }
 
@@ -634,7 +634,7 @@ func (s *service) regionPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetRegion.FmtPath, mods.region.RegionID),
+		Path: fmt.Sprintf(GetRegion.FmtPath, mods.region.ID),
 	}
 
 	return u.String()
@@ -681,7 +681,7 @@ func (s *service) GetConstellation(ctx context.Context, constellation *athena.Co
 		}
 
 	case sc >= http.StatusBadRequest:
-		return constellation, res, fmt.Errorf("failed to fetch constellation %d, received status code of %d", constellation.ConstellationID, sc)
+		return constellation, res, fmt.Errorf("failed to fetch constellation %d, received status code of %d", constellation.ID, sc)
 	}
 
 	return constellation, res, nil
@@ -694,7 +694,7 @@ func (s *service) constellationKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Constellation to be provided, received nil for constellation instead")
 	}
 
-	return buildKey(GetConstellation.Name, strconv.Itoa(mods.constellation.ConstellationID))
+	return buildKey(GetConstellation.Name, strconv.FormatUint(uint64(mods.constellation.ID), 10))
 
 }
 
@@ -705,7 +705,7 @@ func (s *service) constellationPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetConstellation.FmtPath, mods.constellation.ConstellationID),
+		Path: fmt.Sprintf(GetConstellation.FmtPath, mods.constellation.ID),
 	}
 
 	return u.String()
@@ -752,7 +752,7 @@ func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarS
 		}
 
 	case sc >= http.StatusBadRequest:
-		return solarSystem, res, fmt.Errorf("failed to fetch solarSystem %d, received status code of %d", solarSystem.SystemID, sc)
+		return solarSystem, res, fmt.Errorf("failed to fetch solarSystem %d, received status code of %d", solarSystem.ID, sc)
 	}
 
 	return solarSystem, res, nil
@@ -765,7 +765,7 @@ func (s *service) solarSystemKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.SolarSystem to be provided, received nil for solarSystem instead")
 	}
 
-	return buildKey(GetSolarSystem.Name, strconv.Itoa(mods.solarSystem.SystemID))
+	return buildKey(GetSolarSystem.Name, strconv.FormatUint(uint64(mods.solarSystem.ID), 10))
 
 }
 
@@ -776,7 +776,7 @@ func (s *service) solarSystemPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetSolarSystem.FmtPath, mods.solarSystem.SystemID),
+		Path: fmt.Sprintf(GetSolarSystem.FmtPath, mods.solarSystem.ID),
 	}
 
 	return u.String()
@@ -823,7 +823,7 @@ func (s *service) GetStation(ctx context.Context, station *athena.Station) (*ath
 		}
 
 	case sc >= http.StatusBadRequest:
-		return station, res, fmt.Errorf("failed to fetch station %d, received status code of %d", station.SystemID, sc)
+		return station, res, fmt.Errorf("failed to fetch station %d, received status code of %d", station.ID, sc)
 	}
 
 	return station, res, nil
@@ -836,7 +836,7 @@ func (s *service) stationKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Station to be provided, received nil for station instead")
 	}
 
-	return buildKey(GetStation.Name, strconv.Itoa(mods.station.StationID))
+	return buildKey(GetStation.Name, strconv.FormatUint(uint64(mods.station.ID), 10))
 
 }
 
@@ -847,7 +847,7 @@ func (s *service) stationPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetStation.FmtPath, mods.station.StationID),
+		Path: fmt.Sprintf(GetStation.FmtPath, mods.station.ID),
 	}
 
 	return u.String()
@@ -895,7 +895,7 @@ func (s *service) GetStructure(ctx context.Context, member *athena.Member, struc
 		}
 
 	case sc >= http.StatusBadRequest:
-		return structure, res, fmt.Errorf("failed to fetch structure %d, received status code of %d", structure.StructureID, sc)
+		return structure, res, fmt.Errorf("failed to fetch structure %d, received status code of %d", structure.ID, sc)
 	}
 
 	return structure, res, nil
@@ -908,7 +908,7 @@ func (s *service) structureKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Structure to be provided, received nil for structure instead")
 	}
 
-	return buildKey(GetStation.Name, strconv.Itoa(int(mods.structure.StructureID)))
+	return buildKey(GetStation.Name, strconv.FormatUint(mods.structure.ID, 10))
 
 }
 
@@ -919,7 +919,7 @@ func (s *service) structurePathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetStructure.FmtPath, mods.structure.StructureID),
+		Path: fmt.Sprintf(GetStructure.FmtPath, mods.structure.ID),
 	}
 
 	return u.String()

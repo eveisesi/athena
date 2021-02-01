@@ -5,42 +5,40 @@ import (
 	"time"
 
 	"github.com/volatiletech/null"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type MemberRepository interface {
-	Member(ctx context.Context, id string) (*Member, error)
+	Member(ctx context.Context, id uint) (*Member, error)
 	Members(ctx context.Context, operators ...*Operator) ([]*Member, error)
 	CreateMember(ctx context.Context, member *Member) (*Member, error)
-	UpdateMember(ctx context.Context, id string, member *Member) (*Member, error)
-	DeleteMember(ctx context.Context, id string) (bool, error)
+	UpdateMember(ctx context.Context, id uint, member *Member) (*Member, error)
+	DeleteMember(ctx context.Context, id uint) (bool, error)
 }
 
 type Member struct {
-	ID                primitive.ObjectID `bson:"_id,omitempty" json:"_id"`
-	CharacterID       uint64             `bson:"character_id" json:"character_id"`
-	MainID            null.Uint64        `bson:"main_id,omitempty" json:"main_id"`
-	AccessToken       string             `bson:"access_token" json:"access_token"`
-	RefreshToken      string             `bson:"refresh_token" json:"refresh_token"`
-	Expires           time.Time          `bson:"expires" json:"expires"`
-	OwnerHash         string             `bson:"owner_hash" json:"owner_hash"`
-	Scopes            []MemberScope      `bson:"scopes,omitempty" json:"scopes,omitempty"`
-	IsNew             bool               `bson:"-" json:"-"`
-	Disabled          bool               `bson:"disabled" json:"disabled"`
-	DisabledReason    null.String        `bson:"disabled_reason,omitempty" json:"disabled_reason"`
-	DisabledTimestamp null.Time          `bson:"disabled_timestamp,omitempty" json:"disabled_timestamp"`
-	LastLogin         time.Time          `bson:"last_login" json:"last_login"`
-	CreatedAt         time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt         time.Time          `bson:"updated_at" json:"updated_at"`
+	ID                uint          `db:"character_id" json:"character_id"`
+	MainID            null.Uint     `db:"main_id,omitempty" json:"main_id"`
+	AccessToken       string        `db:"access_token" json:"access_token"`
+	RefreshToken      string        `db:"refresh_token" json:"refresh_token"`
+	Expires           time.Time     `db:"expires" json:"expires"`
+	OwnerHash         string        `db:"owner_hash" json:"owner_hash"`
+	Scopes            []MemberScope `db:"scopes,omitempty" json:"scopes,omitempty"`
+	IsNew             bool          `db:"-" json:"-"`
+	Disabled          bool          `db:"disabled" json:"disabled"`
+	DisabledReason    null.String   `db:"disabled_reason,omitempty" json:"disabled_reason"`
+	DisabledTimestamp null.Time     `db:"disabled_timestamp,omitempty" json:"disabled_timestamp"`
+	LastLogin         time.Time     `db:"last_login" json:"last_login"`
+	CreatedAt         time.Time     `db:"created_at" json:"created_at"`
+	UpdatedAt         time.Time     `db:"updated_at" json:"updated_at"`
 }
 
 type MemberScope struct {
-	Scope  Scope     `bson:"scope" json:"scope"`
-	Expiry null.Time `bson:"expiry,omitempty" json:"expiry,omitempty"`
+	Scope  Scope     `db:"scope" json:"scope"`
+	Expiry null.Time `db:"expiry,omitempty" json:"expiry,omitempty"`
 }
 
 type MemberLogin struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty" json:"_id"`
-	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt time.Time          `bson:"updated_at" json:"updated_at"`
+	ID        uint      `db:"_id,omitempty" json:"_id"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

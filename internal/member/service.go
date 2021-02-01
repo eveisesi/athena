@@ -19,7 +19,7 @@ import (
 )
 
 type Service interface {
-	Member(ctx context.Context, memberID string) (*athena.Member, error)
+	Member(ctx context.Context, memberID uint) (*athena.Member, error)
 	// UpdateMember(ctx context.Context, member *athena.Member) (*athena.Member, error)
 	Login(ctx context.Context, code, state string) error
 	ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error)
@@ -69,7 +69,7 @@ func (s *service) ValidateToken(ctx context.Context, member *athena.Member) (*at
 	}
 
 	if member.AccessToken != currentToken {
-		_, err = s.member.UpdateMember(ctx, member.ID.Hex(), member)
+		_, err = s.member.UpdateMember(ctx, member.ID, member)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +79,7 @@ func (s *service) ValidateToken(ctx context.Context, member *athena.Member) (*at
 
 }
 
-func (s *service) Member(ctx context.Context, memberID string) (*athena.Member, error) {
+func (s *service) Member(ctx context.Context, memberID uint) (*athena.Member, error) {
 
 	member, err := s.cache.Member(ctx, memberID)
 	if err != nil {
@@ -129,13 +129,13 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 	member.RefreshToken = bearer.RefreshToken
 	member.Expires = bearer.Expiry
 
-	_, err = s.member.UpdateMember(ctx, member.ID.Hex(), member)
+	_, err = s.member.UpdateMember(ctx, member.ID, member)
 	if err != nil {
 		return err
 	}
 
 	s.cache.PushIDToProcessorQueue(ctx, member.ID)
-	_ = s.cache.SetMember(ctx, member.ID.Hex(), member)
+	_ = s.cache.SetMember(ctx, member.ID, member)
 
 	attempt.Status = athena.CompletedAuthStatus
 	attempt.Token = null.NewString(member.AccessToken, true)
@@ -161,7 +161,7 @@ func (s *service) MemberFromToken(ctx context.Context, token jwt.Token) (*athena
 		return nil, err
 	}
 
-	operators := []*athena.Operator{athena.NewEqualOperator("character_id", memberID), athena.NewLimitOperator(1)}
+	operators := []*athena.Operator{athena.NewEqualOperator("id", memberID), athena.NewLimitOperator(1)}
 
 	members, err := s.member.Members(ctx, operators...)
 	if err != nil {
@@ -175,27 +175,27 @@ func (s *service) MemberFromToken(ctx context.Context, token jwt.Token) (*athena
 		member = members[0]
 	} else {
 		// This is a new member, lets create a record for them.
-		character, err := s.character.CharacterByCharacterID(ctx, memberID, character.NewOptionFuncs())
+		character, err := s.character.Character(ctx, memberID, character.NewOptionFuncs())
 		if err != nil {
 			return nil, err
 		}
 
-		corporation, err := s.corporation.CorporationByCorporationID(ctx, character.CorporationID, corporation.NewOptionFuncs())
+		corporation, err := s.corporation.Corporation(ctx, character.CorporationID, corporation.NewOptionFuncs())
 		if err != nil {
 			return nil, err
 		}
 
 		if corporation.AllianceID.Valid {
-			_, err = s.alliance.AllianceByAllianceID(ctx, corporation.AllianceID.Uint, alliance.NewOptionFuncs())
+			_, err = s.alliance.Alliance(ctx, corporation.AllianceID.Uint, alliance.NewOptionFuncs())
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		member = &athena.Member{
-			CharacterID: character.CharacterID,
-			LastLogin:   time.Now(),
-			IsNew:       true,
+			ID:        character.ID,
+			LastLogin: time.Now(),
+			IsNew:     true,
 		}
 	}
 
@@ -231,7 +231,7 @@ func (s *service) MemberFromToken(ctx context.Context, token jwt.Token) (*athena
 			return nil, err
 		}
 	} else {
-		member, err = s.member.UpdateMember(ctx, member.ID.Hex(), member)
+		member, err = s.member.UpdateMember(ctx, member.ID, member)
 		if err != nil {
 			return nil, err
 		}
@@ -241,7 +241,7 @@ func (s *service) MemberFromToken(ctx context.Context, token jwt.Token) (*athena
 
 }
 
-func memberIDFromSubject(sub string) (uint64, error) {
+func memberIDFromSubject(sub string) (uint, error) {
 
 	parts := strings.Split(sub, ":")
 
@@ -249,6 +249,8 @@ func memberIDFromSubject(sub string) (uint64, error) {
 		return 0, fmt.Errorf("invalid sub format")
 	}
 
-	return strconv.ParseUint(parts[2], 10, 64)
+	id, err := strconv.ParseUint(parts[2], 10, 32)
+
+	return uint(id), err
 
 }

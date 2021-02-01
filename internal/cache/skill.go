@@ -11,28 +11,29 @@ import (
 )
 
 type skillService interface {
-	MemberSkillAttributes(ctx context.Context, memberID string) (*athena.MemberSkillAttributes, error)
-	SetMemberSkillAttributes(ctx context.Context, memberID string, attributes *athena.MemberSkillAttributes, options ...OptionFunc) error
-	MemberSkillQueue(ctx context.Context, memberID string) ([]*athena.MemberSkillQueue, error)
-	SetMemberSkillQueue(ctx context.Context, memberID string, skillQueue []*athena.MemberSkillQueue, options ...OptionFunc) error
-	MemberSkills(ctx context.Context, memberID string) ([]*athena.MemberSkill, error)
-	SetMemberSkills(ctx context.Context, memberID string, skills []*athena.MemberSkill, options ...OptionFunc) error
-	MemberSkillMeta(ctx context.Context, memberID string) (*athena.MemberSkillMeta, error)
-	SetMemberSkillMeta(ctx context.Context, memberID string, meta *athena.MemberSkillMeta, optionFuncs ...OptionFunc) error
+	MemberSkillAttributes(ctx context.Context, id uint) (*athena.MemberSkillAttributes, error)
+	SetMemberSkillAttributes(ctx context.Context, id uint, attributes *athena.MemberSkillAttributes, options ...OptionFunc) error
+	MemberSkillQueue(ctx context.Context, id uint) ([]*athena.MemberSkillQueue, error)
+	SetMemberSkillQueue(ctx context.Context, id uint, skillQueue []*athena.MemberSkillQueue, options ...OptionFunc) error
+	MemberSkills(ctx context.Context, id uint) ([]*athena.MemberSkill, error)
+	SetMemberSkills(ctx context.Context, id uint, skills []*athena.MemberSkill, options ...OptionFunc) error
+	MemberSkillMeta(ctx context.Context, id uint) (*athena.MemberSkillMeta, error)
+	SetMemberSkillMeta(ctx context.Context, id uint, meta *athena.MemberSkillMeta, optionFuncs ...OptionFunc) error
 }
 
 const (
-	keyMemberSkillAttributes = "athena::member::%s::skill::attributes"
-	keyMemberSkillQueue      = "athena::member::%s::skillqueue"
-	keyMemberSkills          = "athena::member::%s::skills"
-	keyMemberSkillMeta       = "athena::member::%s::skill::meta"
+	keyMemberSkillAttributes = "athena::member::%d::skill::attributes"
+	keyMemberSkillQueue      = "athena::member::%d::skillqueue"
+	keyMemberSkills          = "athena::member::%d::skills"
+	keyMemberSkillMeta       = "athena::member::%d::skill::meta"
 )
 
-func (s *service) MemberSkillAttributes(ctx context.Context, memberID string) (*athena.MemberSkillAttributes, error) {
+func (s *service) MemberSkillAttributes(ctx context.Context, id uint) (*athena.MemberSkillAttributes, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyMemberSkillAttributes, memberID)).Bytes()
+	key := fmt.Sprintf(keyMemberSkillAttributes, id)
+	result, err := s.client.Get(ctx, key).Bytes()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(result) == 0 {
@@ -40,17 +41,16 @@ func (s *service) MemberSkillAttributes(ctx context.Context, memberID string) (*
 	}
 
 	var attributes = new(athena.MemberSkillAttributes)
-
 	err = json.Unmarshal(result, attributes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return attributes, nil
 
 }
 
-func (s *service) SetMemberSkillAttributes(ctx context.Context, memberID string, attributes *athena.MemberSkillAttributes, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberSkillAttributes(ctx context.Context, id uint, attributes *athena.MemberSkillAttributes, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -59,7 +59,8 @@ func (s *service) SetMemberSkillAttributes(ctx context.Context, memberID string,
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberSkillAttributes, memberID), data, options.expiry).Result()
+	key := fmt.Sprintf(keyMemberSkillAttributes, id)
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -68,9 +69,9 @@ func (s *service) SetMemberSkillAttributes(ctx context.Context, memberID string,
 
 }
 
-func (s *service) MemberSkillQueue(ctx context.Context, memberID string) ([]*athena.MemberSkillQueue, error) {
+func (s *service) MemberSkillQueue(ctx context.Context, id uint) ([]*athena.MemberSkillQueue, error) {
 
-	key := fmt.Sprintf(keyMemberSkillQueue, memberID)
+	key := fmt.Sprintf(keyMemberSkillQueue, id)
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
@@ -97,7 +98,7 @@ func (s *service) MemberSkillQueue(ctx context.Context, memberID string) ([]*ath
 
 }
 
-func (s *service) SetMemberSkillQueue(ctx context.Context, memberID string, positions []*athena.MemberSkillQueue, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberSkillQueue(ctx context.Context, id uint, positions []*athena.MemberSkillQueue, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -106,7 +107,7 @@ func (s *service) SetMemberSkillQueue(ctx context.Context, memberID string, posi
 		members[i] = position
 	}
 
-	key := fmt.Sprintf(keyMemberSkillQueue, memberID)
+	key := fmt.Sprintf(keyMemberSkillQueue, id)
 	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache: %w", err)
@@ -121,12 +122,12 @@ func (s *service) SetMemberSkillQueue(ctx context.Context, memberID string, posi
 
 }
 
-func (s *service) MemberSkills(ctx context.Context, memberID string) ([]*athena.MemberSkill, error) {
+func (s *service) MemberSkills(ctx context.Context, id uint) ([]*athena.MemberSkill, error) {
 
-	key := fmt.Sprintf(keyMemberSkills, memberID)
+	key := fmt.Sprintf(keyMemberSkills, id)
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		return nil, err
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
 	}
 
 	if len(members) == 0 {
@@ -150,7 +151,7 @@ func (s *service) MemberSkills(ctx context.Context, memberID string) ([]*athena.
 
 }
 
-func (s *service) SetMemberSkills(ctx context.Context, memberID string, skills []*athena.MemberSkill, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberSkills(ctx context.Context, id uint, skills []*athena.MemberSkill, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -159,10 +160,10 @@ func (s *service) SetMemberSkills(ctx context.Context, memberID string, skills [
 		members[i] = skill
 	}
 
-	key := fmt.Sprintf(keyMemberSkills, memberID)
+	key := fmt.Sprintf(keyMemberSkills, id)
 	_, err := s.client.SAdd(ctx, key, members...).Result()
 	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to cache skills for member %s: %w", memberID, err)
+		return fmt.Errorf("[Cache Layer] Failed to cache skills for member %d: %w", id, err)
 	}
 
 	_, err = s.client.Expire(ctx, key, options.expiry).Result()
@@ -174,9 +175,9 @@ func (s *service) SetMemberSkills(ctx context.Context, memberID string, skills [
 
 }
 
-func (s *service) MemberSkillMeta(ctx context.Context, memberID string) (*athena.MemberSkillMeta, error) {
+func (s *service) MemberSkillMeta(ctx context.Context, id uint) (*athena.MemberSkillMeta, error) {
 
-	key := fmt.Sprintf(keyMemberSkillMeta, memberID)
+	key := fmt.Sprintf(keyMemberSkillMeta, id)
 	result, err := s.client.Get(ctx, key).Bytes()
 	if err != nil && err != redis.Nil {
 		return nil, err
@@ -197,16 +198,17 @@ func (s *service) MemberSkillMeta(ctx context.Context, memberID string) (*athena
 
 }
 
-func (s *service) SetMemberSkillMeta(ctx context.Context, memberID string, meta *athena.MemberSkillMeta, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberSkillMeta(ctx context.Context, id uint, meta *athena.MemberSkillMeta, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
+	key := fmt.Sprintf(keyMemberSkillMeta, id)
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberSkillMeta, memberID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

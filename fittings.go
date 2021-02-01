@@ -3,8 +3,6 @@ package athena
 import (
 	"context"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type MemberFittingsRepository interface {
@@ -13,38 +11,38 @@ type MemberFittingsRepository interface {
 }
 
 type memberFittingRepository interface {
-	MemberFittings(ctx context.Context, memberID string, operators ...*Operator) ([]*MemberFitting, error)
-	CreateMemberFittings(ctx context.Context, memberID string, fitting []*MemberFitting) ([]*MemberFitting, error)
-	UpdateMemberFitting(ctx context.Context, memberID string, fittingID uint, fitting *MemberFitting) (*MemberFitting, error)
-	DeleteMemberFitting(ctx context.Context, memberID string, fittingID uint) (bool, error)
-	DeleteMemberFittings(ctx context.Context, memberID string) (bool, error)
+	MemberFittings(ctx context.Context, memberID uint, operators ...*Operator) ([]*MemberFitting, error)
+	CreateMemberFittings(ctx context.Context, memberID uint, fitting []*MemberFitting) ([]*MemberFitting, error)
+	UpdateMemberFitting(ctx context.Context, memberID uint, fittingID uint, fitting *MemberFitting) (*MemberFitting, error)
+	DeleteMemberFitting(ctx context.Context, memberID uint, fittingID uint) (bool, error)
+	DeleteMemberFittings(ctx context.Context, memberID uint) (bool, error)
 }
 
 type memberFittingItemRepository interface {
-	MemberFittingItems(ctx context.Context, memberID string, fittingID uint) ([]*MemberFittingItem, error)
-	CreateMemberFittingItems(ctx context.Context, memberID string, fittingID uint, items []*MemberFittingItem) ([]*MemberFittingItem, error)
-	DeleteMemberFittingItems(ctx context.Context, memberID string, fittingID uint) (bool, error)
+	MemberFittingItems(ctx context.Context, memberID uint, fittingID uint) ([]*MemberFittingItem, error)
+	CreateMemberFittingItems(ctx context.Context, memberID uint, fittingID uint, items []*MemberFittingItem) ([]*MemberFittingItem, error)
+	DeleteMemberFittingItems(ctx context.Context, memberID uint, fittingID uint) (bool, error)
 }
 
 type MemberFitting struct {
-	MemberID    primitive.ObjectID   `bson:"member_id" json:"member_id"`
-	FittingID   uint                 `bson:"fitting_id" json:"fitting_id"`
-	ShipTypeID  uint                 `bson:"ship_type_id" json:"ship_type_id"`
-	Name        string               `bson:"name" json:"name"`
-	Description string               `bson:"description" json:"description"`
-	Items       []*MemberFittingItem `bson:"-" json:"items,omitempty"`
-	CreatedAt   time.Time            `bson:"created_at" json:"created_at"`
-	UpdatedAt   time.Time            `bson:"updated_at" json:"updated_at"`
+	MemberID    uint                 `db:"member_id" json:"member_id"`
+	FittingID   uint                 `db:"fitting_id" json:"fitting_id"`
+	ShipTypeID  uint                 `db:"ship_type_id" json:"ship_type_id"`
+	Name        string               `db:"name" json:"name"`
+	Description string               `db:"description" json:"description"`
+	Items       []*MemberFittingItem `db:"-" json:"items,omitempty"`
+	CreatedAt   time.Time            `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time            `db:"updated_at" json:"updated_at"`
 }
 
 type MemberFittingItem struct {
-	MemberID  primitive.ObjectID `bson:"member_id" json:"member_id"`
-	FittingID uint               `bson:"fitting_id" json:"fitting_id"`
-	TypeID    uint               `bson:"type_id" json:"type_id"`
-	Quantity  uint               `bson:"quantity" json:"quantity"`
-	Flag      FittingItemFlag    `bson:"flag" json:"flag"`
-	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt time.Time          `bson:"updated_at" json:"updated_at"`
+	MemberID  uint            `db:"member_id" json:"member_id"`
+	FittingID uint            `db:"fitting_id" json:"fitting_id"`
+	TypeID    uint            `db:"type_id" json:"type_id"`
+	Quantity  uint            `db:"quantity" json:"quantity"`
+	Flag      FittingItemFlag `db:"flag" json:"flag"`
+	CreatedAt time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time       `db:"updated_at" json:"updated_at"`
 }
 
 type FittingItemFlag string

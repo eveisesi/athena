@@ -3,15 +3,15 @@ package cache
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type processorService interface {
-	PushIDToProcessorQueue(ctx context.Context, memberID primitive.ObjectID)
-	PopFromProcessorQueue(ctx context.Context, count int) ([]string, error)
+	PushIDToProcessorQueue(ctx context.Context, memberID uint)
+	PopFromProcessorQueue(ctx context.Context, count int) ([]uint, error)
 	ProcessorQueueCount(ctx context.Context) (int64, error)
 }
 
@@ -19,18 +19,18 @@ const (
 	keyProcessorMemberIDQueue = "athena::processor::members"
 )
 
-func (s *service) PushIDToProcessorQueue(ctx context.Context, memberID primitive.ObjectID) {
+func (s *service) PushIDToProcessorQueue(ctx context.Context, memberID uint) {
 
 	mx.Lock()
 	defer mx.Unlock()
 	ts := time.Now().UnixNano()
-	z := &redis.Z{Score: float64(ts), Member: memberID.Hex()}
+	z := &redis.Z{Score: float64(ts), Member: memberID}
 
 	s.client.ZAdd(ctx, keyProcessorMemberIDQueue, z)
 
 }
 
-func (s *service) PopFromProcessorQueue(ctx context.Context, count int) ([]string, error) {
+func (s *service) PopFromProcessorQueue(ctx context.Context, count int) ([]uint, error) {
 
 	mx.Lock()
 	defer mx.Unlock()
@@ -44,10 +44,14 @@ func (s *service) PopFromProcessorQueue(ctx context.Context, count int) ([]strin
 		return nil, nil
 	}
 
-	slc := make([]string, len(results))
+	slc := make([]uint, len(results))
 	for i, v := range results {
 		msg := v.Member.(string)
-		slc[i] = msg
+		id, err := strconv.Atoi(msg)
+		if err != nil {
+			return nil, err
+		}
+		slc[i] = uint(id)
 	}
 
 	return slc, nil

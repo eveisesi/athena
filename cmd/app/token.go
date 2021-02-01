@@ -157,13 +157,13 @@ func addMemberByCLI(c *cli.Context) error {
 	member.RefreshToken = oauth2Token.RefreshToken
 	member.Expires = oauth2Token.Expiry
 
-	_, err = basics.repositories.member.UpdateMember(ctx, member.ID.Hex(), member)
+	_, err = basics.repositories.member.UpdateMember(ctx, member.ID, member)
 	if err != nil {
 		return err
 	}
 
 	cache.PushIDToProcessorQueue(ctx, member.ID)
-	_ = cache.SetMember(ctx, member.ID.Hex(), member)
+	_ = cache.SetMember(ctx, member.ID, member)
 
 	return nil
 

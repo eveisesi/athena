@@ -13,11 +13,13 @@ require (
 	github.com/friendsofgo/errors v0.9.2 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-redis/redis/v8 v8.4.9
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/jmoiron/sqlx v1.3.1
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.11.7 // indirect
@@ -26,7 +28,6 @@ require (
 	github.com/lestrrat-go/jwx v1.0.8
 	github.com/lestrrat-go/pdebug/v3 v3.0.0-20210111095411-35b07dbf089b // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
-	github.com/newrelic/go-agent v3.10.0+incompatible
 	github.com/newrelic/go-agent/v3 v3.10.0
 	github.com/newrelic/go-agent/v3/integrations/logcontext/nrlogrusplugin v1.0.0
 	github.com/nxadm/tail v1.4.6 // indirect

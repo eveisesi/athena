@@ -72,7 +72,7 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 
 	cached := true
 
-	contacts, err := s.cache.MemberContacts(ctx, member.ID.Hex())
+	contacts, err := s.cache.MemberContacts(ctx, member.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 	if contacts == nil {
 		cached = false
 
-		contacts, err = s.contacts.MemberContacts(ctx, member.ID.Hex())
+		contacts, err = s.contacts.MemberContacts(ctx, member.ID)
 		if err != nil && err != mongo.ErrNoDocuments {
 			return nil, err
 		}
@@ -89,7 +89,7 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 	if etag != nil && etag.CachedUntil.After(time.Now()) && len(contacts) > 0 {
 
 		if !cached {
-			err = s.cache.SetMemberContacts(ctx, member.ID.Hex(), contacts)
+			err = s.cache.SetMemberContacts(ctx, member.ID, contacts)
 			if err != nil {
 				newrelic.FromContext(ctx).NoticeError(err)
 			}
@@ -100,14 +100,14 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 
 	newContacts, _, err := s.esi.GetCharacterContacts(ctx, member, make([]*athena.MemberContact, 0))
 	if err != nil {
-		return nil, fmt.Errorf("[Contacts Service] Failed to fetch contacts for member %s: %w", member.ID.Hex(), err)
+		return nil, fmt.Errorf("[Contacts Service] Failed to fetch contacts for member %d: %w", member.ID, err)
 	}
 
 	if len(newContacts) > 0 {
 		s.resolveContactAttributes(ctx, newContacts)
 		contacts, err = s.diffAndUpdateContacts(ctx, member, contacts, newContacts)
 		if len(contacts) > 0 {
-			err := s.cache.SetMemberContacts(ctx, member.ID.Hex(), contacts)
+			err := s.cache.SetMemberContacts(ctx, member.ID, contacts)
 			if err != nil {
 				newrelic.FromContext(ctx).NoticeError(err)
 			}
@@ -124,7 +124,7 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 	contactsToUpdate := make([]*athena.MemberContact, 0)
 	contactsToDelete := make([]*athena.MemberContact, 0)
 
-	oldContactMap := make(map[int]*athena.MemberContact)
+	oldContactMap := make(map[uint]*athena.MemberContact)
 	for _, contact := range old {
 		oldContactMap[contact.ContactID] = contact
 	}
@@ -142,7 +142,7 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 		}
 	}
 
-	newContactMap := make(map[int]*athena.MemberContact)
+	newContactMap := make(map[uint]*athena.MemberContact)
 	for _, contact := range new {
 		newContactMap[contact.ContactID] = contact
 	}
@@ -156,7 +156,7 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 
 	var final = make([]*athena.MemberContact, 0)
 	if len(contactsToCreate) > 0 {
-		createdContacts, err := s.contacts.CreateMemberContacts(ctx, member.ID.Hex(), contactsToCreate)
+		createdContacts, err := s.contacts.CreateMemberContacts(ctx, member.ID, contactsToCreate)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +165,7 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 
 	if len(contactsToUpdate) > 0 {
 		for _, contact := range contactsToUpdate {
-			updated, err := s.contacts.UpdateMemberContact(ctx, member.ID.Hex(), contact)
+			updated, err := s.contacts.UpdateMemberContact(ctx, member.ID, contact)
 			if err != nil {
 				return nil, err
 			}
@@ -174,7 +174,7 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 	}
 
 	if len(contactsToDelete) > 0 {
-		deleteOK, err := s.contacts.DeleteMemberContacts(ctx, member.ID.Hex(), contactsToDelete)
+		deleteOK, err := s.contacts.DeleteMemberContacts(ctx, member.ID, contactsToDelete)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +192,7 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 	for _, contact := range contacts {
 		switch contact.ContactType {
 		case "alliance":
-			_, err := s.alliance.AllianceByAllianceID(ctx, uint(contact.ContactID), alliance.NewOptionFuncs())
+			_, err := s.alliance.Alliance(ctx, contact.ContactID, alliance.NewOptionFuncs())
 			if err != nil {
 				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
@@ -201,7 +201,7 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 				continue
 			}
 		case "character":
-			_, err := s.character.CharacterByCharacterID(ctx, uint64(contact.ContactID), character.NewOptionFuncs())
+			_, err := s.character.Character(ctx, contact.ContactID, character.NewOptionFuncs())
 			if err != nil {
 				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
@@ -210,7 +210,7 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 				continue
 			}
 		case "corporation":
-			_, err := s.corporation.CorporationByCorporationID(ctx, uint(contact.ContactID), corporation.NewOptionFuncs())
+			_, err := s.corporation.Corporation(ctx, contact.ContactID, corporation.NewOptionFuncs())
 			if err != nil {
 				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
@@ -255,14 +255,14 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 
 	cached := true
 
-	labels, err := s.cache.MemberContactLabels(ctx, member.ID.Hex())
+	labels, err := s.cache.MemberContactLabels(ctx, member.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	if labels == nil {
 		cached = false
-		labels, err = s.contacts.MemberContactLabels(ctx, member.ID.Hex())
+		labels, err = s.contacts.MemberContactLabels(ctx, member.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -270,7 +270,7 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 
 	if etag != nil && etag.CachedUntil.After(time.Now()) && len(labels) > 0 {
 		if !cached {
-			err = s.cache.SetMemberContactLabels(ctx, member.ID.Hex(), labels)
+			err = s.cache.SetMemberContactLabels(ctx, member.ID, labels)
 			if err != nil {
 				newrelic.FromContext(ctx).NoticeError(err)
 			}
@@ -281,7 +281,7 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 
 	newLabels, _, err := s.esi.GetCharacterContactLabels(ctx, member, make([]*athena.MemberContactLabel, 0))
 	if err != nil {
-		return nil, fmt.Errorf("[Contacts Service] Failed to fetch labels for member %s: %w", member.ID.Hex(), err)
+		return nil, fmt.Errorf("[Contacts Service] Failed to fetch labels for member %d: %w", member.ID, err)
 	}
 
 	if len(newLabels) > 0 {
@@ -291,7 +291,7 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 		}
 
 		if len(labels) > 0 {
-			err = s.cache.SetMemberContactLabels(ctx, member.ID.Hex(), labels)
+			err = s.cache.SetMemberContactLabels(ctx, member.ID, labels)
 			if err != nil {
 				newrelic.FromContext(ctx).NoticeError(err)
 			}
@@ -308,7 +308,7 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 	labelsToUpdate := make([]*athena.MemberContactLabel, 0)
 	labelsToDelete := make([]*athena.MemberContactLabel, 0)
 
-	oldLabelMap := make(map[int64]*athena.MemberContactLabel)
+	oldLabelMap := make(map[uint64]*athena.MemberContactLabel)
 	for _, label := range old {
 		oldLabelMap[label.LabelID] = label
 	}
@@ -324,7 +324,7 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 		}
 	}
 
-	newLabelMap := make(map[int64]*athena.MemberContactLabel)
+	newLabelMap := make(map[uint64]*athena.MemberContactLabel)
 	for _, label := range new {
 		newLabelMap[label.LabelID] = label
 	}
@@ -337,7 +337,7 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 
 	var final = make([]*athena.MemberContactLabel, 0)
 	if len(labelsToCreate) > 0 {
-		createdLabels, err := s.contacts.CreateMemberContactLabels(ctx, member.ID.Hex(), labelsToCreate)
+		createdLabels, err := s.contacts.CreateMemberContactLabels(ctx, member.ID, labelsToCreate)
 		if err != nil {
 			return nil, err
 		}
@@ -346,7 +346,7 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 
 	if len(labelsToUpdate) > 0 {
 		for _, label := range labelsToUpdate {
-			updated, err := s.contacts.UpdateMemberContactLabel(ctx, member.ID.Hex(), label)
+			updated, err := s.contacts.UpdateMemberContactLabel(ctx, member.ID, label)
 			if err != nil {
 				return nil, err
 			}
@@ -355,7 +355,7 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 	}
 
 	if len(labelsToDelete) > 0 {
-		deleteOK, err := s.contacts.DeleteMemberContactLabels(ctx, member.ID.Hex(), labelsToDelete)
+		deleteOK, err := s.contacts.DeleteMemberContactLabels(ctx, member.ID, labelsToDelete)
 		if err != nil {
 			return nil, err
 		}

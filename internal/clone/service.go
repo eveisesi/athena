@@ -2,6 +2,8 @@ package clone
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/eveisesi/athena"
@@ -14,9 +16,9 @@ import (
 
 type Service interface {
 	EmptyMemberClones(ctx context.Context, member *athena.Member) error
-	MemberClones(ctx context.Context, member *athena.Member) (*athena.MemberClones, error)
+	MemberClones(ctx context.Context, member *athena.Member) (*athena.MemberHomeClone, []*athena.MemberJumpClone, error)
 	EmptyMemberImplants(ctx context.Context, member *athena.Member) error
-	MemberImplants(ctx context.Context, member *athena.Member) (*athena.MemberImplants, error)
+	MemberImplants(ctx context.Context, member *athena.Member) ([]*athena.MemberImplant, error)
 }
 
 type service struct {
@@ -46,85 +48,113 @@ func (s *service) EmptyMemberClones(ctx context.Context, member *athena.Member) 
 	return err
 }
 
-func (s *service) MemberClones(ctx context.Context, member *athena.Member) (*athena.MemberClones, error) {
+func (s *service) MemberClones(ctx context.Context, member *athena.Member) (*athena.MemberHomeClone, []*athena.MemberJumpClone, error) {
 
-	var upsert = "update"
-
-	clones, err := s.cache.MemberClones(ctx, member.ID.Hex())
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithMember(member))
 	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
 
-	if clones == nil {
+	cached := true
 
-		clones, err = s.clones.MemberClones(ctx, member.ID.Hex())
-		if err != nil {
-			upsert = "create"
-			clones = &athena.MemberClones{
-				MemberID: member.ID,
+	clone, err := s.cache.MemberHomeClone(ctx, member.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	clones, err := s.cache.MemberJumpClones(ctx, member.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if clone == nil || clones == nil || len(clones) == 0 {
+		cached = false
+		clone, err = s.clones.MemberHomeClone(ctx, member.ID)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, nil, err
+		}
+
+		if err == sql.ErrNoRows {
+			clone = &athena.MemberHomeClone{MemberID: member.ID}
+		}
+
+		clones, err = s.clones.MemberJumpClones(ctx, member.ID)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, nil, err
+		}
+	}
+
+	if etag != nil && etag.CachedUntil.After(time.Now()) && len(clones) > 0 && clone != nil {
+
+		if !cached {
+			err = s.cache.SetMemberHomeClone(ctx, member.ID, clone)
+			if err != nil {
+				newrelic.FromContext(ctx).NoticeError(err)
+			}
+
+			err = s.cache.SetMemberJumpClones(ctx, member.ID, clones)
+			if err != nil {
+				newrelic.FromContext(ctx).NoticeError(err)
 			}
 		}
 
+		return clone, clones, nil
 	}
 
-	if clones.CachedUntil.After(time.Now()) {
-		return clones, nil
-	}
-
-	clones, _, err = s.esi.GetCharacterClones(ctx, member, clones)
+	_, _, _, err = s.esi.GetCharacterClones(ctx, member, clone, clones)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch clones for member")
-		return nil, err
+		return clone, clones, err
 	}
 
-	s.resolveCloneAttributes(ctx, member, clones)
+	// s.resolveCloneAttributes(ctx, member, clone, clones)
 
-	switch upsert {
-	case "create":
-		clones, err = s.clones.CreateMemberClones(ctx, clones)
-		if err != nil {
-			return nil, err
-		}
-	case "update":
-		clones, err = s.clones.UpdateMemberClones(ctx, member.ID.Hex(), clones)
-		if err != nil {
-			return nil, err
-		}
-	}
+	// switch upsert {
+	// case "create":
+	// 	clones, err = s.clones.CreateMemberClones(ctx, clones)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// case "update":
+	// 	clones, err = s.clones.UpdateMemberClones(ctx, member.ID, clones)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
-	err = s.cache.SetMemberClones(ctx, clones.MemberID.Hex(), clones)
-	if err != nil {
-		newrelic.FromContext(ctx).NoticeError(err)
-	}
+	// err = s.cache.SetMemberClones(ctx, clones.MemberID, clones)
+	// if err != nil {
+	// 	newrelic.FromContext(ctx).NoticeError(err)
+	// }
 
-	return clones, nil
+	return clone, clones, nil
 }
 
-func (s *service) resolveCloneAttributes(ctx context.Context, member *athena.Member, clones *athena.MemberClones) {
+func (s *service) resolveCloneAttributes(ctx context.Context, member *athena.Member, clone *athena.MemberHomeClone, clones []*athena.MemberJumpClone) {
 
-	switch clones.HomeLocation.LocationType {
+	switch clone.LocationType {
 	case "structure":
-		_, err := s.universe.Structure(ctx, member, clones.HomeLocation.LocationID)
+		_, err := s.universe.Structure(ctx, member, clone.LocationID)
 		if err != nil {
-			s.logger.WithError(err).WithField("structure_id", clones.HomeLocation.LocationID).WithField("member_id", member.ID.Hex()).Error("failed to resolve structure id")
+			s.logger.WithError(err).WithField("structure_id", clone.LocationID).WithField("member_id", member.ID).Error("failed to resolve structure id")
 		}
 	case "station":
-		_, err := s.universe.Station(ctx, int(clones.HomeLocation.LocationID))
+		_, err := s.universe.Station(ctx, uint(clone.LocationID))
 		if err != nil {
-			s.logger.WithError(err).WithField("structure_id", clones.HomeLocation.LocationID).Error("failed to resolve station id")
+			s.logger.WithError(err).WithField("structure_id", clone.LocationID).Error("failed to resolve station id")
 		}
 	}
 
-	for _, jumpClone := range clones.JumpClones {
+	for _, jumpClone := range clones {
 
 		switch jumpClone.LocationType {
 		case "structure":
 			_, err := s.universe.Structure(ctx, member, jumpClone.LocationID)
 			if err != nil {
-				s.logger.WithError(err).WithField("structure_id", jumpClone.LocationID).WithField("member_id", member.ID.Hex()).Error("failed to resolve structure id")
+				s.logger.WithError(err).WithField("structure_id", jumpClone.LocationID).WithField("member_id", member.ID).Error("failed to resolve structure id")
 			}
 		case "station":
-			_, err := s.universe.Station(ctx, int(jumpClone.LocationID))
+			_, err := s.universe.Station(ctx, uint(jumpClone.LocationID))
 			if err != nil {
 				s.logger.WithError(err).WithField("station_id", jumpClone.LocationID).Error("failed to resolve station id")
 			}
@@ -146,79 +176,95 @@ func (s *service) EmptyMemberImplants(ctx context.Context, member *athena.Member
 	return err
 }
 
-func (s *service) MemberImplants(ctx context.Context, member *athena.Member) (*athena.MemberImplants, error) {
+func (s *service) MemberImplants(ctx context.Context, member *athena.Member) ([]*athena.MemberImplant, error) {
 
-	var upsert = "update"
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterImplants, esi.ModWithMember(member))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
+	}
 
-	implants, err := s.cache.MemberImplants(ctx, member.ID.Hex())
+	cached := true
+
+	implants, err := s.cache.MemberImplants(ctx, member.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	if implants == nil {
+	if len(implants) == 0 {
+		cached = false
+		implants, err = s.clones.MemberImplants(ctx, member.ID)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, err
+		}
+	}
 
-		implants, err = s.clones.MemberImplants(ctx, member.ID.Hex())
-		if err != nil {
-			upsert = "create"
-			implants = &athena.MemberImplants{
-				MemberID: member.ID,
+	if etag != nil && etag.CachedUntil.After(time.Now()) && len(implants) > 0 {
+
+		if !cached {
+			err = s.cache.SetMemberImplants(ctx, member.ID, implants)
+			if err != nil {
+				newrelic.FromContext(ctx).NoticeError(err)
 			}
 		}
 
-	}
-
-	if implants.CachedUntil.After(time.Now()) {
 		return implants, nil
 	}
 
-	implants, _, err = s.esi.GetCharacterImplants(ctx, member, implants)
+	newImplants, _, err := s.esi.GetCharacterImplants(ctx, member, make([]uint, 0))
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch implants for member")
 		return nil, err
 	}
 
-	s.resolveImplantAttributes(ctx, implants)
-
-	switch upsert {
-	case "create":
-		implants, err = s.clones.CreateMemberImplants(ctx, implants)
-		if err != nil {
-			return nil, err
-		}
-	case "update":
-		implants, err = s.clones.UpdateMemberImplants(ctx, member.ID.Hex(), implants)
-		if err != nil {
-			return nil, err
-		}
+	implants, err = s.resolveImplantAttributes(ctx, member, newImplants)
+	if err != nil {
+		return nil, err
 	}
 
-	err = s.cache.SetMemberImplants(ctx, implants.MemberID.Hex(), implants)
-	if err != nil {
-		newrelic.FromContext(ctx).NoticeError(err)
+	if len(implants) > 0 {
+		err = s.cache.SetMemberImplants(ctx, member.ID, implants)
+		if err != nil {
+			newrelic.FromContext(ctx).NoticeError(err)
+		}
 	}
 
 	return implants, nil
 }
 
-func (s *service) resolveImplantAttributes(ctx context.Context, implants *athena.MemberImplants) {
+func (s *service) resolveImplantAttributes(ctx context.Context, member *athena.Member, new []uint) ([]*athena.MemberImplant, error) {
 
-	if len(implants.Raw) == 0 {
-		return
-	}
+	implants := make([]*athena.MemberImplant, len(new))
 
-	implants.Implants = make([]*athena.Type, len(implants.Raw))
-
-	for i, raw := range implants.Raw {
+	for i, raw := range new {
 
 		implant, err := s.universe.Type(ctx, raw)
 		if err != nil {
-			s.logger.WithError(err).WithField("implant_type_id", implant).Error("failed to resolve implent type id")
-
+			err = fmt.Errorf("[Clones Service] Failed to resolve implent type id %d: %w", raw, err)
+			newrelic.FromContext(ctx).AddAttribute("implant_type_id", raw)
+			newrelic.FromContext(ctx).NoticeError(err)
+			continue
 		}
 
-		implants.Implants[i] = implant
+		implants[i] = &athena.MemberImplant{
+			MemberID: member.ID,
+			TypeID:   implant.ID,
+		}
 	}
 
-	implants.Raw = nil
+	_, err := s.clones.DeleteMemberImplants(ctx, member.ID)
+	if err != nil {
+		err = fmt.Errorf("[Clone Service] Failed to delete member %d implants: %w", member.ID, err)
+		newrelic.FromContext(ctx).NoticeError(err)
+		return nil, err
+	}
+
+	implants, err = s.clones.CreateMemberImplants(ctx, implants)
+	if err != nil {
+		err = fmt.Errorf("[Clone Service] Failed to create implants for member %d: %w", member.ID, err)
+		newrelic.FromContext(ctx).NoticeError(err)
+		return nil, err
+	}
+
+	return implants, nil
 
 }

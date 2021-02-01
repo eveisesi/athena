@@ -28,6 +28,6 @@ func UnmarshalString(i interface{}) (null.String, error) {
 		}
 		return null.NewString(v, true), nil
 	default:
-		return null.NewString("", false), fmt.Errorf("%v is not a valid string", v)
+		return null.NewString("", false), fmt.Errorf("%v is not a valid uint", v)
 	}
 }

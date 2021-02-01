@@ -53,20 +53,19 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 			return nil, nil, err
 		}
 
-		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
-			alliance.Etag = etag
-		}
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 		if !isAllianceValid(alliance) {
-			return nil, nil, fmt.Errorf("invalid alliance return from esi, missing name or ticker")
+			return nil, nil, fmt.Errorf("invalid alliance returned from esi, missing name or ticker")
 		}
 	case sc >= http.StatusBadRequest:
-		return alliance, res, fmt.Errorf("failed to fetch alliance %d, received status code of %d", alliance.AllianceID, sc)
+		return alliance, res, fmt.Errorf("failed to fetch alliance %d, received status code of %d", alliance.ID, sc)
 	}
 
-	alliance.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return alliance, res, nil
+
 }
 
 func (s *service) allianceKeyFunc(mods *modifiers) string {
@@ -75,7 +74,7 @@ func (s *service) allianceKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return buildKey(GetAlliance.Name, strconv.Itoa(int(mods.alliance.AllianceID)))
+	return buildKey(GetAlliance.Name, strconv.Itoa(int(mods.alliance.ID)))
 }
 
 func (s *service) alliancePathFunc(mods *modifiers) string {
@@ -85,7 +84,7 @@ func (s *service) alliancePathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetAlliance.FmtPath, mods.alliance.AllianceID),
+		Path: fmt.Sprintf(GetAlliance.FmtPath, mods.alliance.ID),
 	}
 
 	return u.String()

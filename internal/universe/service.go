@@ -2,6 +2,7 @@ package universe
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sync"
 
@@ -11,30 +12,29 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Service interface {
 	InitializeUniverse() error
 
-	Ancestry(ctx context.Context, id int) (*athena.Ancestry, error)
-	Bloodline(ctx context.Context, id int) (*athena.Bloodline, error)
-	Category(ctx context.Context, id int) (*athena.Category, error)
+	Ancestry(ctx context.Context, id uint) (*athena.Ancestry, error)
+	Bloodline(ctx context.Context, id uint) (*athena.Bloodline, error)
+	Category(ctx context.Context, id uint) (*athena.Category, error)
 	Categories(ctx context.Context, operators ...*athena.Operator) ([]*athena.Category, error)
-	Constellation(ctx context.Context, id int) (*athena.Constellation, error)
+	Constellation(ctx context.Context, id uint) (*athena.Constellation, error)
 	Constellations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Constellation, error)
-	Faction(ctx context.Context, id int) (*athena.Faction, error)
+	Faction(ctx context.Context, id uint) (*athena.Faction, error)
 	Factions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Faction, error)
-	Group(ctx context.Context, id int) (*athena.Group, error)
+	Group(ctx context.Context, id uint) (*athena.Group, error)
 	Groups(ctx context.Context, operators ...*athena.Operator) ([]*athena.Group, error)
-	Race(ctx context.Context, id int) (*athena.Race, error)
-	Region(ctx context.Context, id int) (*athena.Region, error)
+	Race(ctx context.Context, id uint) (*athena.Race, error)
+	Region(ctx context.Context, id uint) (*athena.Region, error)
 	Regions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Region, error)
-	SolarSystem(ctx context.Context, id int) (*athena.SolarSystem, error)
+	SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem, error)
 	SolarSystems(ctx context.Context, operators ...*athena.Operator) ([]*athena.SolarSystem, error)
-	Station(ctx context.Context, id int) (*athena.Station, error)
-	Structure(ctx context.Context, member *athena.Member, id int64) (*athena.Structure, error)
-	Type(ctx context.Context, id int) (*athena.Type, error)
+	Station(ctx context.Context, id uint) (*athena.Station, error)
+	Structure(ctx context.Context, member *athena.Member, id uint64) (*athena.Structure, error)
+	Type(ctx context.Context, id uint) (*athena.Type, error)
 	Types(ctx context.Context, operators ...*athena.Operator) ([]*athena.Type, error)
 }
 
@@ -198,7 +198,7 @@ func (s *service) InitializeUniverse() error {
 	// 	time.Sleep(time.Millisecond * 50)
 	// }
 
-	categoryIDs, _, err := s.esi.GetCategories(ctx, []int{})
+	categoryIDs, _, err := s.esi.GetCategories(ctx, []uint{})
 	if err != nil {
 		return fmt.Errorf("failed to fetch category IDs from ESI: %w", err)
 	}
@@ -217,7 +217,7 @@ func (s *service) InitializeUniverse() error {
 	for _, categoryID := range categoryIDs {
 		categoryEntry := s.logger.WithField("category_id", categoryID)
 
-		category, _, err := s.esi.GetCategory(ctx, &athena.Category{CategoryID: categoryID})
+		category, _, err := s.esi.GetCategory(ctx, &athena.Category{ID: categoryID})
 		if err != nil {
 			categoryEntry.WithError(err).Error("failed to fetch category from ESI")
 			continue
@@ -242,14 +242,14 @@ func (s *service) InitializeUniverse() error {
 
 		for _, groupID := range category.Groups {
 			wg.Add(1)
-			go func(groupID int) {
+			go func(groupID uint) {
 				defer groupsBar.Increment()
 				defer wg.Done()
 
 				var wg2 = &sync.WaitGroup{}
 				groupEntry := categoryEntry.WithField("group_id", groupID)
 
-				group, _, err := s.esi.GetGroup(ctx, &athena.Group{GroupID: groupID})
+				group, _, err := s.esi.GetGroup(ctx, &athena.Group{ID: groupID})
 				if err != nil {
 					groupEntry.WithError(err).Error("failed to fetch group from ESI")
 					return
@@ -272,15 +272,15 @@ func (s *service) InitializeUniverse() error {
 					mpb.AppendDecorators(decor.Percentage()),
 				)
 
-				chunks := s.chunkSliceInts(group.Types, 50)
+				chunks := s.chunkSliceUints(group.Types, 50)
 
 				for _, chunk := range chunks {
 					wg2.Add(1)
-					go func(typesBar *mpb.Bar, chunk []int, wg2 *sync.WaitGroup, groupEntry *logrus.Entry) {
+					go func(typesBar *mpb.Bar, chunk []uint, wg2 *sync.WaitGroup, groupEntry *logrus.Entry) {
 						defer wg2.Done()
 						for _, typeID := range chunk {
 							typeEntry := groupEntry.WithField("type_id", typeID)
-							item, _, err := s.esi.GetType(ctx, &athena.Type{TypeID: typeID})
+							item, _, err := s.esi.GetType(ctx, &athena.Type{ID: typeID})
 							if err != nil {
 								typeEntry.WithError(err).Error("failed to fetch type from ESI")
 								continue
@@ -456,7 +456,7 @@ func (s *service) InitializeUniverse() error {
 	return nil
 }
 
-func (s *service) Ancestry(ctx context.Context, id int) (*athena.Ancestry, error) {
+func (s *service) Ancestry(ctx context.Context, id uint) (*athena.Ancestry, error) {
 
 	ancestry, err := s.cache.Ancestry(ctx, id)
 	if err != nil {
@@ -478,7 +478,7 @@ func (s *service) Ancestry(ctx context.Context, id int) (*athena.Ancestry, error
 
 }
 
-func (s *service) Bloodline(ctx context.Context, id int) (*athena.Bloodline, error) {
+func (s *service) Bloodline(ctx context.Context, id uint) (*athena.Bloodline, error) {
 
 	bloodline, err := s.cache.Bloodline(ctx, id)
 	if err != nil {
@@ -500,7 +500,7 @@ func (s *service) Bloodline(ctx context.Context, id int) (*athena.Bloodline, err
 
 }
 
-func (s *service) Category(ctx context.Context, id int) (*athena.Category, error) {
+func (s *service) Category(ctx context.Context, id uint) (*athena.Category, error) {
 
 	category, err := s.cache.Category(ctx, id)
 	if err != nil {
@@ -512,12 +512,12 @@ func (s *service) Category(ctx context.Context, id int) (*athena.Category, error
 	}
 
 	category, err = s.universe.Category(ctx, id)
-	if err != nil && err != mongo.ErrNoDocuments {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	if err == mongo.ErrNoDocuments {
-		category, _, err = s.esi.GetCategory(ctx, &athena.Category{CategoryID: id})
+	if err == sql.ErrNoRows {
+		category, _, err = s.esi.GetCategory(ctx, &athena.Category{ID: id})
 		if err != nil {
 			return nil, err
 		}
@@ -538,7 +538,7 @@ func (s *service) Categories(ctx context.Context, operators ...*athena.Operator)
 	return s.universe.Categories(ctx, operators...)
 }
 
-func (s *service) Constellation(ctx context.Context, id int) (*athena.Constellation, error) {
+func (s *service) Constellation(ctx context.Context, id uint) (*athena.Constellation, error) {
 
 	constellation, err := s.cache.Constellation(ctx, id)
 	if err != nil {
@@ -550,12 +550,12 @@ func (s *service) Constellation(ctx context.Context, id int) (*athena.Constellat
 	}
 
 	constellation, err = s.universe.Constellation(ctx, id)
-	if err != nil && err != mongo.ErrNoDocuments {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	if err == mongo.ErrNoDocuments {
-		constellation, _, err = s.esi.GetConstellation(ctx, &athena.Constellation{ConstellationID: id})
+	if err == sql.ErrNoRows {
+		constellation, _, err = s.esi.GetConstellation(ctx, &athena.Constellation{ID: id})
 		if err != nil {
 			return nil, err
 		}
@@ -576,7 +576,7 @@ func (s *service) Constellations(ctx context.Context, operators ...*athena.Opera
 	panic("universe.Constellations has not been implemented")
 }
 
-func (s *service) Faction(ctx context.Context, id int) (*athena.Faction, error) {
+func (s *service) Faction(ctx context.Context, id uint) (*athena.Faction, error) {
 	faction, err := s.cache.Faction(ctx, id)
 	if err != nil {
 		return nil, err
@@ -600,7 +600,7 @@ func (s *service) Factions(ctx context.Context, operators ...*athena.Operator) (
 	panic("universe.Factions has not been implemented")
 }
 
-func (s *service) Group(ctx context.Context, id int) (*athena.Group, error) {
+func (s *service) Group(ctx context.Context, id uint) (*athena.Group, error) {
 
 	group, err := s.cache.Group(ctx, id)
 	if err != nil {
@@ -612,12 +612,12 @@ func (s *service) Group(ctx context.Context, id int) (*athena.Group, error) {
 	}
 
 	group, err = s.universe.Group(ctx, id)
-	if err != nil && err != mongo.ErrNoDocuments {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	if err == mongo.ErrNoDocuments {
-		group, _, err = s.esi.GetGroup(ctx, &athena.Group{GroupID: id})
+	if err == sql.ErrNoRows {
+		group, _, err = s.esi.GetGroup(ctx, &athena.Group{ID: id})
 		if err != nil {
 			return nil, err
 		}
@@ -638,7 +638,7 @@ func (s *service) Groups(ctx context.Context, operators ...*athena.Operator) ([]
 	panic("universe.Groups has not been implemented")
 }
 
-func (s *service) Race(ctx context.Context, id int) (*athena.Race, error) {
+func (s *service) Race(ctx context.Context, id uint) (*athena.Race, error) {
 
 	race, err := s.cache.Race(ctx, id)
 	if err != nil {
@@ -660,7 +660,7 @@ func (s *service) Race(ctx context.Context, id int) (*athena.Race, error) {
 
 }
 
-func (s *service) Region(ctx context.Context, id int) (*athena.Region, error) {
+func (s *service) Region(ctx context.Context, id uint) (*athena.Region, error) {
 
 	region, err := s.cache.Region(ctx, id)
 	if err != nil {
@@ -672,12 +672,12 @@ func (s *service) Region(ctx context.Context, id int) (*athena.Region, error) {
 	}
 
 	region, err = s.universe.Region(ctx, id)
-	if err != nil && err != mongo.ErrNoDocuments {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	if err == mongo.ErrNoDocuments {
-		region, _, err = s.esi.GetRegion(ctx, &athena.Region{RegionID: id})
+	if err == sql.ErrNoRows {
+		region, _, err = s.esi.GetRegion(ctx, &athena.Region{ID: id})
 		if err != nil {
 			return nil, err
 		}
@@ -698,7 +698,7 @@ func (s *service) Regions(ctx context.Context, operators ...*athena.Operator) ([
 	panic("universe.Regions has not been implemented")
 }
 
-func (s *service) SolarSystem(ctx context.Context, id int) (*athena.SolarSystem, error) {
+func (s *service) SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem, error) {
 
 	solarSystem, err := s.cache.SolarSystem(ctx, id)
 	if err != nil {
@@ -710,12 +710,12 @@ func (s *service) SolarSystem(ctx context.Context, id int) (*athena.SolarSystem,
 	}
 
 	solarSystem, err = s.universe.SolarSystem(ctx, id)
-	if err != nil && err != mongo.ErrNoDocuments {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	if err == mongo.ErrNoDocuments {
-		solarSystem, _, err = s.esi.GetSolarSystem(ctx, &athena.SolarSystem{SystemID: id})
+	if err == sql.ErrNoRows {
+		solarSystem, _, err = s.esi.GetSolarSystem(ctx, &athena.SolarSystem{ID: id})
 		if err != nil {
 			return nil, err
 		}
@@ -736,7 +736,7 @@ func (s *service) SolarSystems(ctx context.Context, operators ...*athena.Operato
 	panic("universe.SolarSystems has not been implemented")
 }
 
-func (s *service) Station(ctx context.Context, id int) (*athena.Station, error) {
+func (s *service) Station(ctx context.Context, id uint) (*athena.Station, error) {
 
 	station, err := s.cache.Station(ctx, id)
 	if err != nil {
@@ -748,12 +748,12 @@ func (s *service) Station(ctx context.Context, id int) (*athena.Station, error) 
 	}
 
 	station, err = s.universe.Station(ctx, id)
-	if err != nil && err != mongo.ErrNoDocuments {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	if err == mongo.ErrNoDocuments {
-		station, _, err = s.esi.GetStation(ctx, &athena.Station{StationID: id})
+	if err == sql.ErrNoRows {
+		station, _, err = s.esi.GetStation(ctx, &athena.Station{ID: id})
 		if err != nil {
 			return nil, err
 		}
@@ -770,7 +770,7 @@ func (s *service) Station(ctx context.Context, id int) (*athena.Station, error) 
 
 }
 
-func (s *service) Structure(ctx context.Context, member *athena.Member, id int64) (*athena.Structure, error) {
+func (s *service) Structure(ctx context.Context, member *athena.Member, id uint64) (*athena.Structure, error) {
 
 	structure, err := s.cache.Structure(ctx, id)
 	if err != nil {
@@ -782,13 +782,13 @@ func (s *service) Structure(ctx context.Context, member *athena.Member, id int64
 	}
 
 	structure, err = s.universe.Structure(ctx, id)
-	if err != nil && err != mongo.ErrNoDocuments {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	if err == mongo.ErrNoDocuments {
+	if err == sql.ErrNoRows {
 		// TODO: Deliver a Concreate Error from ESI Package and insert th is into
-		structure, _, err = s.esi.GetStructure(ctx, member, &athena.Structure{StructureID: id})
+		structure, _, err = s.esi.GetStructure(ctx, member, &athena.Structure{ID: id})
 		if err != nil {
 			return nil, err
 		}
@@ -805,7 +805,7 @@ func (s *service) Structure(ctx context.Context, member *athena.Member, id int64
 
 }
 
-func (s *service) Type(ctx context.Context, id int) (*athena.Type, error) {
+func (s *service) Type(ctx context.Context, id uint) (*athena.Type, error) {
 
 	item, err := s.cache.Type(ctx, id)
 	if err != nil {
@@ -817,12 +817,12 @@ func (s *service) Type(ctx context.Context, id int) (*athena.Type, error) {
 	}
 
 	item, err = s.universe.Type(ctx, id)
-	if err != nil && err != mongo.ErrNoDocuments {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	if err == mongo.ErrNoDocuments {
-		item, _, err = s.esi.GetType(ctx, &athena.Type{TypeID: id})
+	if err == sql.ErrNoRows {
+		item, _, err = s.esi.GetType(ctx, &athena.Type{ID: id})
 		if err != nil {
 			return nil, err
 		}
@@ -843,9 +843,9 @@ func (s *service) Types(ctx context.Context, operators ...*athena.Operator) ([]*
 	panic("universe.Types has not been implemented")
 }
 
-func (s *service) chunkSliceInts(slc []int, size int) [][]int {
+func (s *service) chunkSliceUints(slc []uint, size int) [][]uint {
 	var slcLen = len(slc)
-	var divided = make([][]int, slcLen/size)
+	var divided = make([][]uint, slcLen/size)
 
 	for i := 0; i < slcLen; i += size {
 		end := i + size

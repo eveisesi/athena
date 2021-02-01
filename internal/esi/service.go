@@ -33,10 +33,10 @@ type (
 		// Characters
 		GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error)
 		GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberSkillAttributes) (*athena.MemberSkillAttributes, *http.Response, error)
-		GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *http.Response, error)
+		GetCharacterClones(ctx context.Context, member *athena.Member, clone *athena.MemberHomeClone, clones []*athena.MemberJumpClone) (*athena.MemberHomeClone, []*athena.MemberJumpClone, *http.Response, error)
 		GetCharacterContacts(ctx context.Context, member *athena.Member, contacts []*athena.MemberContact) ([]*athena.MemberContact, *http.Response, error)
 		GetCharacterContactLabels(ctx context.Context, member *athena.Member, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *http.Response, error)
-		GetCharacterImplants(ctx context.Context, member *athena.Member, implants *athena.MemberImplants) (*athena.MemberImplants, *http.Response, error)
+		GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *http.Response, error)
 		GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error)
 		GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error)
 		GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error)
@@ -63,7 +63,7 @@ type (
 		// Universe
 		GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error)
 		GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error)
-		GetCategories(ctx context.Context, ids []int) ([]int, *http.Response, error)
+		GetCategories(ctx context.Context, ids []uint) ([]uint, *http.Response, error)
 		GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error)
 		GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error)
 		GetFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error)

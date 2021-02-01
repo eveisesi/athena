@@ -46,7 +46,7 @@ func (s *service) GetCharacterFittings(ctx context.Context, member *athena.Membe
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return fittings, res, fmt.Errorf("failed to fetch fittings for character %d, received status code of %d", member.CharacterID, sc)
+		return fittings, res, fmt.Errorf("failed to fetch fittings for character %d, received status code of %d", member.ID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -67,7 +67,7 @@ func (s *service) newGetCharacterFittingsEndpoint() *endpoint {
 			panic("expected type *athena.Member to be provided, received nil for member instead")
 		}
 
-		param := append(make([]string, 0), GetCharacterFittings.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+		param := append(make([]string, 0), GetCharacterFittings.Name, strconv.Itoa(int(mods.member.ID)))
 
 		if mods.page != nil {
 			param = append(param, strconv.Itoa(*mods.page))
@@ -83,7 +83,7 @@ func (s *service) newGetCharacterFittingsEndpoint() *endpoint {
 		}
 
 		u := url.URL{
-			Path: fmt.Sprintf(GetCharacterFittings.FmtPath, mods.member.CharacterID),
+			Path: fmt.Sprintf(GetCharacterFittings.FmtPath, mods.member.ID),
 		}
 
 		return u.String()

@@ -13,9 +13,9 @@ type EtagRepository interface {
 }
 
 type Etag struct {
-	EtagID      string    `bson:"etag_id" json:"etag_id"`
-	Etag        string    `bson:"etag" json:"etag"`
-	CachedUntil time.Time `bson:"cached_until" json:"cached_until"`
-	CreatedAt   time.Time `bson:"created_at" json:"created_at"`
-	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
+	EtagID      string    `db:"etag_id" json:"etag_id"`
+	Etag        string    `db:"etag" json:"etag"`
+	CachedUntil time.Time `db:"cached_until" json:"cached_until"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }

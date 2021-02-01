@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"github.com/eveisesi/athena/internal/mongodb"
 	"github.com/go-redis/redis/v8"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
@@ -72,10 +71,10 @@ func basics(command string) *app {
 		app.logger.WithError(err).Fatal("failed to configure NR App")
 	}
 
-	app.db, err = makeMongoDB(app.cfg)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to make mongo db connection")
-	}
+	// app.db, err = makeMongoDB(app.cfg)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to make mongo db connection")
+	// }
 
 	app.redis = makeRedis(app.cfg)
 	if err != nil {
@@ -87,68 +86,68 @@ func basics(command string) *app {
 		Transport: newrelic.NewRoundTripper(nil),
 	}
 
-	member, err := mongodb.NewMemberRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize member repository")
-	}
+	// member, err := mongodb.NewMemberRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize member repository")
+	// }
 
-	character, err := mongodb.NewCharacterRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize character repository")
-	}
+	// character, err := mongodb.NewCharacterRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize character repository")
+	// }
 
-	corporation, err := mongodb.NewCorporationRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize corporation repository")
-	}
+	// corporation, err := mongodb.NewCorporationRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize corporation repository")
+	// }
 
-	alliance, err := mongodb.NewAllianceRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize alliance repository")
-	}
+	// alliance, err := mongodb.NewAllianceRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize alliance repository")
+	// }
 
-	clone, err := mongodb.NewCloneRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize alliance repository")
-	}
+	// clone, err := mongodb.NewCloneRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize alliance repository")
+	// }
 
-	etag, err := mongodb.NewEtagRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize etag repository")
-	}
+	// etag, err := mongodb.NewEtagRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize etag repository")
+	// }
 
-	location, err := mongodb.NewLocationRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize location repository")
-	}
+	// location, err := mongodb.NewLocationRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize location repository")
+	// }
 
-	universe, err := mongodb.NewUniverseRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize universe repository")
-	}
+	// universe, err := mongodb.NewUniverseRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize universe repository")
+	// }
 
-	contact, err := mongodb.NewMemberContactRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize contact repository")
-	}
+	// contact, err := mongodb.NewMemberContactRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize contact repository")
+	// }
 
-	skill, err := mongodb.NewMemberSkillRepository(app.db)
-	if err != nil {
-		app.logger.WithError(err).Fatal("failed to initialize skill repository")
-	}
+	// skill, err := mongodb.NewMemberSkillRepository(app.db)
+	// if err != nil {
+	// 	app.logger.WithError(err).Fatal("failed to initialize skill repository")
+	// }
 
-	app.repositories = repositories{
-		member:      member,
-		character:   character,
-		corporation: corporation,
-		alliance:    alliance,
-		clone:       clone,
-		etag:        etag,
-		location:    location,
-		universe:    universe,
-		contact:     contact,
-		skill:       skill,
-	}
+	// app.repositories = repositories{
+	// 	member:      member,
+	// 	character:   character,
+	// 	corporation: corporation,
+	// 	alliance:    alliance,
+	// 	clone:       clone,
+	// 	etag:        etag,
+	// 	location:    location,
+	// 	universe:    universe,
+	// 	contact:     contact,
+	// 	skill:       skill,
+	// }
 
 	return &app
 

@@ -50,18 +50,16 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 			return nil, nil, err
 		}
 
-		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
-			character.Etag = etag
-		}
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 		if !isCharacterValid(character) {
 			return nil, nil, fmt.Errorf("invalid character return from esi, missing name or ticker")
 		}
 	case sc >= http.StatusBadRequest:
-		return character, res, fmt.Errorf("failed to fetch character %d, received status code of %d", character.CharacterID, sc)
+		return character, res, fmt.Errorf("failed to fetch character %d, received status code of %d", character.ID, sc)
 	}
 
-	character.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return character, res, nil
 }
@@ -78,7 +76,7 @@ func (s *service) characterKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Character to be provided, received nil for character instead")
 	}
 
-	return buildKey(GetCharacter.Name, strconv.Itoa(int(mods.character.CharacterID)))
+	return buildKey(GetCharacter.Name, strconv.Itoa(int(mods.character.ID)))
 }
 
 func (s *service) characterPathFunc(mods *modifiers) string {
@@ -88,7 +86,7 @@ func (s *service) characterPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacter.FmtPath, mods.character.CharacterID),
+		Path: fmt.Sprintf(GetCharacter.FmtPath, mods.character.ID),
 	}
 
 	return u.String()

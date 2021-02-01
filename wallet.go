@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/volatiletech/null"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type MemberWalletRepository interface {
@@ -17,47 +16,47 @@ type MemberWalletRepository interface {
 }
 
 type memberWalletBalanceRepository interface {
-	MemberWalletBalance(ctx context.Context, memberID string) *MemberWalletBalance
-	CreateMemberWalletBalance(ctx context.Context, memberID string, balance *MemberWalletBalance) (*MemberWalletBalance, error)
-	UpdateMemberWalletBalance(ctx context.Context, memberID string, balance *MemberWalletBalance) (*MemberWalletBalance, error)
-	DeleteMemberWalletBalance(ctx context.Context, memberID string) (bool, error)
+	MemberWalletBalance(ctx context.Context, memberID uint) *MemberWalletBalance
+	CreateMemberWalletBalance(ctx context.Context, memberID uint, balance *MemberWalletBalance) (*MemberWalletBalance, error)
+	UpdateMemberWalletBalance(ctx context.Context, memberID uint, balance *MemberWalletBalance) (*MemberWalletBalance, error)
+	DeleteMemberWalletBalance(ctx context.Context, memberID uint) (bool, error)
 }
 
 type memberWalletTransactionRepository interface {
-	MemberWalletTransactions(ctx context.Context, memberID string) ([]*MemberWalletTransaction, error)
-	CreateMemberWalletTransactions(ctx context.Context, memberID string, transactions []*MemberWalletTransaction) ([]*MemberWalletTransaction, error)
-	DeleteMemberWalletTransactions(ctx context.Context, memberID string) (bool, error)
+	MemberWalletTransactions(ctx context.Context, memberID uint) ([]*MemberWalletTransaction, error)
+	CreateMemberWalletTransactions(ctx context.Context, memberID uint, transactions []*MemberWalletTransaction) ([]*MemberWalletTransaction, error)
+	DeleteMemberWalletTransactions(ctx context.Context, memberID uint) (bool, error)
 }
 
 type memberWalletJournalRepository interface {
-	MemberWalletJournals(ctx context.Context, memberID string) ([]*MemberWalletJournal, error)
-	CreateMemberWalletJournals(ctx context.Context, memberID string, entries []*MemberWalletJournal) ([]*MemberWalletJournal, error)
-	DeleteMemberWalletJournal(ctx context.Context, memberID string) (bool, error)
+	MemberWalletJournals(ctx context.Context, memberID uint) ([]*MemberWalletJournal, error)
+	CreateMemberWalletJournals(ctx context.Context, memberID uint, entries []*MemberWalletJournal) ([]*MemberWalletJournal, error)
+	DeleteMemberWalletJournal(ctx context.Context, memberID uint) (bool, error)
 }
 
 type MemberWalletBalance struct {
-	MemberID  primitive.ObjectID `bson:"member_id" json:"member_id"`
-	Balance   float64            `bson:"balance" json:"balance"`
-	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt time.Time          `bson:"updated_at" json:"updated_at"`
+	MemberID  uint      `db:"member_id" json:"member_id"`
+	Balance   float64   `db:"balance" json:"balance"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type MemberWalletTransaction struct {
-	MemberID           primitive.ObjectID `bson:"member_id" json:"member_id"`
-	TransactionID      int64              `bson:"transaction_id" json:"transaction_id"`
-	JournalReferenceID int64              `bson:"journal_ref_id" json:"journal_ref_id"`
-	ClientID           int32              `bson:"client_id" json:"client_id"`
-	ClientType         ClientType         `bson:"client_type" json:"client_type"`
-	LocationID         int64              `bson:"location_id" json:"location_id"`
-	LocationType       LocationType       `bson:"location_type" json:"location_type"`
-	TypeID             int                `bson:"type_id" json:"type_id"`
-	Quantity           int                `bson:"quantity" json:"quantity"`
-	UnitPrice          float64            `bson:"unit_price" json:"unit_price"`
-	IsBuy              bool               `bson:"is_buy" json:"is_buy"`
-	IsPersonal         bool               `bson:"is_personal" json:"is_personal"`
-	Date               time.Time          `bson:"date" json:"date"`
-	CreatedAt          time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt          time.Time          `bson:"updated_at" json:"updated_at"`
+	MemberID           uint         `db:"member_id" json:"member_id"`
+	TransactionID      int64        `db:"transaction_id" json:"transaction_id"`
+	JournalReferenceID int64        `db:"journal_ref_id" json:"journal_ref_id"`
+	ClientID           int32        `db:"client_id" json:"client_id"`
+	ClientType         ClientType   `db:"client_type" json:"client_type"`
+	LocationID         int64        `db:"location_id" json:"location_id"`
+	LocationType       LocationType `db:"location_type" json:"location_type"`
+	TypeID             int          `db:"type_id" json:"type_id"`
+	Quantity           int          `db:"quantity" json:"quantity"`
+	UnitPrice          float64      `db:"unit_price" json:"unit_price"`
+	IsBuy              bool         `db:"is_buy" json:"is_buy"`
+	IsPersonal         bool         `db:"is_personal" json:"is_personal"`
+	Date               time.Time    `db:"date" json:"date"`
+	CreatedAt          time.Time    `db:"created_at" json:"created_at"`
+	UpdatedAt          time.Time    `db:"updated_at" json:"updated_at"`
 }
 
 type ClientType string
@@ -113,24 +112,24 @@ func (i LocationType) String() string {
 }
 
 type MemberWalletJournal struct {
-	MemberID        primitive.ObjectID    `bson:"member_id" json:"member_id"`
-	JournalID       int64                 `bson:"journal_id" json:"id"`
-	RefType         RefType               `bson:"ref_type" json:"ref_type"`
-	ContextID       null.Int64            `bson:"context_id,omitempty" json:"context_id,omitempty"`
-	ContextType     NullableContextIDType `bson:"context_id_type,omitempty" json:"context_id_type,omitempty"`
-	Description     string                `bson:"description" json:"description"`
-	Reason          null.String           `bson:"reason,omitempty" json:"reason,omitempty"`
-	FirstPartyID    null.Int              `bson:"first_party_id,omitempty" json:"first_party_id,omitempty"`
-	FirstPartyType  null.String           `bson:"first_party_type,omitempty" json:"first_party_type,omitempty"`
-	SecondPartyID   null.Int              `bson:"second_party_id,omitempty" json:"second_party_id,omitempty"`
-	SecondPartyType null.String           `bson:"second_party_type,omitempty" json:"second_party_type,omitempty"`
-	Amount          null.Float64          `bson:"amount,omitempty" json:"amount,omitempty"`
-	Balance         null.Float64          `bson:"balance,omitempty" json:"balance,omitempty"`
-	Tax             null.Float64          `bson:"tax,omitempty" json:"tax,omitempty"`
-	TaxReceiverID   null.Int              `bson:"tax_receiver_id,omitempty" json:"tax_receiver_id,omitempty"`
-	Date            time.Time             `bson:"date" json:"date"`
-	CreatedAt       time.Time             `bson:"created_at" json:"created_at"`
-	UpdatedAt       time.Time             `bson:"updated_at" json:"updated_at"`
+	MemberID        uint                  `db:"member_id" json:"member_id"`
+	JournalID       int64                 `db:"journal_id" json:"id"`
+	RefType         RefType               `db:"ref_type" json:"ref_type"`
+	ContextID       null.Int64            `db:"context_id,omitempty" json:"context_id,omitempty"`
+	ContextType     NullableContextIDType `db:"context_id_type,omitempty" json:"context_id_type,omitempty"`
+	Description     string                `db:"description" json:"description"`
+	Reason          null.String           `db:"reason,omitempty" json:"reason,omitempty"`
+	FirstPartyID    null.Int              `db:"first_party_id,omitempty" json:"first_party_id,omitempty"`
+	FirstPartyType  null.String           `db:"first_party_type,omitempty" json:"first_party_type,omitempty"`
+	SecondPartyID   null.Int              `db:"second_party_id,omitempty" json:"second_party_id,omitempty"`
+	SecondPartyType null.String           `db:"second_party_type,omitempty" json:"second_party_type,omitempty"`
+	Amount          null.Float64          `db:"amount,omitempty" json:"amount,omitempty"`
+	Balance         null.Float64          `db:"balance,omitempty" json:"balance,omitempty"`
+	Tax             null.Float64          `db:"tax,omitempty" json:"tax,omitempty"`
+	TaxReceiverID   null.Int              `db:"tax_receiver_id,omitempty" json:"tax_receiver_id,omitempty"`
+	Date            time.Time             `db:"date" json:"date"`
+	CreatedAt       time.Time             `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time             `db:"updated_at" json:"updated_at"`
 }
 
 type ContextIDType string

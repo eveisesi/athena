@@ -2,25 +2,23 @@ package athena
 
 import (
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type MemberAssetsRepository struct {
 }
 
 type MemberAsset struct {
-	MemberID        primitive.ObjectID `bson:"member_id" json:"member_id"`
-	ItemID          uint64             `bson:"item_id" json:"item_id"`
-	TypeID          int                `bson:"type_id" json:"type_id"`
-	LocationID      uint64             `bson:"location_id" json:"location_id"`
-	LocationFlag    AssetLocationFlag  `bson:"location_flag" json:"location_flag"`
-	LocationType    AssetLocationType  `bson:"location_type" json:"location_type"`
-	Quantity        int                `bson:"quantity" json:"quantity"`
-	IsBlueprintCopy bool               `bson:"is_blueprint_copy" json:"is_blueprint_copy"`
-	IsSingleton     bool               `bson:"is_singleton" json:"is_singleton"`
-	CreatedAt       time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt       time.Time          `bson:"updated_at" json:"updated_at"`
+	MemberID        uint              `db:"member_id" json:"member_id"`
+	ItemID          uint64            `db:"item_id" json:"item_id"`
+	TypeID          uint              `db:"type_id" json:"type_id"`
+	LocationID      uint64            `db:"location_id" json:"location_id"`
+	LocationFlag    AssetLocationFlag `db:"location_flag" json:"location_flag"`
+	LocationType    AssetLocationType `db:"location_type" json:"location_type"`
+	Quantity        int               `db:"quantity" json:"quantity"`
+	IsBlueprintCopy bool              `db:"is_blueprint_copy" json:"is_blueprint_copy"`
+	IsSingleton     bool              `db:"is_singleton" json:"is_singleton"`
+	CreatedAt       time.Time         `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time         `db:"updated_at" json:"updated_at"`
 }
 
 type AssetLocationFlag string

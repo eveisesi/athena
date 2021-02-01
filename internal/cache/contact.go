@@ -7,23 +7,26 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/newrelic/go-agent/v3/newrelic"
+	"github.com/sirkon/go-format"
 )
 
 type contactService interface {
-	MemberContacts(ctx context.Context, memberID string) ([]*athena.MemberContact, error)
-	SetMemberContacts(ctx context.Context, memberID string, contacts []*athena.MemberContact, optionFuncs ...OptionFunc) error
-	MemberContactLabels(ctx context.Context, memberID string) ([]*athena.MemberContactLabel, error)
-	SetMemberContactLabels(ctx context.Context, memberID string, labels []*athena.MemberContactLabel, optionFuncs ...OptionFunc) error
+	MemberContacts(ctx context.Context, memberID uint) ([]*athena.MemberContact, error)
+	SetMemberContacts(ctx context.Context, memberID uint, contacts []*athena.MemberContact, optionFuncs ...OptionFunc) error
+	MemberContactLabels(ctx context.Context, memberID uint) ([]*athena.MemberContactLabel, error)
+	SetMemberContactLabels(ctx context.Context, memberID uint, labels []*athena.MemberContactLabel, optionFuncs ...OptionFunc) error
 }
 
 const (
-	keyMemberContacts      = "athena::member::%s::contacts"
-	keyMemberContactLabels = "athena::member::%s::contact::labels"
+	keyMemberContacts      = "athena::member::%d::contacts"
+	keyMemberContactLabels = "athena::member::%d::contact::labels"
 )
 
-func (s *service) MemberContacts(ctx context.Context, memberID string) ([]*athena.MemberContact, error) {
+func (s *service) MemberContacts(ctx context.Context, memberID uint) ([]*athena.MemberContact, error) {
 
-	key := fmt.Sprintf(keyMemberContacts, memberID)
+	key := format.Formatm(keyMemberContacts, format.Values{
+		"id": memberID,
+	})
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil {
 		return nil, fmt.Errorf("[Cache Layer] Failed to fetch set members for key %s: %w", key, err)
@@ -50,7 +53,7 @@ func (s *service) MemberContacts(ctx context.Context, memberID string) ([]*athen
 
 }
 
-func (s *service) SetMemberContacts(ctx context.Context, memberID string, contacts []*athena.MemberContact, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberContacts(ctx context.Context, memberID uint, contacts []*athena.MemberContact, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -61,10 +64,12 @@ func (s *service) SetMemberContacts(ctx context.Context, memberID string, contac
 	}
 
 	// Send members to redis
-	key := fmt.Sprintf(keyMemberContacts, memberID)
+	key := format.Formatm(keyMemberContacts, format.Values{
+		"id": memberID,
+	})
 	_, err := s.client.SAdd(ctx, key, members...).Result()
 	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to cache contacts for member %s: %w", memberID, err)
+		return fmt.Errorf("[Cache Layer] Failed to cache contacts for member %d: %w", memberID, err)
 	}
 
 	_, err = s.client.Expire(ctx, key, options.expiry).Result()
@@ -76,7 +81,7 @@ func (s *service) SetMemberContacts(ctx context.Context, memberID string, contac
 
 }
 
-func (s *service) MemberContactLabels(ctx context.Context, memberID string) ([]*athena.MemberContactLabel, error) {
+func (s *service) MemberContactLabels(ctx context.Context, memberID uint) ([]*athena.MemberContactLabel, error) {
 
 	key := fmt.Sprintf(keyMemberContactLabels, memberID)
 	members, err := s.client.SMembers(ctx, key).Result()
@@ -105,7 +110,7 @@ func (s *service) MemberContactLabels(ctx context.Context, memberID string) ([]*
 
 }
 
-func (s *service) SetMemberContactLabels(ctx context.Context, memberID string, labels []*athena.MemberContactLabel, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberContactLabels(ctx context.Context, memberID uint, labels []*athena.MemberContactLabel, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -126,7 +131,7 @@ func (s *service) SetMemberContactLabels(ctx context.Context, memberID string, l
 	_, err := s.client.SAdd(ctx, key, members...).Result()
 	fmt.Println(err)
 	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to cache labels for member %s: %w", memberID, err)
+		return fmt.Errorf("[Cache Layer] Failed to cache labels for member %d: %w", memberID, err)
 	}
 
 	_, err = s.client.Expire(ctx, key, options.expiry).Result()

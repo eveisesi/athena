@@ -36,7 +36,7 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 	}
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return contacts, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.CharacterID, res.StatusCode)
+		return contacts, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.ID, res.StatusCode)
 	} else if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
@@ -88,7 +88,7 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 			etag.Etag = s.retrieveEtagHeader(res.Header)
 
 		case sc >= http.StatusBadRequest:
-			return contacts, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.CharacterID, sc)
+			return contacts, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.ID, sc)
 		}
 
 		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -108,7 +108,7 @@ func (s *service) characterContactsKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	param := append(make([]string, 0), GetCharacterContracts.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	param := append(make([]string, 0), GetCharacterContracts.Name, strconv.Itoa(int(mods.member.ID)))
 
 	if mods.page != nil {
 		param = append(param, strconv.Itoa(*mods.page))
@@ -125,7 +125,7 @@ func (s *service) characterContactsPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterContacts.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterContacts.FmtPath, mods.member.ID),
 	}
 
 	return u.String()
@@ -175,7 +175,7 @@ func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return labels, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.CharacterID, sc)
+		return labels, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.ID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -190,7 +190,7 @@ func (s *service) characterContactLabelsKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterContactLabels.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterContactLabels.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterContactLabelsPathFunc(mods *modifiers) string {
@@ -200,7 +200,7 @@ func (s *service) characterContactLabelsPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterContactLabels.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterContactLabels.FmtPath, mods.member.ID),
 	}
 
 	return u.String()

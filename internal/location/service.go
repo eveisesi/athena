@@ -59,13 +59,13 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 
 	var upsert string = "update"
 
-	location, err := s.cache.MemberLocation(ctx, member.ID.Hex())
+	location, err := s.cache.MemberLocation(ctx, member.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	if location == nil {
-		location, err = s.location.MemberLocation(ctx, member.ID.Hex())
+		location, err = s.location.MemberLocation(ctx, member.ID)
 		if err != nil && err != mongo.ErrNoDocuments {
 			return nil, err
 		}
@@ -98,14 +98,14 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 		}
 
 	case "update":
-		location, err = s.location.UpdateMemberLocation(ctx, member.ID.Hex(), location)
+		location, err = s.location.UpdateMemberLocation(ctx, member.ID, location)
 		if err != nil {
 			return nil, err
 		}
 
 	}
 
-	err = s.cache.SetMemberLocation(ctx, location.MemberID.Hex(), location)
+	err = s.cache.SetMemberLocation(ctx, location.MemberID, location)
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
 	}
@@ -115,13 +115,13 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 
 func (s *service) resolveLocationAttributes(ctx context.Context, member *athena.Member, location *athena.MemberLocation) {
 
-	_, err := s.universe.SolarSystem(ctx, int(location.SolarSystemID))
+	_, err := s.universe.SolarSystem(ctx, location.SolarSystemID)
 	if err != nil {
 		return
 	}
 
 	if location.StationID.Valid {
-		_, err = s.universe.Station(ctx, int(location.StationID.Uint))
+		_, err = s.universe.Station(ctx, location.StationID.Uint)
 		if err != nil {
 			s.logger.WithError(err).WithField("station_id", location.StationID.Uint).Error("failed to resolve station")
 			return
@@ -129,7 +129,7 @@ func (s *service) resolveLocationAttributes(ctx context.Context, member *athena.
 	}
 
 	if location.StructureID.Valid {
-		_, err := s.universe.Structure(ctx, member, int64(location.StructureID.Uint64))
+		_, err := s.universe.Structure(ctx, member, location.StructureID.Uint64)
 		if err != nil {
 			s.logger.WithError(err).WithField("structure_id", location.StructureID.Uint64).Error("failed to resolve structure")
 			return
@@ -150,13 +150,13 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 
 	var upsert string = "update"
 
-	ship, err := s.cache.MemberShip(ctx, member.ID.Hex())
+	ship, err := s.cache.MemberShip(ctx, member.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	if ship == nil {
-		ship, err = s.location.MemberShip(ctx, member.ID.Hex())
+		ship, err = s.location.MemberShip(ctx, member.ID)
 		if err != nil && err != mongo.ErrNoDocuments {
 			return nil, err
 		}
@@ -188,13 +188,13 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 			return nil, err
 		}
 	case "update":
-		ship, err = s.location.UpdateMemberShip(ctx, member.ID.Hex(), ship)
+		ship, err = s.location.UpdateMemberShip(ctx, member.ID, ship)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err = s.cache.SetMemberShip(ctx, ship.MemberID.Hex(), ship)
+	err = s.cache.SetMemberShip(ctx, ship.MemberID, ship)
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
 	}
@@ -204,7 +204,7 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 
 func (s *service) resolveShipAttributes(ctx context.Context, member *athena.Member, ship *athena.MemberShip) {
 
-	_, err := s.universe.Type(ctx, int(ship.ShipTypeID))
+	_, err := s.universe.Type(ctx, ship.ShipTypeID)
 	if err != nil {
 		s.logger.WithError(err).WithField("ship_type_id", ship.ShipTypeID).Error("failed to resolve ship type id")
 	}
@@ -223,13 +223,13 @@ func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*ath
 
 	var upsert string = "update"
 
-	online, err := s.cache.MemberOnline(ctx, member.ID.Hex())
+	online, err := s.cache.MemberOnline(ctx, member.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	if online == nil {
-		online, err = s.location.MemberOnline(ctx, member.ID.Hex())
+		online, err = s.location.MemberOnline(ctx, member.ID)
 		if err != nil && err != mongo.ErrNoDocuments {
 			return nil, err
 		}
@@ -259,13 +259,13 @@ func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*ath
 			return nil, err
 		}
 	case "update":
-		online, err = s.location.UpdateMemberOnline(ctx, member.ID.Hex(), online)
+		online, err = s.location.UpdateMemberOnline(ctx, member.ID, online)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err = s.cache.SetMemberOnline(ctx, online.MemberID.Hex(), online)
+	err = s.cache.SetMemberOnline(ctx, online.MemberID, online)
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
 	}

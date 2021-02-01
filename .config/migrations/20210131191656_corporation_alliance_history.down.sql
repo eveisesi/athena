@@ -1,0 +1,1 @@
+DROP TABLE `corporation_alliance_history`;

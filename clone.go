@@ -2,54 +2,61 @@ package athena
 
 import (
 	"context"
+	"time"
 
 	"github.com/volatiletech/null"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CloneRepository interface {
-	cloneRepository
+	jumpCloneRepository
+	homeCloneRepository
 	implantRepository
 }
 
-type cloneRepository interface {
-	MemberClones(ctx context.Context, id string) (*MemberClones, error)
-	CreateMemberClones(ctx context.Context, location *MemberClones) (*MemberClones, error)
-	UpdateMemberClones(ctx context.Context, id string, location *MemberClones) (*MemberClones, error)
-	DeleteMemberClones(ctx context.Context, id string) (bool, error)
+type jumpCloneRepository interface {
+	MemberJumpClones(ctx context.Context, id uint) ([]*MemberJumpClone, error)
+	CreateMemberJumpClones(ctx context.Context, id uint, clones []*MemberJumpClone) ([]*MemberJumpClone, error)
+	UpdateMemberJumpClones(ctx context.Context, id uint, clones []*MemberJumpClone) ([]*MemberJumpClone, error)
+	DeleteMemberJumpClones(ctx context.Context, id uint) (bool, error)
+}
+
+type homeCloneRepository interface {
+	MemberHomeClone(ctx context.Context, id uint) (*MemberHomeClone, error)
+	CreateMemberHomeClone(ctx context.Context, id uint, clone *MemberHomeClone) (*MemberHomeClone, error)
+	UpdateMemberHomeClone(ctx context.Context, id uint, clone *MemberHomeClone) (*MemberHomeClone, error)
+	DeleteMemberHomeClone(ctx context.Context, id uint) (bool, error)
 }
 
 type implantRepository interface {
-	MemberImplants(ctx context.Context, id string) (*MemberImplants, error)
-	CreateMemberImplants(ctx context.Context, location *MemberImplants) (*MemberImplants, error)
-	UpdateMemberImplants(ctx context.Context, id string, location *MemberImplants) (*MemberImplants, error)
-	DeleteMemberImplants(ctx context.Context, id string) (bool, error)
+	MemberImplants(ctx context.Context, id uint) ([]*MemberImplant, error)
+	CreateMemberImplants(ctx context.Context, implants []*MemberImplant) ([]*MemberImplant, error)
+	UpdateMemberImplants(ctx context.Context, id uint, implants []*MemberImplant) ([]*MemberImplant, error)
+	DeleteMemberImplants(ctx context.Context, id uint) (bool, error)
 }
 
-type MemberClones struct {
-	MemberID            primitive.ObjectID `bson:"member_id" json:"member_id"`
-	HomeLocation        CloneHomeLocation  `bson:"home_location" json:"home_location"`
-	JumpClones          []CloneJumpClone   `bson:"jump_clones" json:"jump_clones"`
-	LastCloneJumpDate   null.Time          `bson:"last_clone_jump_data" json:"last_clone_jump_data"`
-	LastCloneChangeDate null.Time          `bson:"last_clone_change_date" json:"last_clone_change_date"`
-	Meta
+type MemberHomeClone struct {
+	MemberID              uint      `db:"member_id" json:"member_id"`
+	LocationID            uint64    `db:"location_id" json:"location_id"`
+	LocationType          string    `db:"location_type" json:"location_type"`
+	LastCloneJumpDate     null.Time `db:"last_clone_jump_date" json:"last_clone_jump_date"`
+	LastStationChangeDate null.Time `db:"last_station_change_date" json:"last_station_change_date"`
+	CreatedAt             time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt             time.Time `db:"updated_at" json:"updated_at"`
 }
 
-type CloneHomeLocation struct {
-	LocationID   int64  `bson:"location_id" json:"location_id"`
-	LocationType string `bson:"location_type" json:"location_type"`
+type MemberJumpClone struct {
+	MemberID     uint      `db:"member_id" json:"member_id"`
+	JumpCloneID  uint      `db:"jump_clone_id" json:"jump_clone_id"`
+	LocationID   uint64    `db:"location_id" json:"location_id"`
+	LocationType string    `db:"location_type" json:"location_type"`
+	Implants     []uint    `db:"implants" json:"implants"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
 }
 
-type CloneJumpClone struct {
-	Implants     []int  `bson:"implants" json:"implants"`
-	JumpCloneID  int    `bson:"jump_clone_id" json:"jump_clone_id"`
-	LocationID   int64  `bson:"location_id" json:"location_id"`
-	LocationType string `bson:"location_type" json:"location_type"`
-}
-
-type MemberImplants struct {
-	MemberID primitive.ObjectID `bson:"member_id" json:"member_id"`
-	Implants []*Type            `bson:"implants" json:"implants"`
-	Raw      []int              `bson:"-" json:"-"`
-	Meta
+type MemberImplant struct {
+	MemberID  uint      `db:"member_id" json:"member_id"`
+	TypeID    uint      `db:"type_id" json:"type_id"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

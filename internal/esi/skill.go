@@ -48,7 +48,7 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 		}
 
 	case sc >= http.StatusBadRequest:
-		return attributes, res, fmt.Errorf("failed to fetch attributes for character %d, received status code of %d", member.CharacterID, sc)
+		return attributes, res, fmt.Errorf("failed to fetch attributes for character %d, received status code of %d", member.ID, sc)
 	}
 
 	attributes.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -63,7 +63,7 @@ func (s *service) characterAttributesKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for alliance instead")
 	}
 
-	return buildKey(GetCharacterAttributes.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterAttributes.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterAttributesPathFunc(mods *modifiers) string {
@@ -73,7 +73,7 @@ func (s *service) characterAttributesPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterAttributes.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterAttributes.FmtPath, mods.member.ID),
 	}
 
 	return u.String()
@@ -121,7 +121,7 @@ func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member,
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return meta, res, fmt.Errorf("failed to fetch skills for character %d, received status code of %d", member.CharacterID, sc)
+		return meta, res, fmt.Errorf("failed to fetch skills for character %d, received status code of %d", member.ID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -136,7 +136,7 @@ func (s *service) characterSkillsKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for alliance instead")
 	}
 
-	return buildKey(GetCharacterSkills.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterSkills.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterSkillsPathFunc(mods *modifiers) string {
@@ -146,7 +146,7 @@ func (s *service) characterSkillsPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterSkills.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterSkills.FmtPath, mods.member.ID),
 	}
 
 	return u.String()
@@ -194,7 +194,7 @@ func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Mem
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return queue, res, fmt.Errorf("failed to fetch skill queue for character %d, received status code of %d", member.CharacterID, sc)
+		return queue, res, fmt.Errorf("failed to fetch skill queue for character %d, received status code of %d", member.ID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -209,7 +209,7 @@ func (s *service) characterSkillQueueKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Member to be provided, received nil for alliance instead")
 	}
 
-	return buildKey(GetCharacterSkillQueue.Name, strconv.FormatUint(mods.member.CharacterID, 10))
+	return buildKey(GetCharacterSkillQueue.Name, strconv.Itoa(int(mods.member.ID)))
 }
 
 func (s *service) characterSkillQueuePathFunc(mods *modifiers) string {
@@ -219,7 +219,7 @@ func (s *service) characterSkillQueuePathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterSkillQueue.FmtPath, mods.member.CharacterID),
+		Path: fmt.Sprintf(GetCharacterSkillQueue.FmtPath, mods.member.ID),
 	}
 
 	return u.String()

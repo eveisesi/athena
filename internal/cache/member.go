@@ -11,18 +11,18 @@ import (
 )
 
 type memberService interface {
-	Member(ctx context.Context, memberID string) (*athena.Member, error)
-	SetMember(ctx context.Context, memberID string, member *athena.Member, optionFuncs ...OptionFunc) error
+	Member(ctx context.Context, memberID uint) (*athena.Member, error)
+	SetMember(ctx context.Context, memberID uint, member *athena.Member, optionFuncs ...OptionFunc) error
 	Members(ctx context.Context, operators []*athena.Operator) ([]*athena.Member, error)
 	SetMembers(ctx context.Context, operators []*athena.Operator, members []*athena.Member, optionFuncs ...OptionFunc) error
 }
 
 const (
-	keyMember  = "athena::member::%s"
+	keyMember  = "athena::member::%d"
 	keyMembers = "athena::members::%s"
 )
 
-func (s *service) Member(ctx context.Context, memberID string) (*athena.Member, error) {
+func (s *service) Member(ctx context.Context, memberID uint) (*athena.Member, error) {
 
 	result, err := s.client.Get(ctx, fmt.Sprintf(keyMember, memberID)).Bytes()
 	if err != nil && err != redis.Nil {
@@ -43,7 +43,7 @@ func (s *service) Member(ctx context.Context, memberID string) (*athena.Member, 
 	return nil, nil
 }
 
-func (s *service) SetMember(ctx context.Context, memberID string, member *athena.Member, optionFuncs ...OptionFunc) error {
+func (s *service) SetMember(ctx context.Context, memberID uint, member *athena.Member, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
