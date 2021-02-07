@@ -1,4 +1,5 @@
 _data
+.build
 app.env
 mysql.env
 logs/
