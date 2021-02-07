@@ -14,30 +14,25 @@ type MemberContractRepository interface {
 }
 
 type memberContractRepository interface {
-	MemberContract(ctx context.Context, memberID uint, contractID int) (*MemberContract, error)
-	Contracts(ctx context.Context, memberID uint, operators ...*Operator) ([]*MemberContract, error)
+	MemberContract(ctx context.Context, memberID, contractID uint) (*MemberContract, error)
+	MemberContracts(ctx context.Context, memberID uint, operators ...*Operator) ([]*MemberContract, error)
 	CreateContracts(ctx context.Context, memberID uint, contracts []*MemberContract) ([]*MemberContract, error)
-	UpdateContract(ctx context.Context, memberID uint, contractID int, contract *MemberContract) (*MemberContract, error)
-	DeleteContracts(ctx context.Context, memberID uint) (bool, error)
+	UpdateContract(ctx context.Context, memberID uint, contracts []*MemberContract) ([]*MemberContract, error)
 }
 
 type memberContractItemRepository interface {
-	MemberContractItems(ctx context.Context, memberID uint, contractID int, operators ...*Operator) ([]*MemberContractItem, error)
-	CreateMemberContractItems(ctx context.Context, memberID uint, contractID int, items []*MemberContractItem) ([]*MemberContractItem, error)
-	DeleteMemberContractItems(ctx context.Context, memberID uint, contractID int) (bool, error)
-	DeleteMemberContractItemsAll(ctx context.Context, memberID uint) (bool, error)
+	MemberContractItems(ctx context.Context, memberID, contractID uint, operators ...*Operator) ([]*MemberContractItem, error)
+	CreateMemberContractItems(ctx context.Context, memberID, contractID uint, items []*MemberContractItem) ([]*MemberContractItem, error)
 }
 
 type memberContractBidRepository interface {
-	MemberContractBids(ctx context.Context, memberID uint, contractID int, operators ...*Operator) ([]*MemberContractBid, error)
-	CreateMemberContractBids(ctx context.Context, memberID uint, contractID int, items []*MemberContractBid) ([]*MemberContractBid, error)
-	DeleteMemberContractBids(ctx context.Context, memberID uint, contractID int) (bool, error)
-	DeleteMemberContractBidsAll(ctx context.Context, memberID uint) (bool, error)
+	MemberContractBids(ctx context.Context, memberID, contractID uint, operators ...*Operator) ([]*MemberContractBid, error)
+	CreateMemberContractBids(ctx context.Context, memberID, contractID uint, bids []*MemberContractBid) ([]*MemberContractBid, error)
 }
 
 type MemberContract struct {
 	MemberID            uint                 `db:"member_id" json:"member_id"`
-	ContractID          int                  `db:"contract_id" json:"contract_id"`
+	ContractID          uint                 `db:"contract_id" json:"contract_id"`
 	AcceptorID          null.Int             `db:"acceptor_id" json:"acceptor_id"`
 	AssigneeID          null.Int             `db:"assignee_id" json:"assignee_id"`
 	Availability        ContractAvailability `db:"availability" json:"availability"`
@@ -50,8 +45,8 @@ type MemberContract struct {
 	DaysToComplete      null.Int             `db:"days_to_complete,omitempty" json:"days_to_complete,omitempty"`
 	EndLocationID       null.Int64           `db:"end_location_id,omitempty" json:"end_location_id,omitempty"`
 	ForCorporation      bool                 `db:"for_corporation" json:"for_corporation"`
-	IssuerCorporationID int                  `db:"issuer_corporation_id" json:"issuer_corporation_id"`
-	IssuerID            int64                `db:"issuer_id" json:"issuer_id"`
+	IssuerCorporationID uint                 `db:"issuer_corporation_id" json:"issuer_corporation_id"`
+	IssuerID            uint64               `db:"issuer_id" json:"issuer_id"`
 	Price               null.Int             `db:"price,omitempty" json:"price,omitempty"`
 	Reward              null.Int             `db:"reward,omitempty" json:"reward,omitempty"`
 	StartLocationID     null.Int64           `db:"start_location_id,omitempty" json:"start_location_id,omitempty"`
@@ -157,13 +152,13 @@ func (c ContractType) Valid() bool {
 
 type MemberContractBid struct {
 	MemberID   uint `db:"member_id" json:"member_id"`
-	ContractID int  `db:"contract_id" json:"contract_id"`
+	ContractID uint `db:"contract_id" json:"contract_id"`
 
 	// Unique ID for the bid
-	BidID int `db:"bid_id" json:"bid_id"`
+	BidID uint `db:"bid_id" json:"bid_id"`
 
 	// Character ID of the bidder
-	BidderID int64 `db:"bidder" json:"bidder"`
+	BidderID uint64 `db:"bidder" json:"bidder"`
 
 	// The amount bid, in ISK
 	Amount float64 `db:"amount" json:"amount"`
@@ -177,20 +172,20 @@ type MemberContractBid struct {
 
 type MemberContractItem struct {
 	MemberID   uint `db:"member_id" json:"member_id"`
-	ContractID int  `db:"contract_id" json:"contract_id"`
+	ContractID uint `db:"contract_id" json:"contract_id"`
 
 	// UniqueID for the Item
-	RecordID int `db:"record_id" json:"record_id"`
+	RecordID uint `db:"record_id" json:"record_id"`
 
 	// Type ID for item
-	TypeID int `db:"type_id" json:"type_id"`
+	TypeID uint `db:"type_id" json:"type_id"`
 
 	// Number of items in the stack
-	Quantity int `db:"quantity" json:"quantity"`
+	Quantity uint `db:"quantity" json:"quantity"`
 
 	// -1 indicates that the item is a singleton (non-stackable).
 	// If the item happens to be a Blueprint, -1 is an Original and -2 is a Blueprint Copy
-	RawQuantity int `db:"raw_quantity" json:"raw_quantity"`
+	RawQuantity uint `db:"raw_quantity" json:"raw_quantity"`
 
 	// true if the contract issuer has submitted this item with the contract, false if the isser is asking for this item in the contract
 	IsIncluded  bool `db:"is_included" json:"is_included"`
