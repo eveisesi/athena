@@ -16,22 +16,19 @@ type MemberWalletRepository interface {
 }
 
 type memberWalletBalanceRepository interface {
-	MemberWalletBalance(ctx context.Context, memberID uint) *MemberWalletBalance
-	CreateMemberWalletBalance(ctx context.Context, memberID uint, balance *MemberWalletBalance) (*MemberWalletBalance, error)
-	UpdateMemberWalletBalance(ctx context.Context, memberID uint, balance *MemberWalletBalance) (*MemberWalletBalance, error)
-	DeleteMemberWalletBalance(ctx context.Context, memberID uint) (bool, error)
+	MemberWalletBalance(ctx context.Context, memberID uint) (*MemberWalletBalance, error)
+	CreateMemberWalletBalance(ctx context.Context, memberID uint, balance float64) (*MemberWalletBalance, error)
+	UpdateMemberWalletBalance(ctx context.Context, memberID uint, balance float64) (*MemberWalletBalance, error)
 }
 
 type memberWalletTransactionRepository interface {
-	MemberWalletTransactions(ctx context.Context, memberID uint) ([]*MemberWalletTransaction, error)
+	MemberWalletTransactions(ctx context.Context, operators ...*Operator) ([]*MemberWalletTransaction, error)
 	CreateMemberWalletTransactions(ctx context.Context, memberID uint, transactions []*MemberWalletTransaction) ([]*MemberWalletTransaction, error)
-	DeleteMemberWalletTransactions(ctx context.Context, memberID uint) (bool, error)
 }
 
 type memberWalletJournalRepository interface {
-	MemberWalletJournals(ctx context.Context, memberID uint) ([]*MemberWalletJournal, error)
+	MemberWalletJournals(ctx context.Context, operators ...*Operator) ([]*MemberWalletJournal, error)
 	CreateMemberWalletJournals(ctx context.Context, memberID uint, entries []*MemberWalletJournal) ([]*MemberWalletJournal, error)
-	DeleteMemberWalletJournal(ctx context.Context, memberID uint) (bool, error)
 }
 
 type MemberWalletBalance struct {
@@ -43,14 +40,14 @@ type MemberWalletBalance struct {
 
 type MemberWalletTransaction struct {
 	MemberID           uint         `db:"member_id" json:"member_id"`
-	TransactionID      int64        `db:"transaction_id" json:"transaction_id"`
-	JournalReferenceID int64        `db:"journal_ref_id" json:"journal_ref_id"`
-	ClientID           int32        `db:"client_id" json:"client_id"`
+	TransactionID      uint64       `db:"transaction_id" json:"transaction_id"`
+	JournalReferenceID uint64       `db:"journal_ref_id" json:"journal_ref_id"`
+	ClientID           uint32       `db:"client_id" json:"client_id"`
 	ClientType         ClientType   `db:"client_type" json:"client_type"`
-	LocationID         int64        `db:"location_id" json:"location_id"`
+	LocationID         uint64       `db:"location_id" json:"location_id"`
 	LocationType       LocationType `db:"location_type" json:"location_type"`
-	TypeID             int          `db:"type_id" json:"type_id"`
-	Quantity           int          `db:"quantity" json:"quantity"`
+	TypeID             uint         `db:"type_id" json:"type_id"`
+	Quantity           uint         `db:"quantity" json:"quantity"`
 	UnitPrice          float64      `db:"unit_price" json:"unit_price"`
 	IsBuy              bool         `db:"is_buy" json:"is_buy"`
 	IsPersonal         bool         `db:"is_personal" json:"is_personal"`
@@ -113,7 +110,7 @@ func (i LocationType) String() string {
 
 type MemberWalletJournal struct {
 	MemberID        uint                  `db:"member_id" json:"member_id"`
-	JournalID       int64                 `db:"journal_id" json:"id"`
+	JournalID       uint64                `db:"journal_id" json:"id"`
 	RefType         RefType               `db:"ref_type" json:"ref_type"`
 	ContextID       null.Int64            `db:"context_id,omitempty" json:"context_id,omitempty"`
 	ContextType     NullableContextIDType `db:"context_id_type,omitempty" json:"context_id_type,omitempty"`
