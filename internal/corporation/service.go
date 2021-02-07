@@ -2,6 +2,8 @@ package corporation
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
@@ -34,12 +36,16 @@ func NewService(cache cache.Service, esi esi.Service, corporation athena.Corpora
 func (s *service) Corporation(ctx context.Context, id uint, options []OptionFunc) (*athena.Corporation, error) {
 
 	corporation, err := s.CorporationRepository.Corporation(ctx, id)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		newrelic.FromContext(ctx).NoticeError(err)
 		return nil, err
 	}
 
-	corporation, _, err = s.esi.GetCorporation(ctx, &athena.Corporation{CorporationID: id})
+	if err == nil && corporation != nil {
+		return corporation, err
+	}
+
+	corporation, _, err = s.esi.GetCorporation(ctx, &athena.Corporation{ID: id})
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
 		return nil, err

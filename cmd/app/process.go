@@ -48,8 +48,6 @@ func processorCommand(c *cli.Context) error {
 
 	processor.SetScopeMap(buildScopeMap(location, clone, contact, skill))
 
-	listScopes()
-
 	processor.Run()
 
 	return nil

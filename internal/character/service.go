@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/eveisesi/athena"
@@ -35,10 +36,14 @@ func NewService(cache cache.Service, esi esi.Service, character athena.Character
 func (s *service) Character(ctx context.Context, id uint, options []OptionFunc) (*athena.Character, error) {
 
 	character, err := s.CharacterRepository.Character(ctx, id)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		err = fmt.Errorf("[Character Service] Failed to fetch character %d from db: %w", id, err)
 		newrelic.FromContext(ctx).NoticeError(err)
 		return nil, err
+	}
+
+	if err == nil && character != nil {
+		return character, err
 	}
 
 	character, _, err = s.esi.GetCharacter(ctx, &athena.Character{ID: id})

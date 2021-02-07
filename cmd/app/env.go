@@ -25,13 +25,12 @@ func loadConfig() (cfg config, err error) {
 }
 
 type config struct {
-	Mongo struct {
-		Host     string `required:"true"`
-		Port     int    `required:"true"`
-		User     string `required:"true"`
-		Pass     string `required:"true"`
-		Name     string `required:"true"`
-		AuthMech string `default:"SCRAM-SHA-256"`
+	MySQL struct {
+		Host string `required:"true"`
+		Port int    `required:"true"`
+		User string `required:"true"`
+		Pass string `required:"true"`
+		DB   string `required:"true"`
 	}
 
 	Redis struct {
@@ -43,7 +42,7 @@ type config struct {
 		AppName string `envconfig:"NEW_RELIC_APP_NAME"`
 	}
 
-	Env athena.Environment `default:"production"`
+	Env athena.Environment `default:"development"`
 
 	Developer struct {
 		Name string

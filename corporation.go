@@ -15,9 +15,7 @@ type CorporationRepository interface {
 }
 
 type Corporation struct {
-	ID            uint `db:"_id,omitempty" json:"_id"`
-	CorporationID uint `db:"corporation_id" json:"corporation_id"`
-
+	ID            uint        `db:"id,omitempty" json:"id"`
 	AllianceID    null.Uint   `db:"alliance_id,omitempty" json:"alliance_id,omitempty"`
 	CeoID         uint        `db:"ceo_id" json:"ceo_id"`
 	CreatorID     uint        `db:"creator_id" json:"creator_id"`

@@ -13,15 +13,16 @@ type MemberFittingsRepository interface {
 type memberFittingRepository interface {
 	MemberFittings(ctx context.Context, memberID uint, operators ...*Operator) ([]*MemberFitting, error)
 	CreateMemberFittings(ctx context.Context, memberID uint, fitting []*MemberFitting) ([]*MemberFitting, error)
-	UpdateMemberFitting(ctx context.Context, memberID uint, fittingID uint, fitting *MemberFitting) (*MemberFitting, error)
+	UpdateMemberFitting(ctx context.Context, memberID, fittingID uint, fitting *MemberFitting) (*MemberFitting, error)
 	DeleteMemberFitting(ctx context.Context, memberID uint, fittingID uint) (bool, error)
 	DeleteMemberFittings(ctx context.Context, memberID uint) (bool, error)
 }
 
 type memberFittingItemRepository interface {
-	MemberFittingItems(ctx context.Context, memberID uint, fittingID uint) ([]*MemberFittingItem, error)
-	CreateMemberFittingItems(ctx context.Context, memberID uint, fittingID uint, items []*MemberFittingItem) ([]*MemberFittingItem, error)
-	DeleteMemberFittingItems(ctx context.Context, memberID uint, fittingID uint) (bool, error)
+	MemberFittingItems(ctx context.Context, memberID, fittingID uint) ([]*MemberFittingItem, error)
+	CreateMemberFittingItems(ctx context.Context, memberID, fittingID uint, items []*MemberFittingItem) ([]*MemberFittingItem, error)
+	DeleteMemberFittingItems(ctx context.Context, memberID, fittingID uint) (bool, error)
+	DeleteMemberFittingItemsAll(ctx context.Context, memberID uint) (bool, error)
 }
 
 type MemberFitting struct {

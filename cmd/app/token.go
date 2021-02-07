@@ -153,9 +153,9 @@ func addMemberByCLI(c *cli.Context) error {
 		basics.logger.WithError(err).Fatal("failed to create member from token")
 	}
 
-	member.AccessToken = oauth2Token.AccessToken
-	member.RefreshToken = oauth2Token.RefreshToken
-	member.Expires = oauth2Token.Expiry
+	member.AccessToken.SetValid(oauth2Token.AccessToken)
+	member.Expires.SetValid(oauth2Token.Expiry)
+	member.RefreshToken.SetValid(oauth2Token.RefreshToken)
 
 	_, err = basics.repositories.member.UpdateMember(ctx, member.ID, member)
 	if err != nil {

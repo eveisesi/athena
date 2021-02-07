@@ -1,9 +1,9 @@
 CREATE TABLE `mail_headers` (
 	`id` INT UNSIGNED NOT NULL,
 	`sender_id` INT UNSIGNED NOT NULL,
-	`sender_type` ENUM('character', 'corporation', 'mailing_list') NOT NULL COLLATE 'utf8mb4_unicode_ci',
-	`subject` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
-	`body` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`sender_type` ENUM('character', 'corporation', 'mailing_list') NOT NULL,
+	`subject` VARCHAR(255) NULL DEFAULT NULL,
+	`body` TEXT NULL DEFAULT NULL,
 	`is_on_mailing_list` TINYINT(1) NULL DEFAULT '0',
 	`mailing_list_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL,
 	`is_ready` TINYINT(1) NOT NULL DEFAULT '0',
@@ -12,4 +12,4 @@ CREATE TABLE `mail_headers` (
 	`updated_at` TIMESTAMP NULL DEFAULT NULL,
 	PRIMARY KEY (`id`),
 	INDEX `mail_headers_sender_id_index` (`sender_id`)
-) COLLATE='utf8mb4_unicode_ci' ENGINE=InnoDB;
+) COLLATE = 'utf8mb4_unicode_ci' ENGINE = InnoDB;

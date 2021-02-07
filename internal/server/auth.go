@@ -28,7 +28,15 @@ func (s *server) handleGetAuthCallback(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`
 		<!DOCTYPE html>
 		<html>
-			<title>ZRule EVE SSO Auth Callback</title>
+			<title>Athena EVE SSO Auth Callback</title>
+			<style>
+			body {
+				background-color: #585858;
+			}
+			</style>
+			<body>
+				<h2>Athena EVE SSO Auth Callback</h2>
+			</body>
 			<script>
 				setTimeout(function() {
 					window.close()

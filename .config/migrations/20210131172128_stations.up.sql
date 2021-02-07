@@ -11,11 +11,8 @@ CREATE TABLE `stations` (
     `reprocessing_stations_take` FLOAT NOT NULL,
     `created_at` TIMESTAMP NOT NULL,
     `updated_at` TIMESTAMP NOT NULL,
+    PRIMARY KEY (`id`) USING BTREE,
     INDEX `stations_system_id_idx` (`system_id`) USING BTREE,
     INDEX `stations_type_id_idx` (`type_id`) USING BTREE,
-    INDEX `stations_race_id_idx` (`race_id`) USING BTREE,
-    PRIMARY KEY (`id`) USING BTREE,
-    CONSTRAINT `stations_system_id_solar_systems_id_foreign` FOREIGN KEY (`system_id`) REFERENCES `athena`.`solar_systems` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    CONSTRAINT `stations_type_id_types_id_foreign` FOREIGN KEY (`type_id`) REFERENCES `athena`.`types` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    CONSTRAINT `stations_race_id_races_id_foreign` FOREIGN KEY (`race_id`) REFERENCES `athena`.`races` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+    INDEX `stations_race_id_idx` (`race_id`) USING BTREE
 ) COLLATE = 'utf8mb4_unicode_ci' ENGINE = InnoDB;

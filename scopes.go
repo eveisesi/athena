@@ -1,12 +1,19 @@
 package athena
 
-import "context"
+import (
+	"context"
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+
+	"github.com/volatiletech/null"
+)
 
 type ScopeMap map[Scope][]ScopeResolver
 
 type ScopeResolver struct {
 	Name string
-	Func func(context.Context, *Member) error
+	Func func(context.Context, *Member) (*Etag, error)
 }
 
 type Scope string
@@ -35,4 +42,42 @@ var AllScopes = []Scope{
 
 func (s Scope) String() string {
 	return string(s)
+}
+
+type MemberScope struct {
+	Scope  Scope     `db:"scope" json:"scope"`
+	Expiry null.Time `db:"expiry,omitempty" json:"expiry,omitempty"`
+}
+
+type MemberScopes []MemberScope
+
+func (s *MemberScopes) Scan(value interface{}) error {
+
+	switch data := value.(type) {
+	case []byte:
+		var scopes MemberScopes
+		err := json.Unmarshal(data, &scopes)
+		if err != nil {
+			return err
+		}
+
+		*s = scopes
+	}
+
+	return nil
+}
+
+func (s MemberScopes) Value() (driver.Value, error) {
+	var data []byte
+	var err error
+	if len(s) == 0 {
+		data, err = json.Marshal([]interface{}{})
+	} else {
+		data, err = json.Marshal(s)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("[MemberScopes] Failed to marshal scope for storage in data store: %w", err)
+	}
+
+	return data, nil
 }

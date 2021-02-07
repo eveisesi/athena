@@ -25,23 +25,21 @@ const (
 
 type (
 	Service interface {
-		Etag(ctx context.Context, endpoint *endpoint, modifierFunc ...modifierFunc) (*athena.Etag, error)
+		etagInterface
+		cloneInterface
+		skillInterface
 
 		// Alliances
 		GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error)
 
 		// Characters
 		GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error)
-		GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberSkillAttributes) (*athena.MemberSkillAttributes, *http.Response, error)
-		GetCharacterClones(ctx context.Context, member *athena.Member, clone *athena.MemberHomeClone, clones []*athena.MemberJumpClone) (*athena.MemberHomeClone, []*athena.MemberJumpClone, *http.Response, error)
+
 		GetCharacterContacts(ctx context.Context, member *athena.Member, contacts []*athena.MemberContact) ([]*athena.MemberContact, *http.Response, error)
 		GetCharacterContactLabels(ctx context.Context, member *athena.Member, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *http.Response, error)
-		GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *http.Response, error)
 		GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error)
 		GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error)
 		GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error)
-		GetCharacterSkills(ctx context.Context, member *athena.Member, meta *athena.MemberSkillMeta) (*athena.MemberSkillMeta, *http.Response, error)
-		GetCharacterSkillQueue(ctx context.Context, member *athena.Member, queue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, *http.Response, error)
 
 		// Corporations
 		GetCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error)
@@ -68,7 +66,7 @@ type (
 		GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error)
 		GetFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error)
 		GetGroup(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error)
-		GetRegions(ctx context.Context, ids []int) ([]int, *http.Response, error)
+		GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Response, error)
 		GetRegion(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error)
 		GetRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error)
 		GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error)

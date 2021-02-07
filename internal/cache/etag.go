@@ -12,6 +12,7 @@ import (
 type etagService interface {
 	Etag(ctx context.Context, etagID string) (*athena.Etag, error)
 	SetEtag(ctx context.Context, etagID string, etag *athena.Etag, optionFunc ...OptionFunc) error
+	DeleteEtag(ctx context.Context, etagID string) error
 }
 
 const (
@@ -51,6 +52,18 @@ func (s *service) SetEtag(ctx context.Context, etagID string, etag *athena.Etag,
 	_, err = s.client.Set(ctx, fmt.Sprintf(keyEtag, etagID), data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
+	}
+
+	return nil
+
+}
+
+func (s *service) DeleteEtag(ctx context.Context, etagID string) error {
+
+	key := fmt.Sprintf(keyEtag, etagID)
+	_, err := s.client.Del(ctx, fmt.Sprintf(keyEtag, etagID)).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Service] Failed to delete key %s from cache: %w", key, err)
 	}
 
 	return nil

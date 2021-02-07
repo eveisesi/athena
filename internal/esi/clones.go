@@ -8,25 +8,12 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/eveisesi/athena"
-	"github.com/volatiletech/null"
 )
 
-type CharacterClones struct {
-	HomeLocation struct {
-		LocationID   uint64 `json:"location_id"`
-		LocationType string `json:"location_type"`
-	} `json:"home_location"`
-	JumpClones []struct {
-		Implants     []uint      `json:"implants"`
-		JumpCloneID  uint        `json:"jump_clone_id"`
-		LocationID   uint64      `json:"location_id"`
-		LocationType string      `json:"location_type"`
-		name         null.String `json:"name"`
-	} `json:"jump_clones"`
-	LastCloneJumpDate     null.Time `json:"last_clone_jump_date"`
-	LastStationChangeDate null.Time `json:"last_station_change_date"`
+type cloneInterface interface {
+	GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *athena.Etag, *http.Response, error)
+	GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *athena.Etag, *http.Response, error)
 }
 
 // GetCharacterClones makes an HTTP GET Request to the /characters/{character_id}/clones/ endpoint for
@@ -35,17 +22,7 @@ type CharacterClones struct {
 // Documentation: https://esi.evetech.net/ui/#/Clones/get_characters_character_id_clones
 // Version: v3
 // Cache: 120 (2 min)
-func (s *service) GetCharacterClones(
-	ctx context.Context,
-	member *athena.Member,
-	clone *athena.MemberHomeClone,
-	clones []*athena.MemberJumpClone,
-) (
-	*athena.MemberHomeClone,
-	[]*athena.MemberJumpClone,
-	*http.Response,
-	error,
-) {
+func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *athena.Etag, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCharacterClones.Name]
 
@@ -69,27 +46,28 @@ func (s *service) GetCharacterClones(
 		return nil, nil, nil, err
 	}
 
-	characterClones := new(CharacterClones)
-
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
-		err = json.Unmarshal(b, characterClones)
+		err = json.Unmarshal(b, clones)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 			return nil, nil, nil, err
 		}
 
-		spew.Dump(characterClones)
-
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return clone, clones, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.ID, sc)
+		return clones, etag, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.ID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
-	return clone, clones, res, nil
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
+
+	return clones, etag, res, nil
 
 }
 
@@ -130,7 +108,7 @@ func (s *service) newGetCharacterClonesEndpoint() *endpoint {
 // Documentation: https://esi.evetech.net/ui/#/Clones/get_characters_character_id_implants
 // Version: v1
 // Cache: 120 (2 min)
-func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *http.Response, error) {
+func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *athena.Etag, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCharacterImplants.Name]
 
@@ -138,7 +116,7 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -151,26 +129,30 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
-		err = json.Unmarshal(b, ids)
+		err = json.Unmarshal(b, &ids)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return ids, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.ID, sc)
+		return ids, etag, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.ID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
 
-	return ids, res, nil
+	return ids, etag, res, nil
 
 }
 

@@ -30,14 +30,15 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 
 	mods := s.modifiers(ModWithCharacter(character))
 
-	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
-	if err != nil {
-		return nil, nil, err
-	}
+	// etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
 
 	path := endpoint.PathFunc(mods)
+	// WithEtag(etag)
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(etag))
+	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -50,7 +51,7 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 			return nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		// etag.Etag = s.retrieveEtagHeader(res.Header)
 
 		if !isCharacterValid(character) {
 			return nil, nil, fmt.Errorf("invalid character return from esi, missing name or ticker")
@@ -59,7 +60,7 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 		return character, res, fmt.Errorf("failed to fetch character %d, received status code of %d", character.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	// etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return character, res, nil
 }

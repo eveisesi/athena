@@ -2,6 +2,8 @@ package location
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/eveisesi/athena"
@@ -11,7 +13,6 @@ import (
 
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Service interface {
@@ -66,11 +67,11 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 
 	if location == nil {
 		location, err = s.location.MemberLocation(ctx, member.ID)
-		if err != nil && err != mongo.ErrNoDocuments {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
 
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, sql.ErrNoRows) {
 			upsert = "create"
 			location = &athena.MemberLocation{
 				MemberID: member.ID,
@@ -157,11 +158,11 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 
 	if ship == nil {
 		ship, err = s.location.MemberShip(ctx, member.ID)
-		if err != nil && err != mongo.ErrNoDocuments {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
 
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, sql.ErrNoRows) {
 			upsert = "create"
 			ship = &athena.MemberShip{
 				MemberID: member.ID,
@@ -230,11 +231,11 @@ func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*ath
 
 	if online == nil {
 		online, err = s.location.MemberOnline(ctx, member.ID)
-		if err != nil && err != mongo.ErrNoDocuments {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
 
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, sql.ErrNoRows) {
 			upsert = "create"
 			online = &athena.MemberOnline{
 				MemberID: member.ID,

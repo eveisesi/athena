@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type MemberAssetsRepository struct {
+type MemberAssetsRepository interface {
 }
 
 type MemberAsset struct {

@@ -1,5 +1,4 @@
 _data
 app.env
-mongo.env
+mysql.env
 logs/
-.config/mysql.env

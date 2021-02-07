@@ -106,9 +106,9 @@ func (s *service) ValidateToken(ctx context.Context, member *athena.Member) (*at
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, s.client)
 
 	token := new(oauth2.Token)
-	token.AccessToken = member.AccessToken
-	token.RefreshToken = member.RefreshToken
-	token.Expiry = member.Expires
+	token.AccessToken = member.AccessToken.String
+	token.RefreshToken = member.RefreshToken.String
+	token.Expiry = member.Expires.Time
 
 	tokenSource := s.oauth.TokenSource(ctx, token)
 	newToken, err := tokenSource.Token()
@@ -116,13 +116,14 @@ func (s *service) ValidateToken(ctx context.Context, member *athena.Member) (*at
 		return nil, err
 	}
 
-	if member.AccessToken != newToken.AccessToken {
-		member.AccessToken = newToken.AccessToken
-		member.Expires = newToken.Expiry
-		member.RefreshToken = newToken.RefreshToken
+	if member.AccessToken.String != newToken.AccessToken {
+		member.AccessToken.SetValid(newToken.AccessToken)
+		member.Expires.SetValid(newToken.Expiry)
+		member.RefreshToken.SetValid(newToken.RefreshToken)
 	}
 
 	return member, nil
+
 }
 
 func (s *service) BearerForCode(ctx context.Context, code string) (*oauth2.Token, error) {

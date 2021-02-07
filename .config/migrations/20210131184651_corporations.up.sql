@@ -1,10 +1,10 @@
 CREATE TABLE `corporations` (
     `id` INT UNSIGNED NOT NULL,
-    `name` VARCHAR(255) NOT NULL COLLATE 'utf8mb4_unicode_ci',
-    `ticker` VARCHAR(255) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+    `name` VARCHAR(255) NOT NULL,
+    `ticker` VARCHAR(255) NOT NULL,
     `ceo_id` INT UNSIGNED NOT NULL,
     `creator_id` INT UNSIGNED NOT NULL,
-    `alliance_id` INT NULL DEFAULT NULL,
+    `alliance_id` INT UNSIGNED NULL DEFAULT NULL,
     `home_station_id` INT UNSIGNED NULL DEFAULT NULL,
     `faction_id` INT UNSIGNED NULL DEFAULT NULL,
     `member_count` INT UNSIGNED NOT NULL,
@@ -16,9 +16,10 @@ CREATE TABLE `corporations` (
     `created_at` TIMESTAMP NOT NULL,
     `updated_at` TIMESTAMP NOT NULL,
     PRIMARY KEY (`id`) USING BTREE,
-    INDEX `corporation_ceo_id_idx` (`ceo_id`),
-    INDEX `corporation_creator_id_idx` (`creator_id`),
+    INDEX `corporations_ceo_id_idx` (`ceo_id`),
+    INDEX `corporations_creator_id_idx` (`creator_id`),
     INDEX `corporations_alliance_id_idx` (`alliance_id`),
     INDEX `corporations_home_station_id_idx` (`home_station_id`),
     INDEX `corporations_faction_id_idx` (`faction_id`),
+    INDEX `corporations_member_count_idx` (`member_count`)
 ) COLLATE = 'utf8mb4_unicode_ci' ENGINE = InnoDB;

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	nethttp "net/http"
@@ -8,11 +9,11 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
+	"github.com/eveisesi/athena/internal/mysqldb"
 	"github.com/go-redis/redis/v8"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
@@ -24,23 +25,24 @@ type app struct {
 	cfg          config
 	newrelic     *newrelic.Application
 	logger       *logrus.Logger
-	db           *mongo.Database
+	db           *sql.DB
 	redis        *redis.Client
 	client       *nethttp.Client
 	repositories repositories
 }
 
 type repositories struct {
-	member      athena.MemberRepository
-	character   athena.CharacterRepository
-	corporation athena.CorporationRepository
 	alliance    athena.AllianceRepository
+	character   athena.CharacterRepository
+	contact     athena.MemberContactRepository
+	corporation athena.CorporationRepository
 	clone       athena.CloneRepository
 	etag        athena.EtagRepository
 	location    athena.MemberLocationRepository
-	universe    athena.UniverseRepository
-	contact     athena.MemberContactRepository
+	member      athena.MemberRepository
+	migration   athena.MigrationRepository
 	skill       athena.MemberSkillRepository
+	universe    athena.UniverseRepository
 }
 
 // basics initializes the following
@@ -71,10 +73,10 @@ func basics(command string) *app {
 		app.logger.WithError(err).Fatal("failed to configure NR App")
 	}
 
-	// app.db, err = makeMongoDB(app.cfg)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to make mongo db connection")
-	// }
+	app.db, err = makeMySQL(app.cfg)
+	if err != nil {
+		app.logger.WithError(err).Fatal("failed to make mongo db connection")
+	}
 
 	app.redis = makeRedis(app.cfg)
 	if err != nil {
@@ -86,68 +88,19 @@ func basics(command string) *app {
 		Transport: newrelic.NewRoundTripper(nil),
 	}
 
-	// member, err := mongodb.NewMemberRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize member repository")
-	// }
-
-	// character, err := mongodb.NewCharacterRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize character repository")
-	// }
-
-	// corporation, err := mongodb.NewCorporationRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize corporation repository")
-	// }
-
-	// alliance, err := mongodb.NewAllianceRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize alliance repository")
-	// }
-
-	// clone, err := mongodb.NewCloneRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize alliance repository")
-	// }
-
-	// etag, err := mongodb.NewEtagRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize etag repository")
-	// }
-
-	// location, err := mongodb.NewLocationRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize location repository")
-	// }
-
-	// universe, err := mongodb.NewUniverseRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize universe repository")
-	// }
-
-	// contact, err := mongodb.NewMemberContactRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize contact repository")
-	// }
-
-	// skill, err := mongodb.NewMemberSkillRepository(app.db)
-	// if err != nil {
-	// 	app.logger.WithError(err).Fatal("failed to initialize skill repository")
-	// }
-
-	// app.repositories = repositories{
-	// 	member:      member,
-	// 	character:   character,
-	// 	corporation: corporation,
-	// 	alliance:    alliance,
-	// 	clone:       clone,
-	// 	etag:        etag,
-	// 	location:    location,
-	// 	universe:    universe,
-	// 	contact:     contact,
-	// 	skill:       skill,
-	// }
+	app.repositories = repositories{
+		member:      mysqldb.NewMemberRepository(app.db),
+		character:   mysqldb.NewCharacterRepository(app.db),
+		corporation: mysqldb.NewCorporationRepository(app.db),
+		alliance:    mysqldb.NewAllianceRepository(app.db),
+		etag:        mysqldb.NewEtagRepository(app.db),
+		universe:    mysqldb.NewUniverseRepository(app.db),
+		migration:   mysqldb.NewMigrationRepository(app.db),
+		clone:       mysqldb.NewCloneRepository(app.db),
+		skill:       mysqldb.NewSkillRepository(app.db),
+		// location:    location,
+		// contact:     contact,
+	}
 
 	return &app
 
@@ -170,6 +123,51 @@ func main() {
 		{
 			Name:   "universe",
 			Action: universeCommand,
+			Flags: []cli.Flag{
+				cli.StringSliceFlag{
+					Name:  "skip",
+					Usage: "skip certain imports so we don't have to wait to load the entire universe",
+				},
+				cli.BoolFlag{
+					Name:  "debug",
+					Usage: "disable the progress bar so debug output doesn't get overwritten",
+				},
+			},
+		},
+		{
+			Name: "migrate",
+			Subcommands: []cli.Command{
+				{
+					Name:   "up",
+					Action: migrateUpCommand,
+					Flags: []cli.Flag{
+						cli.IntFlag{
+							Name:  "steps",
+							Value: -1,
+						},
+					},
+				},
+				{
+					Name:   "down",
+					Action: migrateDownCommand,
+					Flags: []cli.Flag{
+						cli.IntFlag{
+							Name:  "steps",
+							Value: -1,
+						},
+					},
+				},
+				{
+					Name:   "create",
+					Action: migrateCreateCommand,
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:     "name",
+							Required: true,
+						},
+					},
+				},
+			},
 		},
 		{
 			Name:  "token",
@@ -203,10 +201,10 @@ func main() {
 				},
 			},
 		},
-		// {
-		// 	Name:   "test",
-		// 	Action: testCommand,
-		// },
+		{
+			Name:   "test",
+			Action: testCommand,
+		},
 	}
 
 	err := app.Run(os.Args)

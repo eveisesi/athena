@@ -13,7 +13,7 @@ type MemberContactRepository interface {
 }
 
 type memberContactRepository interface {
-	MemberContact(ctx context.Context, memberID uint, contactID int) (*MemberContact, error)
+	MemberContact(ctx context.Context, memberID, contactID uint) (*MemberContact, error)
 	MemberContacts(ctx context.Context, memberID uint) ([]*MemberContact, error)
 	CreateMemberContacts(ctx context.Context, memberID uint, contacts []*MemberContact) ([]*MemberContact, error)
 	UpdateMemberContact(ctx context.Context, memberID uint, contact *MemberContact) (*MemberContact, error)
@@ -23,7 +23,7 @@ type memberContactRepository interface {
 type memberContactLabelRepository interface {
 	MemberContactLabels(ctx context.Context, memberID uint) ([]*MemberContactLabel, error)
 	CreateMemberContactLabels(ctx context.Context, memberID uint, labels []*MemberContactLabel) ([]*MemberContactLabel, error)
-	UpdateMemberContactLabel(ctx context.Context, memberID uint, label *MemberContactLabel) (*MemberContactLabel, error)
+	UpdateMemberContactLabel(ctx context.Context, memberID uint, label []*MemberContactLabel) ([]*MemberContactLabel, error)
 	DeleteMemberContactLabels(ctx context.Context, memberID uint, labels []*MemberContactLabel) (bool, error)
 }
 

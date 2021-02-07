@@ -2,7 +2,6 @@ package processor
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/eveisesi/athena"
@@ -97,36 +96,57 @@ func (s *service) processMember(ctx context.Context, memberID uint) {
 		return
 	}
 
+	entry := s.logger.WithFields(logrus.Fields{
+		"member": member.ID,
+	})
+
 	// Member Retrieve successfully. Loop over the scopes array calling the functions in the scope map
-	for _, scope := range member.Scopes {
+	for i, scope := range member.Scopes {
+
+		entry := s.logger.WithField("scope", scope.Scope)
 
 		// If the scope expiry is valid, that means it has previously been called,
 		// and if the expiry is after the current time, that means that the cache timer
-		// has been expired yet, so updating the data now will not yield any fresh results
+		// has not expired yet, so attempting to update the data now will not yield any fresh results
 		if scope.Expiry.Valid && scope.Expiry.Time.After(time.Now()) {
-			fmt.Println(scope.Scope, "is not valid")
+			entry.Info("skipping valid and active scope")
+			time.Sleep(time.Second)
 			continue
 		}
 
 		if _, ok := s.scopes[scope.Scope]; !ok {
-			s.logger.WithField("scope", scope.Scope).Error("scope not supported")
+			entry.Error("scope not supported")
+			time.Sleep(time.Second)
 			continue
 		}
 
 		for _, resolver := range s.scopes[scope.Scope] {
-			s.logger.WithFields(logrus.Fields{
-				"member": member.ID,
-				"scope":  scope.Scope,
-				"name":   resolver.Name,
-			}).Infoln()
+			entry := entry.WithField("name", resolver.Name)
 
-			err := resolver.Func(ctx, member)
+			etag, err := resolver.Func(ctx, member)
 			if err != nil {
-				s.logger.WithError(err).WithField("field", scope.Scope).Errorln()
+				entry.WithError(err).Errorln()
+				continue
 			}
+
+			entry.Info("scope resolved successfully")
+
+			if etag != nil {
+				scope.Expiry.SetValid(etag.CachedUntil)
+			}
+
+			member.Scopes[i] = scope
+
 			time.Sleep(time.Second)
 		}
 
 	}
+
+	_, err = s.member.UpdateMember(ctx, member)
+	if err != nil {
+		entry.WithError(err).Error("failed to update member")
+	}
+
+	entry.Info("member processed successfully")
 
 }

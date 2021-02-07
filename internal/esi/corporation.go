@@ -31,14 +31,15 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 
 	mods := s.modifiers(ModWithCorporation(corporation))
 
-	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
-	if err != nil {
-		return nil, nil, err
-	}
+	// etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
 
 	path := endpoint.PathFunc(mods)
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path), WithEtag(etag))
+	// WithEtag(etag)
+	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -51,16 +52,16 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 			return nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		// etag.Etag = s.retrieveEtagHeader(res.Header)
 
 		if !isCorporationValid(corporation) {
 			return nil, nil, fmt.Errorf("invalid corporation return from esi, missing name or ticker")
 		}
 	case sc >= http.StatusBadRequest:
-		return corporation, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporation.CorporationID, sc)
+		return corporation, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporation.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	// etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 
 	return corporation, res, nil
 }
@@ -71,7 +72,7 @@ func (s *service) corporationKeyFunc(mods *modifiers) string {
 		panic("expected type *athena.Corporation to be provided, received nil for corporation instead")
 	}
 
-	return buildKey(GetCorporation.Name, strconv.Itoa(int(mods.corporation.CorporationID)))
+	return buildKey(GetCorporation.Name, strconv.Itoa(int(mods.corporation.ID)))
 }
 
 func (s *service) corporationPathFunc(mods *modifiers) string {
@@ -81,7 +82,7 @@ func (s *service) corporationPathFunc(mods *modifiers) string {
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCorporation.FmtPath, mods.corporation.CorporationID),
+		Path: fmt.Sprintf(GetCorporation.FmtPath, mods.corporation.ID),
 	}
 
 	return u.String()

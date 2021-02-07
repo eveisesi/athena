@@ -2,12 +2,13 @@ package etag
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Service interface {
@@ -41,11 +42,11 @@ func (s *service) Etag(ctx context.Context, etagID string) (*athena.Etag, error)
 
 	if etag == nil {
 		etag, err = s.EtagRepository.Etag(ctx, etagID)
-		if err != nil && err != mongo.ErrNoDocuments {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
 
-		if err == mongo.ErrNoDocuments {
+		if etag == nil || errors.Is(err, sql.ErrNoRows) {
 			etag = &athena.Etag{
 				EtagID: etagID,
 			}
@@ -58,13 +59,29 @@ func (s *service) Etag(ctx context.Context, etagID string) (*athena.Etag, error)
 }
 
 func (s *service) UpdateEtag(ctx context.Context, etagID string, etag *athena.Etag) (*athena.Etag, error) {
-
-	etag, err := s.EtagRepository.UpdateEtag(ctx, etag.EtagID, etag)
-	if err != nil {
-		return nil, err
+	var err error
+	if etag.ID > 0 {
+		etag, err = s.EtagRepository.UpdateEtag(ctx, etag.EtagID, etag)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		etag, err = s.EtagRepository.InsertEtag(ctx, etag)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	_ = s.cache.SetEtag(ctx, etag.EtagID, etag, cache.WithCustomExpiry(time.Since(etag.CachedUntil)))
+	_ = s.cache.SetEtag(
+		ctx,
+		etag.EtagID,
+		etag,
+		cache.WithCustomExpiry(
+			time.Since(
+				etag.CachedUntil,
+			),
+		),
+	)
 
 	return etag, nil
 

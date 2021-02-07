@@ -2,6 +2,8 @@ package contact
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,7 +17,6 @@ import (
 	"github.com/go-test/deep"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Service interface {
@@ -81,7 +82,7 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 		cached = false
 
 		contacts, err = s.contacts.MemberContacts(ctx, member.ID)
-		if err != nil && err != mongo.ErrNoDocuments {
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return nil, err
 		}
 	}
@@ -335,6 +336,13 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 		}
 	}
 
+	if len(labelsToDelete) > 0 {
+		_, err := s.contacts.DeleteMemberContactLabels(ctx, member.ID, labelsToDelete)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var final = make([]*athena.MemberContactLabel, 0)
 	if len(labelsToCreate) > 0 {
 		createdLabels, err := s.contacts.CreateMemberContactLabels(ctx, member.ID, labelsToCreate)
@@ -345,24 +353,11 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 	}
 
 	if len(labelsToUpdate) > 0 {
-		for _, label := range labelsToUpdate {
-			updated, err := s.contacts.UpdateMemberContactLabel(ctx, member.ID, label)
-			if err != nil {
-				return nil, err
-			}
-			final = append(final, updated)
-		}
-	}
-
-	if len(labelsToDelete) > 0 {
-		deleteOK, err := s.contacts.DeleteMemberContactLabels(ctx, member.ID, labelsToDelete)
+		updated, err := s.contacts.UpdateMemberContactLabel(ctx, member.ID, labelsToUpdate)
 		if err != nil {
 			return nil, err
 		}
-
-		if !deleteOK {
-			return nil, fmt.Errorf("Expected to delete %d documents, deleted none", len(labelsToDelete))
-		}
+		final = append(final, updated...)
 	}
 
 	return final, nil

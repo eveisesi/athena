@@ -45,7 +45,7 @@ type MemberMail struct {
 	IsRead     bool                  `db:"is_read" json:"is_read"`
 	Labels     []int                 `db:"labels" json:"labels"`
 	MailID     null.Int              `db:"mail_id" json:"mail_id"`
-	Recipients []MemberMailRecipient `db:"recipients" json:"recipients"`
+	Recipients []MemberMailRecipient `db:"-" json:"recipients"`
 	Subject    null.String           `db:"subject" json:"subject"`
 	Timestamp  time.Time             `db:"timestamp" json:"timestamp"`
 	CreatedAt  time.Time             `db:"created_at" json:"created_at"`

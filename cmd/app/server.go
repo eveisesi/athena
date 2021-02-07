@@ -49,7 +49,6 @@ func serverCommand(c *cli.Context) error {
 	server := server.NewServer(
 		basics.cfg.Server.Port,
 		basics.cfg.Env,
-		basics.db,
 		basics.logger,
 		cache,
 		basics.newrelic,

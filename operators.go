@@ -51,7 +51,7 @@ func (o Operation) IsValid() bool {
 	switch o {
 	case EqualOp, NotEqualOp,
 		GreaterThanOp, LessThanOp, GreaterThanEqualToOp, LessThanEqualToOp,
-		InOp, NotInOp,
+		InOp, NotInOp, LikeOp,
 		LimitOp, OrderOp, SkipOp, OrOp, AndOp, ExistsOp:
 		return true
 	}
@@ -160,12 +160,12 @@ func NewOrderOperator(column string, sort Sort) *Operator {
 
 }
 
-func NewInOperator(column string, value interface{}) *Operator {
+func NewInOperator(column string, values ...interface{}) *Operator {
 
 	return &Operator{
 		Column:    column,
 		Operation: InOp,
-		Value:     value,
+		Value:     values,
 	}
 
 }

@@ -12,21 +12,18 @@ import (
 )
 
 type cloneService interface {
-	MemberHomeClone(ctx context.Context, memberID uint) (*athena.MemberHomeClone, error)
-	SetMemberHomeClone(ctx context.Context, memberID uint, clones *athena.MemberHomeClone, optionFuncs ...OptionFunc) error
-	MemberJumpClones(ctx context.Context, memberID uint) ([]*athena.MemberJumpClone, error)
-	SetMemberJumpClones(ctx context.Context, memberID uint, clones []*athena.MemberJumpClone, optionFuncs ...OptionFunc) error
+	MemberClones(ctx context.Context, memberID uint) (*athena.MemberClones, error)
+	SetMemberClones(ctx context.Context, memberID uint, clones *athena.MemberClones, optionFuncs ...OptionFunc) error
 	MemberImplants(ctx context.Context, memberID uint) ([]*athena.MemberImplant, error)
 	SetMemberImplants(ctx context.Context, memberID uint, implants []*athena.MemberImplant, optionFuncs ...OptionFunc) error
 }
 
 const (
-	keyMemberClone      = "athena::member::${memberID}::clone"
-	keyMemberJumpClones = "athena::member::${memberID}::clones"
-	keyMemberImplants   = "athena::member::${memberID}::implants"
+	keyMemberClone    = "athena::member::${memberID}::clone"
+	keyMemberImplants = "athena::member::${memberID}::implants"
 )
 
-func (s *service) MemberHomeClone(ctx context.Context, memberID uint) (*athena.MemberHomeClone, error) {
+func (s *service) MemberClones(ctx context.Context, memberID uint) (*athena.MemberClones, error) {
 
 	key := format.Formatm(keyMemberClone, format.Values{
 		"memberID": memberID,
@@ -40,7 +37,7 @@ func (s *service) MemberHomeClone(ctx context.Context, memberID uint) (*athena.M
 		return nil, nil
 	}
 
-	var clone = new(athena.MemberHomeClone)
+	var clone = new(athena.MemberClones)
 	err = json.Unmarshal(result, clone)
 	if err != nil {
 		return nil, err
@@ -50,7 +47,7 @@ func (s *service) MemberHomeClone(ctx context.Context, memberID uint) (*athena.M
 
 }
 
-func (s *service) SetMemberHomeClone(ctx context.Context, memberID uint, clone *athena.MemberHomeClone, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberClones(ctx context.Context, memberID uint, clone *athena.MemberClones, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -65,59 +62,6 @@ func (s *service) SetMemberHomeClone(ctx context.Context, memberID uint, clone *
 	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
-	}
-
-	return nil
-
-}
-
-func (s *service) MemberJumpClones(ctx context.Context, memberID uint) ([]*athena.MemberJumpClone, error) {
-
-	key := format.Formatm(keyMemberJumpClones, format.Values{
-		"memberID": memberID,
-	})
-	members, err := s.client.SMembers(ctx, key).Result()
-	if err != nil && err != redis.Nil {
-		return nil, err
-	}
-
-	if len(members) == 0 {
-		return nil, nil
-	}
-
-	clones := make([]*athena.MemberJumpClone, len(members))
-	for i, member := range members {
-		var clone = new(athena.MemberJumpClone)
-		err = json.Unmarshal([]byte(member), clone)
-		if err != nil {
-			err = fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s on struct: %w", key, err)
-			newrelic.FromContext(ctx).NoticeError(err)
-			continue
-		}
-
-		clones[i] = clone
-
-	}
-
-	return clones, nil
-
-}
-
-func (s *service) SetMemberJumpClones(ctx context.Context, memberID uint, clones []*athena.MemberJumpClone, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	members := make([]interface{}, len(clones))
-	for i, clones := range clones {
-		members[i] = clones
-	}
-
-	key := format.Formatm(keyMemberJumpClones, format.Values{
-		"memberID": memberID,
-	})
-	_, err := s.client.SAdd(ctx, key, members, options.expiry).Result()
-	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to write to cache: %w", err)
 	}
 
 	return nil

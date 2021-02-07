@@ -7,50 +7,49 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
-	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 type skillService interface {
-	MemberSkillAttributes(ctx context.Context, id uint) (*athena.MemberSkillAttributes, error)
-	SetMemberSkillAttributes(ctx context.Context, id uint, attributes *athena.MemberSkillAttributes, options ...OptionFunc) error
+	MemberAttributes(ctx context.Context, id uint) (*athena.MemberAttributes, error)
+	SetMemberAttributes(ctx context.Context, id uint, attributes *athena.MemberAttributes, options ...OptionFunc) error
 	MemberSkillQueue(ctx context.Context, id uint) ([]*athena.MemberSkillQueue, error)
 	SetMemberSkillQueue(ctx context.Context, id uint, skillQueue []*athena.MemberSkillQueue, options ...OptionFunc) error
-	MemberSkills(ctx context.Context, id uint) ([]*athena.MemberSkill, error)
-	SetMemberSkills(ctx context.Context, id uint, skills []*athena.MemberSkill, options ...OptionFunc) error
-	MemberSkillMeta(ctx context.Context, id uint) (*athena.MemberSkillMeta, error)
-	SetMemberSkillMeta(ctx context.Context, id uint, meta *athena.MemberSkillMeta, optionFuncs ...OptionFunc) error
+	MemberSkills(ctx context.Context, id uint) ([]*athena.Skill, error)
+	SetMemberSkills(ctx context.Context, id uint, skills []*athena.Skill, options ...OptionFunc) error
+	MemberSkillProperties(ctx context.Context, id uint) (*athena.MemberSkills, error)
+	SetMemberSkillProperties(ctx context.Context, id uint, meta *athena.MemberSkills, optionFuncs ...OptionFunc) error
 }
 
 const (
-	keyMemberSkillAttributes = "athena::member::%d::skill::attributes"
+	keyMemberAttributes      = "athena::member::%d::skill::attributes"
 	keyMemberSkillQueue      = "athena::member::%d::skillqueue"
 	keyMemberSkills          = "athena::member::%d::skills"
-	keyMemberSkillMeta       = "athena::member::%d::skill::meta"
+	keyMemberSkillProperties = "athena::member::%d::skill::properties"
 )
 
-func (s *service) MemberSkillAttributes(ctx context.Context, id uint) (*athena.MemberSkillAttributes, error) {
+func (s *service) MemberAttributes(ctx context.Context, id uint) (*athena.MemberAttributes, error) {
 
-	key := fmt.Sprintf(keyMemberSkillAttributes, id)
-	result, err := s.client.Get(ctx, key).Bytes()
+	key := fmt.Sprintf(keyMemberAttributes, id)
+	data, err := s.client.Get(ctx, key).Bytes()
 	if err != nil && err != redis.Nil {
-		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch data from cache for key %s: %w", key, err)
 	}
 
-	if len(result) == 0 {
+	if len(data) == 0 {
 		return nil, nil
 	}
 
-	var attributes = new(athena.MemberSkillAttributes)
-	err = json.Unmarshal(result, attributes)
+	var attributes = new(athena.MemberAttributes)
+	err = json.Unmarshal(data, attributes)
 	if err != nil {
-		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal data for key %s on struct: %w", key, err)
 	}
 
 	return attributes, nil
 
 }
 
-func (s *service) SetMemberSkillAttributes(ctx context.Context, id uint, attributes *athena.MemberSkillAttributes, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberAttributes(ctx context.Context, id uint, attributes *athena.MemberAttributes, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -59,7 +58,7 @@ func (s *service) SetMemberSkillAttributes(ctx context.Context, id uint, attribu
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	key := fmt.Sprintf(keyMemberSkillAttributes, id)
+	key := fmt.Sprintf(keyMemberAttributes, id)
 	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
@@ -86,9 +85,7 @@ func (s *service) MemberSkillQueue(ctx context.Context, id uint) ([]*athena.Memb
 		var position = new(athena.MemberSkillQueue)
 		err = json.Unmarshal([]byte(member), position)
 		if err != nil {
-			err = fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s onto struct: %w", key, err)
-			newrelic.FromContext(ctx).NoticeError(err)
-			continue
+			return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s onto struct: %w", key, err)
 		}
 
 		positions[i] = position
@@ -122,7 +119,7 @@ func (s *service) SetMemberSkillQueue(ctx context.Context, id uint, positions []
 
 }
 
-func (s *service) MemberSkills(ctx context.Context, id uint) ([]*athena.MemberSkill, error) {
+func (s *service) MemberSkills(ctx context.Context, id uint) ([]*athena.Skill, error) {
 
 	key := fmt.Sprintf(keyMemberSkills, id)
 	members, err := s.client.SMembers(ctx, key).Result()
@@ -134,14 +131,12 @@ func (s *service) MemberSkills(ctx context.Context, id uint) ([]*athena.MemberSk
 		return nil, nil
 	}
 
-	skills := make([]*athena.MemberSkill, len(members))
+	skills := make([]*athena.Skill, len(members))
 	for i, member := range members {
-		var skill = new(athena.MemberSkill)
+		var skill = new(athena.Skill)
 		err = json.Unmarshal([]byte(member), skill)
 		if err != nil {
-			err = fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s onto struct: %w", key, err)
-			newrelic.FromContext(ctx).NoticeError(err)
-			continue
+			return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s onto struct: %w", key, err)
 		}
 
 		skills[i] = skill
@@ -151,7 +146,7 @@ func (s *service) MemberSkills(ctx context.Context, id uint) ([]*athena.MemberSk
 
 }
 
-func (s *service) SetMemberSkills(ctx context.Context, id uint, skills []*athena.MemberSkill, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberSkills(ctx context.Context, id uint, skills []*athena.Skill, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
@@ -175,9 +170,9 @@ func (s *service) SetMemberSkills(ctx context.Context, id uint, skills []*athena
 
 }
 
-func (s *service) MemberSkillMeta(ctx context.Context, id uint) (*athena.MemberSkillMeta, error) {
+func (s *service) MemberSkillProperties(ctx context.Context, id uint) (*athena.MemberSkills, error) {
 
-	key := fmt.Sprintf(keyMemberSkillMeta, id)
+	key := fmt.Sprintf(keyMemberSkillProperties, id)
 	result, err := s.client.Get(ctx, key).Bytes()
 	if err != nil && err != redis.Nil {
 		return nil, err
@@ -187,7 +182,7 @@ func (s *service) MemberSkillMeta(ctx context.Context, id uint) (*athena.MemberS
 		return nil, nil
 	}
 
-	var meta = new(athena.MemberSkillMeta)
+	var meta = new(athena.MemberSkills)
 
 	err = json.Unmarshal(result, meta)
 	if err != nil {
@@ -198,11 +193,11 @@ func (s *service) MemberSkillMeta(ctx context.Context, id uint) (*athena.MemberS
 
 }
 
-func (s *service) SetMemberSkillMeta(ctx context.Context, id uint, meta *athena.MemberSkillMeta, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberSkillProperties(ctx context.Context, id uint, meta *athena.MemberSkills, optionFuncs ...OptionFunc) error {
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	key := fmt.Sprintf(keyMemberSkillMeta, id)
+	key := fmt.Sprintf(keyMemberSkillProperties, id)
 	data, err := json.Marshal(meta)
 	if err != nil {
 		return fmt.Errorf("failed to marshal struct: %w", err)

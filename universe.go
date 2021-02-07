@@ -127,7 +127,7 @@ type Ancestry struct {
 }
 
 type Bloodline struct {
-	ID            uint      `db:"id" json:"id"`
+	ID            uint      `db:"id" json:"bloodline_id"`
 	Name          string    `db:"name" json:"name"`
 	RaceID        uint      `db:"race_id" json:"race_id"`
 	CorporationID uint      `db:"corporation_id" json:"corporation_id"`
@@ -160,15 +160,15 @@ type Constellation struct {
 }
 
 type Faction struct {
-	ID                   uint      `db:"id" json:"id"`
+	ID                   uint      `db:"id" json:"faction_id"`
 	Name                 string    `db:"name" json:"name"`
 	IsUnique             bool      `db:"is_unique" json:"is_unique"`
 	SizeFactor           float64   `db:"size_factor" json:"size_factor"`
 	StationCount         uint      `db:"station_count" json:"station_count"`
 	StationSystemCount   uint      `db:"station_system_count" json:"station_system_count"`
-	CorporationID        null.Int  `db:"corporation_id,omitempty" json:"corporation_id,omitempty"`
-	MilitiaCorporationID null.Int  `db:"militia_corporation_id,omitempty" json:"militia_corporation_id,omitempty"`
-	SolarSystemID        null.Int  `db:"solar_system_id,omitempty" json:"solar_system_id,omitempty"`
+	CorporationID        null.Uint `db:"corporation_id,omitempty" json:"corporation_id,omitempty"`
+	MilitiaCorporationID null.Uint `db:"militia_corporation_id,omitempty" json:"militia_corporation_id,omitempty"`
+	SolarSystemID        null.Uint `db:"solar_system_id,omitempty" json:"solar_system_id,omitempty"`
 	CreatedAt            time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt            time.Time `db:"updated_at" json:"updated_at"`
 }
@@ -184,11 +184,10 @@ type Group struct {
 }
 
 type Race struct {
-	ID         uint      `db:"id" json:"id"`
-	Name       string    `db:"name" json:"name"`
-	AllianceID null.Uint `db:"alliance_id" json:"alliance_id"`
-	CreatedAt  time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt  time.Time `db:"updated_at" json:"updated_at"`
+	ID        uint      `db:"id" json:"race_id"`
+	Name      string    `db:"name" json:"name"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type Region struct {

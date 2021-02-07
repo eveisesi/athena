@@ -3,6 +3,7 @@ package alliance
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
@@ -35,7 +36,7 @@ func NewService(cache cache.Service, esi esi.Service, alliance athena.AllianceRe
 func (s *service) Alliance(ctx context.Context, id uint, options []OptionFunc) (*athena.Alliance, error) {
 
 	alliance, err := s.AllianceRepository.Alliance(ctx, id)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		newrelic.FromContext(ctx).NoticeError(err)
 		return nil, err
 	}
@@ -72,12 +73,12 @@ func (s *service) Alliances(ctx context.Context, operators []*athena.Operator, o
 
 func (s *service) CreateAlliance(ctx context.Context, alliance *athena.Alliance, options []OptionFunc) (*athena.Alliance, error) {
 
-	alliance, err := s.AllianceRepository.CreateAlliance(ctx, alliance)
-	if err != nil {
-		newrelic.FromContext(ctx).NoticeError(err)
-		return nil, err
-	}
+	// err := s.AllianceRepository.CreateAlliance(ctx, alliance)
+	// if err != nil {
+	// 	newrelic.FromContext(ctx).NoticeError(err)
+	// 	return nil, err
+	// }
 
-	return alliance, nil
+	return nil, nil
 
 }

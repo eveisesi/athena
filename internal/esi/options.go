@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/eveisesi/athena"
+	"github.com/volatiletech/null"
 )
 
 type options struct {
@@ -104,12 +105,12 @@ func WithPage(i int) OptionFunc {
 	return WithQuery("page", strconv.Itoa(i))
 }
 
-func WithAuthorization(token string) OptionFunc {
-	if token == "" {
+func WithAuthorization(token null.String) OptionFunc {
+	if !token.Valid {
 		return emptyApplicator()
 	}
 
-	return WithHeader("authorization", fmt.Sprintf("Bearer %s", token))
+	return WithHeader("authorization", fmt.Sprintf("Bearer %s", token.String))
 }
 
 func emptyApplicator() OptionFunc {

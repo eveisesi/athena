@@ -28,13 +28,11 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type server struct {
 	port     uint
 	env      athena.Environment
-	db       *mongo.Database
 	logger   *logrus.Logger
 	newrelic *newrelic.Application
 
@@ -51,7 +49,6 @@ type server struct {
 func NewServer(
 	port uint,
 	env athena.Environment,
-	db *mongo.Database,
 	logger *logrus.Logger,
 	cache cache.Service,
 	newrelic *newrelic.Application,
@@ -65,7 +62,6 @@ func NewServer(
 	s := &server{
 		port:        port,
 		env:         env,
-		db:          db,
 		logger:      logger,
 		cache:       cache,
 		newrelic:    newrelic,

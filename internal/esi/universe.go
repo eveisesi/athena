@@ -109,23 +109,23 @@ func (s *service) GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodl
 
 }
 
-func (s *service) racesKeyFunc(mods *modifiers) string {
+func (s *service) bloodlinesKeyFunc(mods *modifiers) string {
 
-	return buildKey(GetRaces.Name)
-
-}
-
-func (s *service) racesPathFunc(mods *modifiers) string {
-
-	return GetRaces.FmtPath
+	return buildKey(GetBloodlines.Name)
 
 }
 
-func (s *service) newGetRacesEndpoint() *endpoint {
+func (s *service) bloodlinesPathFunc(mods *modifiers) string {
 
-	GetRaces.KeyFunc = s.racesKeyFunc
-	GetRaces.PathFunc = s.racesPathFunc
-	return GetRaces
+	return GetBloodlines.FmtPath
+
+}
+
+func (s *service) newGetBloodlinesEndpoint() *endpoint {
+
+	GetBloodlines.KeyFunc = s.bloodlinesKeyFunc
+	GetBloodlines.PathFunc = s.bloodlinesPathFunc
+	return GetBloodlines
 
 }
 
@@ -168,23 +168,23 @@ func (s *service) GetRaces(ctx context.Context, races []*athena.Race) ([]*athena
 
 }
 
-func (s *service) bloodlinesKeyFunc(mods *modifiers) string {
+func (s *service) racesKeyFunc(mods *modifiers) string {
 
-	return buildKey(GetBloodlines.Name)
-
-}
-
-func (s *service) bloodlinesPathFunc(mods *modifiers) string {
-
-	return GetBloodlines.FmtPath
+	return buildKey(GetRaces.Name)
 
 }
 
-func (s *service) newGetBloodlinesEndpoint() *endpoint {
+func (s *service) racesPathFunc(mods *modifiers) string {
 
-	GetBloodlines.KeyFunc = s.bloodlinesKeyFunc
-	GetBloodlines.PathFunc = s.bloodlinesPathFunc
-	return GetBloodlines
+	return GetRaces.FmtPath
+
+}
+
+func (s *service) newGetRacesEndpoint() *endpoint {
+
+	GetRaces.KeyFunc = s.racesKeyFunc
+	GetRaces.PathFunc = s.racesPathFunc
+	return GetRaces
 
 }
 
@@ -308,7 +308,7 @@ func (s *service) newGetCategoriesEndpoint() *endpoint {
 
 func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCategories.Name]
+	endpoint := s.endpoints[GetCategory.Name]
 
 	mods := s.modifiers(ModWithCategory(category))
 
@@ -519,7 +519,7 @@ func (s *service) newGetTypeEndpoint() *endpoint {
 
 }
 
-func (s *service) GetRegions(ctx context.Context, ids []int) ([]int, *http.Response, error) {
+func (s *service) GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Response, error) {
 
 	endpoint := s.endpoints[GetRegions.Name]
 
@@ -582,7 +582,7 @@ func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena
 
 	endpoint := s.endpoints[GetRegion.Name]
 
-	mods := s.modifiers()
+	mods := s.modifiers(ModWithRegion(region))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -651,7 +651,7 @@ func (s *service) newGetRegionEndpoint() *endpoint {
 
 func (s *service) GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error) {
 
-	endpoint := s.endpoints[GetRaces.Name]
+	endpoint := s.endpoints[GetConstellation.Name]
 
 	mods := s.modifiers(ModWithConstellation(constellation))
 
@@ -722,7 +722,7 @@ func (s *service) newGetConstellationEndpoint() *endpoint {
 
 func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error) {
 
-	endpoint := s.endpoints[GetRaces.Name]
+	endpoint := s.endpoints[GetSolarSystem.Name]
 
 	mods := s.modifiers(ModWithSystem(solarSystem))
 

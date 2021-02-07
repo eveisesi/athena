@@ -11,7 +11,13 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberSkillAttributes) (*athena.MemberSkillAttributes, *http.Response, error) {
+type skillInterface interface {
+	GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberAttributes) (*athena.MemberAttributes, *athena.Etag, *http.Response, error)
+	GetCharacterSkills(ctx context.Context, member *athena.Member, meta *athena.MemberSkills) (*athena.MemberSkills, *athena.Etag, *http.Response, error)
+	GetCharacterSkillQueue(ctx context.Context, member *athena.Member, queue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, *athena.Etag, *http.Response, error)
+}
+
+func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberAttributes) (*athena.MemberAttributes, *athena.Etag, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCharacterAttributes.Name]
 
@@ -19,7 +25,7 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -32,7 +38,7 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	switch sc := res.StatusCode; {
@@ -40,20 +46,22 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 		err = json.Unmarshal(b, attributes)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
-		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
-			attributes.Etag = etag
-		}
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return attributes, res, fmt.Errorf("failed to fetch attributes for character %d, received status code of %d", member.ID, sc)
+		return attributes, etag, res, fmt.Errorf("failed to fetch attributes for character %d, received status code of %d", member.ID, sc)
 	}
 
-	attributes.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
 
-	return attributes, res, nil
+	return attributes, etag, res, nil
 
 }
 
@@ -86,7 +94,7 @@ func (s *service) newGetCharacterAttributesEndpoint() *endpoint {
 	return GetCharacterAttributes
 }
 
-func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member, meta *athena.MemberSkillMeta) (*athena.MemberSkillMeta, *http.Response, error) {
+func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member, skills *athena.MemberSkills) (*athena.MemberSkills, *athena.Etag, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCharacterSkills.Name]
 
@@ -94,7 +102,7 @@ func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member,
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -107,26 +115,30 @@ func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member,
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &meta)
+		err = json.Unmarshal(b, &skills)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return meta, res, fmt.Errorf("failed to fetch skills for character %d, received status code of %d", member.ID, sc)
+		return skills, etag, res, fmt.Errorf("failed to fetch skills for character %d, received status code of %d", member.ID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
 
-	return meta, res, nil
+	return skills, etag, res, nil
 
 }
 
@@ -159,7 +171,7 @@ func (s *service) newGetCharacterSkillsEndpoint() *endpoint {
 	return GetCharacterSkills
 }
 
-func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Member, queue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, *http.Response, error) {
+func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Member, queue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, *athena.Etag, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCharacterSkillQueue.Name]
 
@@ -167,7 +179,7 @@ func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Mem
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -180,7 +192,7 @@ func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Mem
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	switch sc := res.StatusCode; {
@@ -188,18 +200,22 @@ func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Mem
 		err = json.Unmarshal(b, &queue)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return queue, res, fmt.Errorf("failed to fetch skill queue for character %d, received status code of %d", member.ID, sc)
+		return queue, etag, res, fmt.Errorf("failed to fetch skill queue for character %d, received status code of %d", member.ID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
 
-	return queue, res, nil
+	return queue, etag, res, nil
 
 }
 

@@ -1,10 +1,16 @@
 CREATE TABLE `bloodlines` (
 	`id` INT UNSIGNED NOT NULL,
-	`name` VARCHAR(255) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`name` VARCHAR(255) NOT NULL,
 	`race_id` INT UNSIGNED NOT NULL,
+	`corporation_id` INT UNSIGNED NOT NULL,
+	`ship_type_id` INT UNSIGNED NOT NULL,
+	`charisma` INT UNSIGNED NOT NULL,
+	`intelligence` INT UNSIGNED NOT NULL,
+	`memory` INT UNSIGNED NOT NULL,
+	`perception` INT UNSIGNED NOT NULL,
+	`willpower` INT UNSIGNED NOT NULL,
 	`created_at` TIMESTAMP NOT NULL,
 	`updated_at` TIMESTAMP NOT NULL,
-	PRIMARY KEY (`id`),
-	INDEX `bloodlines_race_id_idx` (`race_id`),
-	CONSTRAINT `bloodlines_race_id_races_id_foreign` FOREIGN KEY (`race_id`) REFERENCES `athena`.`races` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `bloodlines_race_id_idx` (`race_id`) USING BTREE
 ) COLLATE = 'utf8mb4_unicode_ci' ENGINE = InnoDB;

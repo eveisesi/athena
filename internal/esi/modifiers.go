@@ -82,6 +82,13 @@ func ModWithCorporation(corporation *athena.Corporation) modifierFunc {
 	}
 }
 
+func ModWithRegion(region *athena.Region) modifierFunc {
+	return func(mod *modifiers) *modifiers {
+		mod.region = region
+		return mod
+	}
+}
+
 func ModWithConstellation(constellation *athena.Constellation) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.constellation = constellation

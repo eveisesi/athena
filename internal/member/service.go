@@ -11,7 +11,6 @@ import (
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/corporation"
-	"github.com/volatiletech/null"
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/auth"
@@ -20,7 +19,7 @@ import (
 
 type Service interface {
 	Member(ctx context.Context, memberID uint) (*athena.Member, error)
-	// UpdateMember(ctx context.Context, member *athena.Member) (*athena.Member, error)
+	UpdateMember(ctx context.Context, member *athena.Member) (*athena.Member, error)
 	Login(ctx context.Context, code, state string) error
 	ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error)
 	MemberFromToken(ctx context.Context, token jwt.Token) (*athena.Member, error)
@@ -99,12 +98,17 @@ func (s *service) Member(ctx context.Context, memberID uint) (*athena.Member, er
 
 }
 
+func (s *service) UpdateMember(ctx context.Context, member *athena.Member) (*athena.Member, error) {
+	return s.member.UpdateMember(ctx, member.ID, member)
+}
+
 func (s *service) Login(ctx context.Context, code, state string) error {
 
 	attempt, err := s.auth.AuthAttempt(ctx, state)
 	if err != nil {
 		return err
 	}
+
 	if attempt != nil && attempt.Status == athena.InvalidAuthStatus {
 		return fmt.Errorf("attempt is no longer valid")
 	}
@@ -125,9 +129,9 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 		return err
 	}
 
-	member.AccessToken = bearer.AccessToken
-	member.RefreshToken = bearer.RefreshToken
-	member.Expires = bearer.Expiry
+	member.AccessToken.SetValid(bearer.AccessToken)
+	member.RefreshToken.SetValid(bearer.RefreshToken)
+	member.Expires.SetValid(bearer.Expiry)
 
 	_, err = s.member.UpdateMember(ctx, member.ID, member)
 	if err != nil {
@@ -138,7 +142,7 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 	_ = s.cache.SetMember(ctx, member.ID, member)
 
 	attempt.Status = athena.CompletedAuthStatus
-	attempt.Token = null.NewString(member.AccessToken, true)
+	attempt.Token = member.AccessToken
 
 	_, err = s.auth.UpdateAuthAttempt(ctx, attempt.State, attempt)
 	if err != nil {
@@ -161,19 +165,12 @@ func (s *service) MemberFromToken(ctx context.Context, token jwt.Token) (*athena
 		return nil, err
 	}
 
-	operators := []*athena.Operator{athena.NewEqualOperator("id", memberID), athena.NewLimitOperator(1)}
-
-	members, err := s.member.Members(ctx, operators...)
+	member, err := s.member.Member(ctx, memberID)
 	if err != nil {
 		return nil, err
 	}
 
-	var member *athena.Member
-	if len(members) > 1 {
-		return nil, fmt.Errorf("invalid number of results returned from member query")
-	} else if len(members) == 1 {
-		member = members[0]
-	} else {
+	if member == nil {
 		// This is a new member, lets create a record for them.
 		character, err := s.character.Character(ctx, memberID, character.NewOptionFuncs())
 		if err != nil {
@@ -205,7 +202,7 @@ func (s *service) MemberFromToken(ctx context.Context, token jwt.Token) (*athena
 		return nil, fmt.Errorf("failed to process token. owner hash is missing")
 	}
 
-	member.OwnerHash = claims["owner"].(string)
+	member.OwnerHash.SetValid(claims["owner"].(string))
 
 	if _, ok := claims["scp"]; ok {
 		scp := []athena.MemberScope{}

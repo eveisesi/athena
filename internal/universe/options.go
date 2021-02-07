@@ -1,28 +1,53 @@
 package universe
 
-// type options struct {
-// 	skipCache bool
-// }
+type options struct {
+	loc bool
+	inv bool
+	chr bool
 
-// type OptionFunc func(*options) *options
+	disableProgress bool
+}
 
-// func NewOptionFuncs(optionFuncs ...OptionFunc) []OptionFunc {
-// 	return optionFuncs
-// }
+type OptionFunc func(*options) *options
 
-// func (s *service) options(optionFuncs []OptionFunc) *options {
-// 	options := &options{}
+func (s *service) options(optionFuncs ...OptionFunc) *options {
+	options := &options{
+		loc: true,
+		inv: true,
+		chr: true,
+	}
 
-// 	for _, optionFunc := range optionFuncs {
-// 		options = optionFunc(options)
-// 	}
+	for _, optionFunc := range optionFuncs {
+		options = optionFunc(options)
+	}
 
-// 	return options
-// }
+	return options
+}
 
-// func SkipCache() OptionFunc {
-// 	return func(o *options) *options {
-// 		o.skipCache = true
-// 		return o
-// 	}
-// }
+func WithDisableProgress() OptionFunc {
+	return func(o *options) *options {
+		o.disableProgress = true
+		return o
+	}
+}
+
+func WithoutChr() OptionFunc {
+	return func(o *options) *options {
+		o.chr = false
+		return o
+	}
+}
+
+func WithoutInv() OptionFunc {
+	return func(o *options) *options {
+		o.inv = false
+		return o
+	}
+}
+
+func WithoutLoc() OptionFunc {
+	return func(o *options) *options {
+		o.loc = false
+		return o
+	}
+}

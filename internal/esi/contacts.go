@@ -37,11 +37,16 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 
 	if res.StatusCode >= http.StatusBadRequest {
 		return contacts, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.ID, res.StatusCode)
-	} else if res.StatusCode == http.StatusNotModified {
+	} else {
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+		}
+
+		if res.StatusCode == http.StatusNotModified {
+			return contacts, res, nil
 		}
 	}
 
@@ -56,7 +61,7 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 
 		mods := s.modifiers(ModWithMember(member), ModWithPage(&i))
 
-		etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+		pageEtag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -67,7 +72,7 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 			ctx,
 			WithMethod(http.MethodGet),
 			WithPath(path),
-			WithEtag(etag),
+			WithEtag(pageEtag),
 			WithPage(i),
 			WithAuthorization(member.AccessToken),
 		)
@@ -92,9 +97,9 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 		}
 
 		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
-		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+		_, err = s.etag.UpdateEtag(ctx, pageEtag.EtagID, pageEtag)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
 		}
 	}
 
