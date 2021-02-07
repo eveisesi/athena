@@ -42,7 +42,7 @@ type MemberJumpClone struct {
 	JumpCloneID  uint      `db:"jump_clone_id" json:"jump_clone_id"`
 	LocationID   uint64    `db:"location_id" json:"location_id"`
 	LocationType string    `db:"location_type" json:"location_type"`
-	Implants     UintSlice `db:"implants" json:"implants"`
+	Implants     SliceUint `db:"implants" json:"implants"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
 }
@@ -53,26 +53,23 @@ type MemberImplant struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
 
-type UintSlice []uint
+type SliceUint []uint
 
-func (s *UintSlice) Scan(value interface{}) error {
+func (s *SliceUint) Scan(value interface{}) error {
 
 	switch data := value.(type) {
 	case []byte:
-		var values UintSlice
-		err := json.Unmarshal(data, &values)
+		err := json.Unmarshal(data, s)
 		if err != nil {
 			return err
 		}
-
-		*s = values
 	}
 
 	return nil
 
 }
 
-func (s UintSlice) Value() (driver.Value, error) {
+func (s SliceUint) Value() (driver.Value, error) {
 
 	var data []byte
 	var err error
@@ -82,7 +79,7 @@ func (s UintSlice) Value() (driver.Value, error) {
 		data, err = json.Marshal(s)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("[UintSlice] Failed to marshal slice of string for storage in data store: %w", err)
+		return nil, fmt.Errorf("[SliceUint] Failed to marshal slice of uints for storage in data store: %w", err)
 	}
 
 	return data, nil
