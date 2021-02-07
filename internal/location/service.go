@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/eveisesi/athena"
@@ -16,14 +17,14 @@ import (
 )
 
 type Service interface {
-	MemberLocation(ctx context.Context, member *athena.Member) (*athena.MemberLocation, error)
-	EmptyMemberLocation(ctx context.Context, member *athena.Member) error
+	EmptyMemberLocation(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberLocation(ctx context.Context, member *athena.Member) (*athena.MemberLocation, *athena.Etag, error)
 
-	MemberOnline(ctx context.Context, member *athena.Member) (*athena.MemberOnline, error)
-	EmptyMemberOnline(ctx context.Context, member *athena.Member) error
+	EmptyMemberOnline(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberOnline(ctx context.Context, member *athena.Member) (*athena.MemberOnline, *athena.Etag, error)
 
-	MemberShip(ctx context.Context, member *athena.Member) (*athena.MemberShip, error)
-	EmptyMemberShip(ctx context.Context, member *athena.Member) error
+	EmptyMemberShip(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberShip(ctx context.Context, member *athena.Member) (*athena.MemberShip, *athena.Etag, error)
 }
 
 type service struct {
@@ -35,6 +36,10 @@ type service struct {
 
 	location athena.MemberLocationRepository
 }
+
+const (
+	errPrefix = "[Location Service]"
+)
 
 func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, universe universe.Service, location athena.MemberLocationRepository) Service {
 	return &service{
@@ -48,62 +53,86 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, uni
 	}
 }
 
-func (s *service) EmptyMemberLocation(ctx context.Context, member *athena.Member) error {
+func (s *service) EmptyMemberLocation(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	_, err := s.MemberLocation(ctx, member)
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterLocation, esi.ModWithMember(member))
+	if err != nil {
+		return nil, fmt.Errorf("%s Failed to fetch Etag Object: %w", errPrefix, err)
+	}
 
-	return err
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
+		return etag, nil
+	}
+
+	_, etag, err = s.MemberLocation(ctx, member)
+
+	return etag, err
 
 }
 
-func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*athena.MemberLocation, error) {
+func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*athena.MemberLocation, *athena.Etag, error) {
 
-	var upsert string = "update"
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterLocation, esi.ModWithMember(member))
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s Failed to fetch Etag Object: %w", errPrefix, err)
+	}
+
+	exists := true
+	cached := true
 
 	location, err := s.cache.MemberLocation(ctx, member.ID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if location == nil {
+		cached = false
 		location, err = s.location.MemberLocation(ctx, member.ID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, err
+			return nil, nil, err
 		}
 
-		if errors.Is(err, sql.ErrNoRows) {
-			upsert = "create"
+		if location == nil || errors.Is(err, sql.ErrNoRows) {
+			exists = false
 			location = &athena.MemberLocation{
 				MemberID: member.ID,
 			}
 		}
 	}
 
-	if location.CachedUntil.After(time.Now()) {
-		return location, nil
+	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
+
+		if !cached {
+			err = s.cache.SetMemberLocation(ctx, member.ID, location)
+			if err != nil {
+				newrelic.FromContext(ctx).NoticeError(err)
+			}
+		}
+
+		return location, etag, nil
+
 	}
 
-	location, _, err = s.esi.GetCharacterLocation(ctx, member, location)
+	location, etag, _, err = s.esi.GetCharacterLocation(ctx, member, location)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch location for member")
-		return nil, err
+		return nil, nil, err
 	}
 
 	s.resolveLocationAttributes(ctx, member, location)
 
-	switch upsert {
-	case "create":
-		location, err = s.location.CreateMemberLocation(ctx, location)
-		if err != nil {
-			return nil, err
-		}
-
-	case "update":
+	switch exists {
+	case true:
 		location, err = s.location.UpdateMemberLocation(ctx, member.ID, location)
 		if err != nil {
-			return nil, err
+			return nil, etag, err
 		}
 
+	case false:
+		location, err = s.location.CreateMemberLocation(ctx, member.ID, location)
+		if err != nil {
+			return nil, etag, err
+		}
 	}
 
 	err = s.cache.SetMemberLocation(ctx, location.MemberID, location)
@@ -111,7 +140,8 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 		newrelic.FromContext(ctx).NoticeError(err)
 	}
 
-	return location, nil
+	return location, etag, nil
+
 }
 
 func (s *service) resolveLocationAttributes(ctx context.Context, member *athena.Member, location *athena.MemberLocation) {
@@ -139,59 +169,84 @@ func (s *service) resolveLocationAttributes(ctx context.Context, member *athena.
 
 }
 
-func (s *service) EmptyMemberShip(ctx context.Context, member *athena.Member) error {
+func (s *service) EmptyMemberShip(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	_, err := s.MemberShip(ctx, member)
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterShip, esi.ModWithMember(member))
+	if err != nil {
+		return nil, fmt.Errorf("%s Failed to fetch Etag Object: %w", errPrefix, err)
+	}
 
-	return err
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
+		return etag, nil
+	}
+
+	_, etag, err = s.MemberShip(ctx, member)
+
+	return etag, err
 
 }
 
-func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athena.MemberShip, error) {
+func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athena.MemberShip, *athena.Etag, error) {
 
-	var upsert string = "update"
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterShip, esi.ModWithMember(member))
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s Failed to fetch Etag Object: %w", errPrefix, err)
+	}
+
+	exists := true
+	cached := true
 
 	ship, err := s.cache.MemberShip(ctx, member.ID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if ship == nil {
+		cached = false
 		ship, err = s.location.MemberShip(ctx, member.ID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, err
+			return nil, nil, err
 		}
 
-		if errors.Is(err, sql.ErrNoRows) {
-			upsert = "create"
+		if ship == nil || errors.Is(err, sql.ErrNoRows) {
+			exists = false
 			ship = &athena.MemberShip{
 				MemberID: member.ID,
 			}
 		}
 	}
 
-	if ship.CachedUntil.After(time.Now()) {
-		return ship, nil
+	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
+
+		if !cached {
+			err = s.cache.SetMemberShip(ctx, member.ID, ship)
+			if err != nil {
+				newrelic.FromContext(ctx).NoticeError(err)
+			}
+		}
+
+		return ship, etag, nil
+
 	}
 
-	ship, _, err = s.esi.GetCharacterShip(ctx, member, ship)
+	ship, etag, _, err = s.esi.GetCharacterShip(ctx, member, ship)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch location for member")
-		return nil, err
+		return nil, etag, err
 	}
 
 	s.resolveShipAttributes(ctx, member, ship)
 
-	switch upsert {
-	case "create":
-		ship, err = s.location.CreateMemberShip(ctx, ship)
-		if err != nil {
-			return nil, err
-		}
-	case "update":
+	switch exists {
+	case true:
 		ship, err = s.location.UpdateMemberShip(ctx, member.ID, ship)
 		if err != nil {
-			return nil, err
+			return nil, etag, err
+		}
+	case false:
+		ship, err = s.location.CreateMemberShip(ctx, member.ID, ship)
+		if err != nil {
+			return nil, etag, err
 		}
 	}
 
@@ -200,7 +255,8 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 		newrelic.FromContext(ctx).NoticeError(err)
 	}
 
-	return ship, nil
+	return ship, etag, nil
+
 }
 
 func (s *service) resolveShipAttributes(ctx context.Context, member *athena.Member, ship *athena.MemberShip) {
@@ -212,57 +268,82 @@ func (s *service) resolveShipAttributes(ctx context.Context, member *athena.Memb
 
 }
 
-func (s *service) EmptyMemberOnline(ctx context.Context, member *athena.Member) error {
+func (s *service) EmptyMemberOnline(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	_, err := s.MemberOnline(ctx, member)
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterOnline, esi.ModWithMember(member))
+	if err != nil {
+		return nil, fmt.Errorf("%s Failed to fetch Etag Object: %w", errPrefix, err)
+	}
 
-	return err
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
+		return etag, nil
+	}
+
+	_, etag, err = s.MemberOnline(ctx, member)
+
+	return etag, err
 
 }
 
-func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*athena.MemberOnline, error) {
+func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*athena.MemberOnline, *athena.Etag, error) {
 
-	var upsert string = "update"
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterOnline, esi.ModWithMember(member))
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s Failed to fetch Etag Object: %w", errPrefix, err)
+	}
+
+	exists := true
+	cached := true
 
 	online, err := s.cache.MemberOnline(ctx, member.ID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if online == nil {
+		cached = false
 		online, err = s.location.MemberOnline(ctx, member.ID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, err
+			return nil, nil, err
 		}
 
-		if errors.Is(err, sql.ErrNoRows) {
-			upsert = "create"
+		if online == nil || errors.Is(err, sql.ErrNoRows) {
+			exists = false
 			online = &athena.MemberOnline{
 				MemberID: member.ID,
 			}
 		}
 	}
 
-	if online.CachedUntil.After(time.Now()) {
-		return nil, err
+	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
+
+		if !cached {
+			err = s.cache.SetMemberOnline(ctx, member.ID, online)
+			if err != nil {
+				newrelic.FromContext(ctx).NoticeError(err)
+			}
+		}
+
+		return online, etag, nil
+
 	}
 
-	online, _, err = s.esi.GetCharacterOnline(ctx, member, online)
+	online, etag, _, err = s.esi.GetCharacterOnline(ctx, member, online)
 	if err != nil {
 		s.logger.WithError(err).Error("failed to fetch location for member")
-		return nil, err
+		return nil, nil, err
 	}
 
-	switch upsert {
-	case "create":
-		online, err = s.location.CreateMemberOnline(ctx, online)
+	switch exists {
+	case false:
+		online, err = s.location.CreateMemberOnline(ctx, member.ID, online)
 		if err != nil {
-			return nil, err
+			return nil, etag, err
 		}
-	case "update":
+	case true:
 		online, err = s.location.UpdateMemberOnline(ctx, member.ID, online)
 		if err != nil {
-			return nil, err
+			return nil, etag, err
 		}
 	}
 
@@ -271,6 +352,6 @@ func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*ath
 		newrelic.FromContext(ctx).NoticeError(err)
 	}
 
-	return online, nil
+	return online, etag, nil
 
 }

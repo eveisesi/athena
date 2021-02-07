@@ -11,13 +11,19 @@ import (
 	"github.com/eveisesi/athena"
 )
 
+type locationInterface interface {
+	GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *athena.Etag, *http.Response, error)
+	GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *athena.Etag, *http.Response, error)
+	GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *athena.Etag, *http.Response, error)
+}
+
 // GetCharacterLocation makes an HTTP GET Request to the /characters/{character_id}/location endpoint for
 // information about the provided members current location
 //
 // Documentation: https://esi.evetech.net/ui/#/Location/get_characters_character_id_location
 // Version: v1
 // Cache: 5 secs
-func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *http.Response, error) {
+func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *athena.Etag, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCharacterLocation.Name]
 
@@ -25,7 +31,7 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -38,7 +44,7 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	switch sc := res.StatusCode; {
@@ -46,20 +52,22 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 		err = json.Unmarshal(b, location)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
-		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
-			location.Etag = etag
-		}
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return location, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.ID, sc)
+		return location, etag, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.ID, sc)
 	}
 
-	location.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
 
-	return location, res, nil
+	return location, etag, res, nil
 
 }
 
@@ -94,7 +102,7 @@ func (s *service) newGetCharacterLocationEndpoint() *endpoint {
 
 }
 
-func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *http.Response, error) {
+func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *athena.Etag, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCharacterOnline.Name]
 
@@ -102,7 +110,7 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -115,10 +123,10 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	switch sc := res.StatusCode; {
@@ -126,20 +134,22 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 		err = json.Unmarshal(b, online)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
-		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
-			online.Etag = etag
-		}
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return online, res, fmt.Errorf("failed to fetch online for character %d, received status code of %d", member.ID, sc)
+		return online, etag, res, fmt.Errorf("failed to fetch online for character %d, received status code of %d", member.ID, sc)
 	}
 
-	online.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
 
-	return online, res, nil
+	return online, etag, res, nil
 
 }
 
@@ -174,7 +184,7 @@ func (s *service) newGetCharacterOnlineEndpoint() *endpoint {
 
 }
 
-func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *http.Response, error) {
+func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *athena.Etag, *http.Response, error) {
 
 	endpoint := s.endpoints[GetCharacterShip.Name]
 
@@ -182,7 +192,7 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -195,7 +205,7 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	switch sc := res.StatusCode; {
@@ -203,20 +213,22 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 		err = json.Unmarshal(b, ship)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
-		if etag := s.retrieveEtagHeader(res.Header); etag != "" {
-			ship.Etag = etag
-		}
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return ship, res, fmt.Errorf("failed to fetch ship for character %d, received status code of %d", member.ID, sc)
+		return ship, etag, res, fmt.Errorf("failed to fetch ship for character %d, received status code of %d", member.ID, sc)
 	}
 
-	ship.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
 
-	return ship, res, nil
+	return ship, etag, res, nil
 
 }
 
