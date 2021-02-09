@@ -26,9 +26,9 @@ func processorCommand(c *cli.Context) error {
 	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
 	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
-	character := character.NewService(cache, esi, basics.repositories.character)
-	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
 	alliance := alliance.NewService(cache, esi, basics.repositories.alliance)
+	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
+	character := character.NewService(basics.logger, cache, esi, corporation, basics.repositories.character)
 
 	auth := auth.NewService(
 		cache,

@@ -6,17 +6,21 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/squirrel"
+	sq "github.com/Masterminds/squirrel"
 	"github.com/eveisesi/athena"
 	"github.com/jmoiron/sqlx"
 )
 
 type corporationRepository struct {
-	db *sqlx.DB
+	db                   *sqlx.DB
+	corporation, history string
 }
 
 func NewCorporationRepository(db *sql.DB) athena.CorporationRepository {
 	return &corporationRepository{
-		db: sqlx.NewDb(db, "mysql"),
+		db:          sqlx.NewDb(db, "mysql"),
+		corporation: "corporations",
+		history:     "corporation_alliance_history",
 	}
 }
 
@@ -42,7 +46,7 @@ func (r *corporationRepository) Corporations(ctx context.Context, operators ...*
 		"date_founded", "faction_id", "home_station_id", "member_count",
 		"name", "shares", "tax_rate", "ticker",
 		"url", "war_eligible", "created_at", "updated_at",
-	), operators...).From("corporations").ToSql()
+	).From(r.corporation), operators...).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("[Corporation Repository] Failed to generate query: %w", err)
 	}
@@ -84,7 +88,7 @@ func (r *corporationRepository) CreateCorporation(ctx context.Context, corporati
 
 func (r *corporationRepository) UpdateCorporation(ctx context.Context, id uint, corporation *athena.Corporation) (*athena.Corporation, error) {
 
-	u := squirrel.Update("corporations").
+	u := squirrel.Update(r.corporation).
 		Set("alliance_id", corporation.AllianceID).
 		Set("ceo_id", corporation.CeoID).
 		Set("faction_id", corporation.FactionID).
@@ -108,5 +112,54 @@ func (r *corporationRepository) UpdateCorporation(ctx context.Context, id uint, 
 	}
 
 	return r.Corporation(ctx, corporation.ID)
+
+}
+func (r *corporationRepository) CorporationAllianceHistory(ctx context.Context, operators ...*athena.Operator) ([]*athena.CorporationAllianceHistory, error) {
+
+	query, args, err := BuildFilters(sq.Select(
+		"corporation_id",
+		"alliance_id", "is_deleted",
+		"record_id", "start_date",
+		"created_at", "updated_at",
+	).From(r.history), operators...).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("[Character Repository] Failed to generate select query: %w", err)
+	}
+
+	var histories = make([]*athena.CorporationAllianceHistory, 0)
+	err = r.db.SelectContext(ctx, &histories, query, args...)
+
+	return histories, err
+
+}
+
+func (r *corporationRepository) CreateCorporationAllianceHistory(ctx context.Context, id uint, records []*athena.CorporationAllianceHistory) ([]*athena.CorporationAllianceHistory, error) {
+
+	i := sq.Insert(r.history).Options("IGNORE").Columns(
+		"corporation_id",
+		"alliance_id", "is_deleted",
+		"record_id", "start_date",
+		"created_at", "updated_at",
+	)
+	for _, record := range records {
+		i.Values(
+			id,
+			record.AllianceID, record.IsDeleteed,
+			record.RecordID, record.StartDate,
+			record.StartDate, sq.Expr(`NOW()`, sq.Expr(`NOW()`)),
+		)
+	}
+
+	query, args, err := i.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("[Corporation Repository] Failed to generate insert query: %w", err)
+	}
+
+	_, err = r.db.Exec(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("[Character Repository] Failed to insert records: %w", err)
+	}
+
+	return r.CorporationAllianceHistory(ctx, athena.NewEqualOperator("corporation_id", id))
 
 }

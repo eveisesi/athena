@@ -22,7 +22,6 @@ type characterRepository interface {
 type characterHistoryRepository interface {
 	CharacterCorporationHistory(ctx context.Context, operators ...*Operator) ([]*CharacterCorporationHistory, error)
 	CreateCharacterCorporationHistory(ctx context.Context, id uint, records []*CharacterCorporationHistory) ([]*CharacterCorporationHistory, error)
-	DeleteCharacterCorporationHistory(ctx context.Context, id uint) (bool, error)
 }
 
 type Character struct {

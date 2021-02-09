@@ -18,8 +18,8 @@ type contactService interface {
 }
 
 const (
-	keyMemberContacts      = "athena::member::%d::contacts"
-	keyMemberContactLabels = "athena::member::%d::contact::labels"
+	keyMemberContacts      = "athena::member::${id}::contacts"
+	keyMemberContactLabels = "athena::member::${id}::contact::labels"
 )
 
 func (s *service) MemberContacts(ctx context.Context, memberID uint) ([]*athena.MemberContact, error) {
@@ -83,7 +83,9 @@ func (s *service) SetMemberContacts(ctx context.Context, memberID uint, contacts
 
 func (s *service) MemberContactLabels(ctx context.Context, memberID uint) ([]*athena.MemberContactLabel, error) {
 
-	key := fmt.Sprintf(keyMemberContactLabels, memberID)
+	key := format.Formatm(keyMemberContactLabels, format.Values{
+		"id": memberID,
+	})
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil {
 		return nil, fmt.Errorf("[Cache Layer] Failed to fetch set members for key %s: %w", key, err)
@@ -127,9 +129,10 @@ func (s *service) SetMemberContactLabels(ctx context.Context, memberID uint, lab
 	}
 
 	// Send members to redis
-	key := fmt.Sprintf(keyMemberContactLabels, memberID)
+	key := format.Formatm(keyMemberContactLabels, format.Values{
+		"id": memberID,
+	})
 	_, err := s.client.SAdd(ctx, key, members...).Result()
-	fmt.Println(err)
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to cache labels for member %d: %w", memberID, err)
 	}

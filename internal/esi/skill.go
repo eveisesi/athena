@@ -11,7 +11,7 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-type skillInterface interface {
+type skillsInterface interface {
 	GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberAttributes) (*athena.MemberAttributes, *athena.Etag, *http.Response, error)
 	GetCharacterSkills(ctx context.Context, member *athena.Member, meta *athena.MemberSkills) (*athena.MemberSkills, *athena.Etag, *http.Response, error)
 	GetCharacterSkillQueue(ctx context.Context, member *athena.Member, queue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, *athena.Etag, *http.Response, error)

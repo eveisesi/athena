@@ -98,8 +98,8 @@ func basics(command string) *app {
 		migration:   mysqldb.NewMigrationRepository(app.db),
 		clone:       mysqldb.NewCloneRepository(app.db),
 		skill:       mysqldb.NewSkillRepository(app.db),
-		// location:    location,
-		// contact:     contact,
+		location:    mysqldb.NewMemberLocationRepository(app.db),
+		contact:     mysqldb.NewMemberContactRepository(app.db),
 	}
 
 	return &app
@@ -140,22 +140,11 @@ func main() {
 				{
 					Name:   "up",
 					Action: migrateUpCommand,
-					Flags: []cli.Flag{
-						cli.IntFlag{
-							Name:  "steps",
-							Value: -1,
-						},
-					},
 				},
 				{
-					Name:   "down",
-					Action: migrateDownCommand,
-					Flags: []cli.Flag{
-						cli.IntFlag{
-							Name:  "steps",
-							Value: -1,
-						},
-					},
+					Name:            "down",
+					SkipFlagParsing: true,
+					Action:          migrateDownCommand,
 				},
 				{
 					Name:   "create",
@@ -166,6 +155,10 @@ func main() {
 							Required: true,
 						},
 					},
+				},
+				{
+					Name:   "current",
+					Action: migrateCurrentCommand,
 				},
 			},
 		},
@@ -196,6 +189,9 @@ func main() {
 						cli.Int64Flag{
 							Name:     "id",
 							Required: true,
+						},
+						cli.BoolFlag{
+							Name: "reset",
 						},
 					},
 				},

@@ -169,7 +169,7 @@ func (s *service) resolveCloneAttributes(ctx context.Context, member *athena.Mem
 		}
 
 		for _, implant := range jumpClone.Implants {
-			_, err := s.universe.Type(ctx, implant)
+			_, err := s.universe.Type(ctx, uint(implant))
 			if err != nil {
 				s.logger.WithError(err).WithField("implant_type_id", jumpClone.LocationID).Error("failed to resolve implent type id")
 			}

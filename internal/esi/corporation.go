@@ -31,15 +31,20 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 
 	mods := s.modifiers(ModWithCorporation(corporation))
 
-	// etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
 
 	path := endpoint.PathFunc(mods)
 
 	// WithEtag(etag)
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(path))
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -52,7 +57,7 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 			return nil, nil, err
 		}
 
-		// etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 		if !isCorporationValid(corporation) {
 			return nil, nil, fmt.Errorf("invalid corporation return from esi, missing name or ticker")
@@ -61,7 +66,11 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 		return corporation, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporation.ID, sc)
 	}
 
-	// etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
 
 	return corporation, res, nil
 }
@@ -90,9 +99,87 @@ func (s *service) corporationPathFunc(mods *modifiers) string {
 }
 
 func (s *service) newGetCorporationEndpoint() *endpoint {
-
 	GetCorporation.KeyFunc = s.corporationKeyFunc
 	GetCorporation.PathFunc = s.corporationPathFunc
 	return GetCorporation
+}
 
+// GetCorporationAllianceHistory makes a HTTP GET Request to the /v2/corporations/{corporation_id}/alliancehistory/ endpoint
+// for information about the provided corporations alliance history
+//
+// Documentation: https://esi.evetech.net/ui/?version=_latest#/Corporation/get_corporations_corporation_id_alliancehistory
+// Version: v4
+// Cache: 3600 sec (1 Hour)
+func (s *service) GetCorporationAllianceHistory(ctx context.Context, corporation *athena.Corporation, history []*athena.CorporationAllianceHistory) ([]*athena.CorporationAllianceHistory, *athena.Etag, *http.Response, error) {
+
+	endpoint := s.endpoints[GetCorporationAllianceHistory.Name]
+
+	mods := s.modifiers(ModWithCorporation(corporation))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	// WithEtag(etag)
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	switch sc := res.StatusCode; {
+	case sc == http.StatusOK:
+		err = json.Unmarshal(b, &history)
+		if err != nil {
+			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+			return nil, nil, nil, err
+		}
+
+		etag.Etag = s.retrieveEtagHeader(res.Header)
+
+	case sc >= http.StatusBadRequest:
+		return history, etag, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporation.ID, sc)
+	}
+
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
+
+	return history, etag, res, nil
+
+}
+
+func (s *service) corporationAllianceHistoryPathFunc(mods *modifiers) string {
+	if mods.corporation == nil {
+		panic("expected type *athena.Corporation to be provided, received nil for corporation instead")
+	}
+
+	u := url.URL{
+		Path: fmt.Sprintf(GetCorporationAllianceHistory.FmtPath, mods.corporation.ID),
+	}
+
+	return u.String()
+}
+
+func (s *service) corporationAllianceHistoryKeyFunc(mods *modifiers) string {
+	if mods.corporation == nil {
+		panic("expected type *athena.Corporation to be provided, received nil for corporation instead")
+	}
+
+	return buildKey(GetCorporationAllianceHistory.Name, strconv.Itoa(int(mods.corporation.ID)))
+}
+
+func (s *service) newGetCorporationAllianceHistoryEndpoint() *endpoint {
+	GetCorporationAllianceHistory.KeyFunc = s.corporationAllianceHistoryKeyFunc
+	GetCorporationAllianceHistory.PathFunc = s.corporationAllianceHistoryPathFunc
+	return GetCorporationAllianceHistory
 }

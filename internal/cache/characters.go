@@ -7,23 +7,29 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
+	"github.com/sirkon/go-format"
 )
 
 type characterService interface {
 	Character(ctx context.Context, id uint) (*athena.Character, error)
 	SetCharacter(ctx context.Context, character *athena.Character, optionFuncs ...OptionFunc) error
+	CharacterCorporationHistory(ctx context.Context, id uint) ([]*athena.CharacterCorporationHistory, error)
+	SetCharacterCorporationHistory(ctx context.Context, id uint, history []*athena.CharacterCorporationHistory, optionFuncs ...OptionFunc) error
 	// Characters(ctx context.Context, operators []*athena.Operator) ([]*athena.Character, error)
 	// SetCharacters(ctx context.Context, operators []*athena.Operator, characters []*athena.Character, optionFuncs ...OptionFunc) error
 }
 
 const (
-	keyCharacter = "athena::character::%d"
+	keyCharacter                   = "athena::character::${id}"
+	keyCharacterCorporationHistory = "athena::character::${id}::history"
 	// keyCharacters = "athena::characters::%d"
 )
 
 func (s *service) Character(ctx context.Context, id uint) (*athena.Character, error) {
 
-	key := fmt.Sprintf(keyCharacter, id)
+	key := format.Formatm(keyMemberContacts, format.Values{
+		"id": id,
+	})
 	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
 		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
@@ -45,7 +51,9 @@ func (s *service) Character(ctx context.Context, id uint) (*athena.Character, er
 
 func (s *service) SetCharacter(ctx context.Context, character *athena.Character, optionFuncs ...OptionFunc) error {
 
-	key := fmt.Sprintf(keyCharacter, character.ID)
+	key := format.Formatm(keyCharacter, format.Values{
+		"id": character.ID,
+	})
 	data, err := json.Marshal(character)
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
@@ -56,6 +64,62 @@ func (s *service) SetCharacter(ctx context.Context, character *athena.Character,
 	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) CharacterCorporationHistory(ctx context.Context, id uint) ([]*athena.CharacterCorporationHistory, error) {
+
+	key := format.Formatm(keyCharacterCorporationHistory, format.Values{
+		"id": id,
+	})
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil {
+		return nil, fmt.Errorf(errKeyNotFound, key, err)
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	records := make([]*athena.CharacterCorporationHistory, len(members))
+	for i, member := range members {
+		var record = new(athena.CharacterCorporationHistory)
+		err = json.Unmarshal([]byte(member), record)
+		if err != nil {
+			return nil, fmt.Errorf(errSetUnmarshalFailed, key, err)
+		}
+
+		records[i] = record
+
+	}
+
+	return records, nil
+
+}
+
+func (s *service) SetCharacterCorporationHistory(ctx context.Context, id uint, records []*athena.CharacterCorporationHistory, optionFuncs ...OptionFunc) error {
+
+	options := applyOptionFuncs(nil, optionFuncs)
+
+	members := make([]interface{}, len(records))
+	for i, record := range records {
+		members[i] = record
+	}
+
+	key := format.Formatm(keyCharacterCorporationHistory, format.Values{
+		"id": id,
+	})
+	_, err := s.client.SAdd(ctx, key, members...).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to cache contacts for member %d: %w", id, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil

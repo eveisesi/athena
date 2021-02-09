@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/eveisesi/athena"
@@ -13,11 +12,15 @@ import (
 
 type characterRepository struct {
 	db *sqlx.DB
+	character,
+	history string
 }
 
 func NewCharacterRepository(db *sql.DB) athena.CharacterRepository {
 	return &characterRepository{
-		db: sqlx.NewDb(db, "mysql"),
+		db:        sqlx.NewDb(db, "mysql"),
+		character: "characters",
+		history:   "character_corporation_history",
 	}
 }
 
@@ -39,10 +42,12 @@ func (r *characterRepository) Character(ctx context.Context, id uint) (*athena.C
 func (r *characterRepository) Characters(ctx context.Context, operators ...*athena.Operator) ([]*athena.Character, error) {
 
 	query, args, err := BuildFilters(sq.Select(
-		"id", "name", "corporation_id", "alliance_id", "faction_id",
-		"security_status", "gender", "birthday", "title", "ancestry_id",
-		"bloodline_id", "race_id", "created_at", "updated_at",
-	), operators...).From("characters").ToSql()
+		"id", "name", "corporation_id",
+		"alliance_id", "faction_id", "security_status",
+		"gender", "birthday", "title",
+		"ancestry_id", "bloodline_id", "race_id",
+		"created_at", "updated_at",
+	).From(r.character), operators...).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("[Character Repository] Failed to generate query: %w", err)
 	}
@@ -56,17 +61,18 @@ func (r *characterRepository) Characters(ctx context.Context, operators ...*athe
 
 func (r *characterRepository) CreateCharacter(ctx context.Context, character *athena.Character) (*athena.Character, error) {
 
-	now := time.Now()
-	character.CreatedAt = now
-	character.UpdatedAt = now
-
-	i := sq.Insert("characters").Columns(
-		"id", "name", "corporation_id", "gender", "birthday", "bloodline_id", "race_id",
-		"security_status", "title", "ancestry_id", "alliance_id", "faction_id", "created_at", "updated_at",
+	i := sq.Insert(r.character).Columns(
+		"id", "name", "corporation_id",
+		"gender", "birthday", "bloodline_id",
+		"race_id", "security_status", "title",
+		"ancestry_id", "alliance_id", "faction_id",
+		"created_at", "updated_at",
 	).Values(
-		character.ID, character.Name, character.CorporationID, character.Gender, character.Birthday,
-		character.BloodlineID, character.RaceID, character.SecurityStatus, character.Title, character.AncestryID,
-		character.AllianceID, character.FactionID, character.CreatedAt, character.UpdatedAt,
+		character.ID, character.Name, character.CorporationID,
+		character.Gender, character.Birthday, character.BloodlineID,
+		character.RaceID, character.SecurityStatus, character.Title,
+		character.AncestryID, character.AllianceID, character.FactionID,
+		sq.Expr(`NOW()`, sq.Expr(`NOW()`)),
 	)
 
 	query, args, err := i.ToSql()
@@ -85,7 +91,7 @@ func (r *characterRepository) CreateCharacter(ctx context.Context, character *at
 
 func (r *characterRepository) UpdateCharacter(ctx context.Context, id uint, character *athena.Character) (*athena.Character, error) {
 
-	query, args, err := sq.Update("characters").
+	query, args, err := sq.Update(r.character).
 		Set("corporation_id", character.CorporationID).
 		Set("alliance_id", character.AllianceID).
 		Set("faction_id", character.FactionID).
@@ -109,9 +115,11 @@ func (r *characterRepository) UpdateCharacter(ctx context.Context, id uint, char
 func (r *characterRepository) CharacterCorporationHistory(ctx context.Context, operators ...*athena.Operator) ([]*athena.CharacterCorporationHistory, error) {
 
 	query, args, err := BuildFilters(sq.Select(
-		"character_id", "record_id", "corporation_id", "is_deleted",
-		"start_date", "created_at", "updated_at"), operators...).
-		From("character_corporation_history").ToSql()
+		"character_id",
+		"record_id", "corporation_id",
+		"is_deleted", "start_date",
+		"created_at", "updated_at",
+	).From(r.history), operators...).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("[Character Repository] Failed to generate select query: %w", err)
 	}
@@ -125,7 +133,7 @@ func (r *characterRepository) CharacterCorporationHistory(ctx context.Context, o
 
 func (r *characterRepository) CreateCharacterCorporationHistory(ctx context.Context, id uint, records []*athena.CharacterCorporationHistory) ([]*athena.CharacterCorporationHistory, error) {
 
-	i := sq.Insert("character_corporation_history").Columns(
+	i := sq.Insert(r.history).Options("IGNORE").Columns(
 		"character_id", "record_id", "corporation_id", "is_deleted", "start_date",
 		"created_at", "updated_at",
 	)
@@ -147,21 +155,5 @@ func (r *characterRepository) CreateCharacterCorporationHistory(ctx context.Cont
 	}
 
 	return r.CharacterCorporationHistory(ctx, athena.NewEqualOperator("character_id", id))
-
-}
-
-func (r *characterRepository) DeleteCharacterCorporationHistory(ctx context.Context, id uint) (bool, error) {
-
-	query, args, err := sq.Delete("character_corporation_history").Where(sq.Eq{"character_id": id}).ToSql()
-	if err != nil {
-		return false, fmt.Errorf("[Corporation Repository] Failed to generate delete query: %w", err)
-	}
-
-	_, err = r.db.Exec(query, args...)
-	if err != nil {
-		return false, fmt.Errorf("[Character Repository] Failed to insert records: %w", err)
-	}
-
-	return err == nil, err
 
 }

@@ -28,7 +28,7 @@ func NewMigrationRepository(db *sql.DB) athena.MigrationRepository {
 
 const createTableQuery = `
 	CREATE TABLE IF NOT EXISTS %s (          
-		id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT, 
+		id INT UNSIGNED NOT NULL AUTO_INCREMENT, 
 		name VARCHAR(255) NOT NULL,                  
 		created_at TIMESTAMP NOT NULL,               
 		PRIMARY KEY (id) USING BTREE,                

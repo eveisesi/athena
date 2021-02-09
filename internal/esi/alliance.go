@@ -63,6 +63,10 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+	}
 
 	return alliance, res, nil
 

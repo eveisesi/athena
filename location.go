@@ -44,7 +44,7 @@ type MemberOnline struct {
 	MemberID   uint      `db:"member_id" json:"member_id"`
 	LastLogin  null.Time `db:"last_login,omitempty" json:"last_login,omitempty"`
 	LastLogout null.Time `db:"last_logout,omitempty" json:"last_logout,omitempty"`
-	Logins     null.Uint `db:"logins,omitempty" json:"logins,omitempty"`
+	Logins     uint      `db:"logins,omitempty" json:"logins,omitempty"`
 	Online     bool      `db:"online,omitempty" json:"online,omitempty"`
 	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt  time.Time `db:"updated_at" json:"updated_at"`

@@ -12,16 +12,15 @@ import (
 )
 
 type Service interface {
-	Alliance(ctx context.Context, id uint, options []OptionFunc) (*athena.Alliance, error)
-	Alliances(ctx context.Context, operators []*athena.Operator, options []OptionFunc) ([]*athena.Alliance, error)
-	CreateAlliance(ctx context.Context, alliance *athena.Alliance, options []OptionFunc) (*athena.Alliance, error)
+	Alliance(ctx context.Context, id uint, options ...OptionFunc) (*athena.Alliance, error)
+	Alliances(ctx context.Context, operators []*athena.Operator, options ...OptionFunc) ([]*athena.Alliance, error)
 }
 
 type service struct {
 	cache cache.Service
 	esi   esi.Service
 
-	athena.AllianceRepository
+	alliance athena.AllianceRepository
 }
 
 func NewService(cache cache.Service, esi esi.Service, alliance athena.AllianceRepository) Service {
@@ -29,13 +28,13 @@ func NewService(cache cache.Service, esi esi.Service, alliance athena.AllianceRe
 		cache: cache,
 		esi:   esi,
 
-		AllianceRepository: alliance,
+		alliance: alliance,
 	}
 }
 
-func (s *service) Alliance(ctx context.Context, id uint, options []OptionFunc) (*athena.Alliance, error) {
+func (s *service) Alliance(ctx context.Context, id uint, options ...OptionFunc) (*athena.Alliance, error) {
 
-	alliance, err := s.AllianceRepository.Alliance(ctx, id)
+	alliance, err := s.alliance.Alliance(ctx, id)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		newrelic.FromContext(ctx).NoticeError(err)
 		return nil, err
@@ -51,34 +50,25 @@ func (s *service) Alliance(ctx context.Context, id uint, options []OptionFunc) (
 		return nil, err
 	}
 
-	alliance, err = s.CreateAlliance(ctx, alliance, options)
+	alliance, err = s.alliance.CreateAlliance(ctx, alliance)
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
+		return nil, err
 	}
 
-	return alliance, nil
+	err = s.cache.SetAlliance(ctx, alliance)
+
+	return alliance, err
 
 }
 
-func (s *service) Alliances(ctx context.Context, operators []*athena.Operator, options []OptionFunc) ([]*athena.Alliance, error) {
+func (s *service) Alliances(ctx context.Context, operators []*athena.Operator, options ...OptionFunc) ([]*athena.Alliance, error) {
 
-	alliances, err := s.AllianceRepository.Alliances(ctx, operators...)
+	alliances, err := s.alliance.Alliances(ctx, operators...)
 	if err != nil {
 		return nil, err
 	}
 
 	return alliances, nil
-
-}
-
-func (s *service) CreateAlliance(ctx context.Context, alliance *athena.Alliance, options []OptionFunc) (*athena.Alliance, error) {
-
-	// err := s.AllianceRepository.CreateAlliance(ctx, alliance)
-	// if err != nil {
-	// 	newrelic.FromContext(ctx).NoticeError(err)
-	// 	return nil, err
-	// }
-
-	return nil, nil
 
 }

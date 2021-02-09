@@ -11,8 +11,8 @@ import (
 
 func testCommand(c *cli.Context) error {
 
-	t := athena.MemberMailLabels{}
-	ref := "label"
+	t := athena.CorporationAllianceHistory{}
+	ref := "history"
 
 	rt := reflect.TypeOf(t)
 

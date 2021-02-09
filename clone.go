@@ -53,7 +53,7 @@ type MemberImplant struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
 
-type SliceUint []uint
+type SliceUint []uint64
 
 func (s *SliceUint) Scan(value interface{}) error {
 

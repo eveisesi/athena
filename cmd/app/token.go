@@ -19,6 +19,7 @@ import (
 	"github.com/eveisesi/athena/internal/etag"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/urfave/cli"
+	"github.com/volatiletech/null"
 	"golang.org/x/oauth2"
 )
 
@@ -30,7 +31,7 @@ func manuallyPushIDToQueue(c *cli.Context) error {
 	cache := cache.NewService(basics.redis)
 
 	memberID := c.Int64("id")
-	members, err := basics.repositories.member.Members(ctx, athena.NewEqualOperator("character_id", memberID))
+	members, err := basics.repositories.member.Members(ctx, athena.NewEqualOperator("id", memberID))
 	if err != nil {
 		basics.logger.WithError(err).Fatal("failed to fetch member from db")
 	}
@@ -56,8 +57,8 @@ func refreshMemberToken(c *cli.Context) error {
 	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
 	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
-	character := character.NewService(cache, esi, basics.repositories.character)
 	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
+	character := character.NewService(basics.logger, cache, esi, corporation, basics.repositories.character)
 	alliance := alliance.NewService(cache, esi, basics.repositories.alliance)
 
 	auth := auth.NewService(
@@ -70,7 +71,7 @@ func refreshMemberToken(c *cli.Context) error {
 	memberServ := member.NewService(auth, cache, alliance, character, corporation, basics.repositories.member)
 
 	memberID := c.Int64("id")
-	members, err := basics.repositories.member.Members(ctx, athena.NewEqualOperator("character_id", memberID))
+	members, err := basics.repositories.member.Members(ctx, athena.NewEqualOperator("id", memberID))
 	if err != nil {
 		basics.logger.WithError(err).Fatal("failed to fetch member from db")
 	}
@@ -86,6 +87,16 @@ func refreshMemberToken(c *cli.Context) error {
 		basics.logger.WithError(err).Fatal("failed to validate token")
 	}
 
+	if c.Bool("reset") {
+		for i := range member.Scopes {
+			member.Scopes[i].Expiry = null.TimeFromPtr(nil)
+		}
+		_, err := basics.repositories.member.UpdateMember(ctx, member.ID, member)
+		if err != nil {
+			basics.logger.WithError(err).Fatal("failed to update member")
+		}
+	}
+
 	fmt.Println("Member Token validated successfully")
 
 	return nil
@@ -99,8 +110,8 @@ func addMemberByCLI(c *cli.Context) error {
 	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
 	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
-	character := character.NewService(cache, esi, basics.repositories.character)
 	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
+	character := character.NewService(basics.logger, cache, esi, corporation, basics.repositories.character)
 	alliance := alliance.NewService(cache, esi, basics.repositories.alliance)
 
 	auth := auth.NewService(

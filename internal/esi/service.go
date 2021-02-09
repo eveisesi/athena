@@ -26,18 +26,14 @@ const (
 type (
 	Service interface {
 		etagInterface
-		cloneInterface
+		characterInterface
+		clonesInterface
+		contactsInterface
 		locationInterface
-		skillInterface
+		skillsInterface
 
 		// Alliances
 		GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error)
-
-		// Characters
-		GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *http.Response, error)
-
-		GetCharacterContacts(ctx context.Context, member *athena.Member, contacts []*athena.MemberContact) ([]*athena.MemberContact, *http.Response, error)
-		GetCharacterContactLabels(ctx context.Context, member *athena.Member, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *http.Response, error)
 
 		// Corporations
 		GetCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error)
@@ -114,7 +110,8 @@ var (
 	GetAlliance = &endpoint{Name: "GetAlliance", FmtPath: "/v3/alliances/%d/"}
 
 	// Characters
-	GetCharacter = &endpoint{Name: "GetCharacter", FmtPath: "/v4/characters/%d/"}
+	GetCharacter                   = &endpoint{Name: "GetCharacter", FmtPath: "/v4/characters/%d/"}
+	GetCharacterCorporationHistory = &endpoint{Name: "GetCharacterCorporationHistory", FmtPath: "/v1/characters/%d/corporationhistory/"}
 
 	// Skills
 	GetCharacterAttributes = &endpoint{Name: "GetCharacterAttributes", FmtPath: "/v1/characters/%d/attributes/"}
@@ -143,7 +140,8 @@ var (
 	GetCharacterShip     = &endpoint{Name: "GetCharacterShip", FmtPath: "/v2/characters/%d/ship/"}
 
 	// Corporations
-	GetCorporation = &endpoint{Name: "GetCorporation", FmtPath: "/v4/corporations/%d/"}
+	GetCorporation                = &endpoint{Name: "GetCorporation", FmtPath: "/v4/corporations/%d/"}
+	GetCorporationAllianceHistory = &endpoint{Name: "GetCorporationAllianceHistory", FmtPath: "/v2/corporations/%d/alliancehistory/"}
 
 	// Universe
 	GetAncestries    = &endpoint{Name: "GetAncestries", FmtPath: "/v1/universe/ancestries/"}
@@ -165,6 +163,7 @@ var (
 var AllEndpoints = []*endpoint{
 	GetAlliance,
 	GetCharacter,
+	GetCharacterCorporationHistory,
 	GetCharacterAttributes,
 	GetCharacterClones,
 	GetCharacterContacts,
@@ -180,6 +179,7 @@ var AllEndpoints = []*endpoint{
 	GetCharacterSkills,
 	GetCharacterSkillQueue,
 	GetCorporation,
+	GetCorporationAllianceHistory,
 	GetAncestries,
 	GetBloodlines,
 	GetCategories,
@@ -199,37 +199,39 @@ var AllEndpoints = []*endpoint{
 func (s *service) buildEndpointMap() {
 
 	s.endpoints = endpointMap{
-		GetAlliance.Name:               s.newGetAllianceEndpoint(),
-		GetCharacter.Name:              s.newGetCharacterEndpoint(),
-		GetCharacterAttributes.Name:    s.newGetCharacterAttributesEndpoint(),
-		GetCharacterClones.Name:        s.newGetCharacterClonesEndpoint(),
-		GetCharacterContacts.Name:      s.newGetCharacterContactsEndpoint(),
-		GetCharacterContactLabels.Name: s.newGetCharacterContactLabelsEndpoint(),
-		GetCharacterContracts.Name:     s.newGetCharacterContractsEndpoint(),
-		GetCharacterContractItems.Name: s.newGetCharacterContractItemsEndpoint(),
-		GetCharacterContractBids.Name:  s.newGetCharacterContractBidsEndpoint(),
-		GetCharacterFittings.Name:      s.newGetCharacterFittingsEndpoint(),
-		GetCharacterImplants.Name:      s.newGetCharacterImplantsEndpoint(),
-		GetCharacterLocation.Name:      s.newGetCharacterLocationEndpoint(),
-		GetCharacterOnline.Name:        s.newGetCharacterOnlineEndpoint(),
-		GetCharacterShip.Name:          s.newGetCharacterShipEndpoint(),
-		GetCharacterSkills.Name:        s.newGetCharacterSkillsEndpoint(),
-		GetCharacterSkillQueue.Name:    s.newGetCharacterSkillQueueEndpoint(),
-		GetCorporation.Name:            s.newGetCorporationEndpoint(),
-		GetAncestries.Name:             s.newGetAncestriesEndpoint(),
-		GetBloodlines.Name:             s.newGetBloodlinesEndpoint(),
-		GetCategories.Name:             s.newGetCategoriesEndpoint(),
-		GetCategory.Name:               s.newGetCategoryEndpoint(),
-		GetConstellation.Name:          s.newGetConstellationEndpoint(),
-		GetFactions.Name:               s.newGetFactionsEndpoint(),
-		GetGroup.Name:                  s.newGetGroupEndpoint(),
-		GetRaces.Name:                  s.newGetRacesEndpoint(),
-		GetRegions.Name:                s.newGetRegionsEndpoint(),
-		GetRegion.Name:                 s.newGetRegionEndpoint(),
-		GetSolarSystem.Name:            s.newGetSolarSystemEndpoint(),
-		GetStation.Name:                s.newGetStationEndpoint(),
-		GetStructure.Name:              s.newGetStructureEndpoint(),
-		GetType.Name:                   s.newGetTypeEndpoint(),
+		GetAlliance.Name:                    s.newGetAllianceEndpoint(),
+		GetCharacter.Name:                   s.newGetCharacterEndpoint(),
+		GetCharacterCorporationHistory.Name: s.newGetCharacterCorporationHistoryEndpoint(),
+		GetCharacterAttributes.Name:         s.newGetCharacterAttributesEndpoint(),
+		GetCharacterClones.Name:             s.newGetCharacterClonesEndpoint(),
+		GetCharacterContacts.Name:           s.newGetCharacterContactsEndpoint(),
+		GetCharacterContactLabels.Name:      s.newGetCharacterContactLabelsEndpoint(),
+		GetCharacterContracts.Name:          s.newGetCharacterContractsEndpoint(),
+		GetCharacterContractItems.Name:      s.newGetCharacterContractItemsEndpoint(),
+		GetCharacterContractBids.Name:       s.newGetCharacterContractBidsEndpoint(),
+		GetCharacterFittings.Name:           s.newGetCharacterFittingsEndpoint(),
+		GetCharacterImplants.Name:           s.newGetCharacterImplantsEndpoint(),
+		GetCharacterLocation.Name:           s.newGetCharacterLocationEndpoint(),
+		GetCharacterOnline.Name:             s.newGetCharacterOnlineEndpoint(),
+		GetCharacterShip.Name:               s.newGetCharacterShipEndpoint(),
+		GetCharacterSkills.Name:             s.newGetCharacterSkillsEndpoint(),
+		GetCharacterSkillQueue.Name:         s.newGetCharacterSkillQueueEndpoint(),
+		GetCorporation.Name:                 s.newGetCorporationEndpoint(),
+		GetCorporationAllianceHistory.Name:  s.newGetCorporationAllianceHistoryEndpoint(),
+		GetAncestries.Name:                  s.newGetAncestriesEndpoint(),
+		GetBloodlines.Name:                  s.newGetBloodlinesEndpoint(),
+		GetCategories.Name:                  s.newGetCategoriesEndpoint(),
+		GetCategory.Name:                    s.newGetCategoryEndpoint(),
+		GetConstellation.Name:               s.newGetConstellationEndpoint(),
+		GetFactions.Name:                    s.newGetFactionsEndpoint(),
+		GetGroup.Name:                       s.newGetGroupEndpoint(),
+		GetRaces.Name:                       s.newGetRacesEndpoint(),
+		GetRegions.Name:                     s.newGetRegionsEndpoint(),
+		GetRegion.Name:                      s.newGetRegionEndpoint(),
+		GetSolarSystem.Name:                 s.newGetSolarSystemEndpoint(),
+		GetStation.Name:                     s.newGetStationEndpoint(),
+		GetStructure.Name:                   s.newGetStructureEndpoint(),
+		GetType.Name:                        s.newGetTypeEndpoint(),
 	}
 
 }
@@ -285,11 +287,11 @@ func (s *service) _exec(req *http.Request, options *options) (response *http.Res
 
 	for i := 0; i < options.maxattempts; i++ {
 		response, err = s.client.Do(req)
-		if err != nil && !options.retryOnError {
+		if err != nil {
 			return nil, fmt.Errorf("failed to execute request: %w", err)
 		}
 
-		if response.StatusCode > http.StatusContinue && response.StatusCode < http.StatusInternalServerError {
+		if response.StatusCode > http.StatusContinue && response.StatusCode < http.StatusInternalServerError && !options.retryOnError {
 			break
 		}
 

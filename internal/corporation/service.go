@@ -12,16 +12,15 @@ import (
 )
 
 type Service interface {
-	Corporation(ctx context.Context, id uint, options []OptionFunc) (*athena.Corporation, error)
+	Corporation(ctx context.Context, id uint, options ...OptionFunc) (*athena.Corporation, error)
 	Corporations(ctx context.Context, operators []*athena.Operator, options ...OptionFunc) ([]*athena.Corporation, error)
-	CreateCorporation(ctx context.Context, corporation *athena.Corporation, options []OptionFunc) (*athena.Corporation, error)
 }
 
 type service struct {
 	cache cache.Service
 	esi   esi.Service
 
-	athena.CorporationRepository
+	corporation athena.CorporationRepository
 }
 
 func NewService(cache cache.Service, esi esi.Service, corporation athena.CorporationRepository) Service {
@@ -29,13 +28,13 @@ func NewService(cache cache.Service, esi esi.Service, corporation athena.Corpora
 		cache: cache,
 		esi:   esi,
 
-		CorporationRepository: corporation,
+		corporation: corporation,
 	}
 }
 
-func (s *service) Corporation(ctx context.Context, id uint, options []OptionFunc) (*athena.Corporation, error) {
+func (s *service) Corporation(ctx context.Context, id uint, optionFunc ...OptionFunc) (*athena.Corporation, error) {
 
-	corporation, err := s.CorporationRepository.Corporation(ctx, id)
+	corporation, err := s.corporation.Corporation(ctx, id)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		newrelic.FromContext(ctx).NoticeError(err)
 		return nil, err
@@ -51,26 +50,25 @@ func (s *service) Corporation(ctx context.Context, id uint, options []OptionFunc
 		return nil, err
 	}
 
-	corporation, err = s.CreateCorporation(ctx, corporation, options)
+	corporation, err = s.corporation.CreateCorporation(ctx, corporation)
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
+		return nil, err
 	}
 
-	return corporation, nil
+	err = s.cache.SetCorporation(ctx, corporation)
+
+	return corporation, err
 
 }
 
 func (s *service) Corporations(ctx context.Context, operators []*athena.Operator, options ...OptionFunc) ([]*athena.Corporation, error) {
 
-	corporations, err := s.CorporationRepository.Corporations(ctx, operators...)
+	corporations, err := s.corporation.Corporations(ctx, operators...)
 	if err != nil {
 		return nil, err
 	}
 
 	return corporations, nil
 
-}
-
-func (s *service) CreateCorporation(ctx context.Context, corporation *athena.Corporation, options []OptionFunc) (*athena.Corporation, error) {
-	return s.CorporationRepository.CreateCorporation(ctx, corporation)
 }

@@ -20,10 +20,10 @@ import (
 )
 
 type Service interface {
-	EmptyMemberContacts(ctx context.Context, member *athena.Member) error
-	MemberContacts(ctx context.Context, member *athena.Member) ([]*athena.MemberContact, error)
-	EmptyMemberContactLabels(ctx context.Context, member *athena.Member) error
-	MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, error)
+	EmptyMemberContacts(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberContacts(ctx context.Context, member *athena.Member) ([]*athena.MemberContact, *athena.Etag, error)
+	EmptyMemberContactLabels(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, *athena.Etag, error)
 }
 
 type service struct {
@@ -38,6 +38,10 @@ type service struct {
 
 	contacts athena.MemberContactRepository
 }
+
+const (
+	errPrefix = "[Contact Service]"
+)
 
 func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, universe universe.Service, alliance alliance.Service, character character.Service, corporation corporation.Service, contacts athena.MemberContactRepository) Service {
 
@@ -56,26 +60,36 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, uni
 
 }
 
-func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member) error {
-
-	_, err := s.MemberContacts(ctx, member)
-
-	return err
-
-}
-
-func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]*athena.MemberContact, error) {
+func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithMember(member))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
 
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
+		return etag, nil
+	}
+
+	_, etag, err = s.MemberContacts(ctx, member)
+
+	return etag, err
+
+}
+
+func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]*athena.MemberContact, *athena.Etag, error) {
+
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithMember(member))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch etag object: %w", err)
+	}
+
+	exists := true
 	cached := true
 
 	contacts, err := s.cache.MemberContacts(ctx, member.ID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if contacts == nil {
@@ -83,11 +97,17 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 
 		contacts, err = s.contacts.MemberContacts(ctx, member.ID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, err
+			return nil, nil, err
+		}
+
+		if contacts == nil || errors.Is(err, sql.ErrNoRows) {
+			contacts = make([]*athena.MemberContact, 0)
+			exists = false
 		}
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) && len(contacts) > 0 {
+	// TODO: Check to see if it is possible to have 0 contacts
+	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
 
 		if !cached {
 			err = s.cache.SetMemberContacts(ctx, member.ID, contacts)
@@ -96,26 +116,27 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 			}
 		}
 
-		return contacts, nil
+		return contacts, etag, nil
 	}
 
-	newContacts, _, err := s.esi.GetCharacterContacts(ctx, member, make([]*athena.MemberContact, 0))
+	newContacts, etag, _, err := s.esi.GetCharacterContacts(ctx, member, make([]*athena.MemberContact, 0))
 	if err != nil {
-		return nil, fmt.Errorf("[Contacts Service] Failed to fetch contacts for member %d: %w", member.ID, err)
+		return nil, nil, fmt.Errorf("[Contacts Service] Failed to fetch contacts for member %d: %w", member.ID, err)
 	}
 
 	if len(newContacts) > 0 {
 		s.resolveContactAttributes(ctx, newContacts)
 		contacts, err = s.diffAndUpdateContacts(ctx, member, contacts, newContacts)
-		if len(contacts) > 0 {
-			err := s.cache.SetMemberContacts(ctx, member.ID, contacts)
-			if err != nil {
-				newrelic.FromContext(ctx).NoticeError(err)
-			}
+		if err != nil {
+			return nil, nil, fmt.Errorf("%s Failed to diffAndUpdateContacts: %w", errPrefix, err)
+		}
+		err := s.cache.SetMemberContacts(ctx, member.ID, contacts)
+		if err != nil {
+			newrelic.FromContext(ctx).NoticeError(err)
 		}
 	}
 
-	return contacts, err
+	return contacts, etag, err
 
 }
 
@@ -193,31 +214,28 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 	for _, contact := range contacts {
 		switch contact.ContactType {
 		case "alliance":
-			_, err := s.alliance.Alliance(ctx, contact.ContactID, alliance.NewOptionFuncs())
+			_, err := s.alliance.Alliance(ctx, contact.ContactID)
 			if err != nil {
 				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
 					"contact_type": contact.ContactType,
 				}).Error("failed to resolve alliance contact type")
-				continue
 			}
 		case "character":
-			_, err := s.character.Character(ctx, contact.ContactID, character.NewOptionFuncs())
+			_, err := s.character.Character(ctx, contact.ContactID)
 			if err != nil {
 				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
 					"contact_type": contact.ContactType,
 				}).Error("failed to resolve character contact type")
-				continue
 			}
 		case "corporation":
-			_, err := s.corporation.Corporation(ctx, contact.ContactID, corporation.NewOptionFuncs())
+			_, err := s.corporation.Corporation(ctx, contact.ContactID)
 			if err != nil {
 				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
 					"contact_type": contact.ContactType,
 				}).Error("failed to resolve corporation contact type")
-				continue
 			}
 		case "faction":
 			_, err := s.universe.Faction(ctx, contact.ContactID)
@@ -226,7 +244,6 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 					"contact_id":   contact.ContactID,
 					"contact_type": contact.ContactType,
 				}).Error("failed to resolve faction contact type")
-				continue
 			}
 		default:
 			s.logger.WithContext(ctx).WithFields(logrus.Fields{
@@ -239,56 +256,66 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 
 }
 
-func (s *service) EmptyMemberContactLabels(ctx context.Context, member *athena.Member) error {
-
-	_, err := s.MemberContactLabels(ctx, member)
-
-	return err
-
-}
-
-func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, error) {
+func (s *service) EmptyMemberContactLabels(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterContactLabels, esi.ModWithMember(member))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
 
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
+		return etag, nil
+	}
+
+	_, etag, err = s.MemberContactLabels(ctx, member)
+
+	return etag, err
+
+}
+
+func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, *athena.Etag, error) {
+
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterContactLabels, esi.ModWithMember(member))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch etag object: %w", err)
+	}
+
 	cached := true
 
 	labels, err := s.cache.MemberContactLabels(ctx, member.ID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if labels == nil {
 		cached = false
 		labels, err = s.contacts.MemberContactLabels(ctx, member.ID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) && len(labels) > 0 {
-		if !cached {
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
+
+		if !cached && len(labels) > 0 {
 			err = s.cache.SetMemberContactLabels(ctx, member.ID, labels)
 			if err != nil {
 				newrelic.FromContext(ctx).NoticeError(err)
 			}
 		}
 
-		return labels, nil
+		return labels, etag, nil
 	}
 
-	newLabels, _, err := s.esi.GetCharacterContactLabels(ctx, member, make([]*athena.MemberContactLabel, 0))
+	newLabels, etag, _, err := s.esi.GetCharacterContactLabels(ctx, member, make([]*athena.MemberContactLabel, 0))
 	if err != nil {
-		return nil, fmt.Errorf("[Contacts Service] Failed to fetch labels for member %d: %w", member.ID, err)
+		return nil, nil, fmt.Errorf("[Contacts Service] Failed to fetch labels for member %d: %w", member.ID, err)
 	}
 
 	if len(newLabels) > 0 {
 		labels, err = s.diffAndUpdateLabels(ctx, member, labels, newLabels)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if len(labels) > 0 {
@@ -299,7 +326,7 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 		}
 	}
 
-	return labels, err
+	return labels, etag, err
 
 }
 

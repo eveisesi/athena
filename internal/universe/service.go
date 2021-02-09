@@ -463,14 +463,11 @@ func (s *service) groupWorker(wid int, buffQ chan uint, wg *sync.WaitGroup, prog
 
 		chunks := s.chunkSliceUints(group.Types, int(size))
 
-		// fmt.Printf("Size: %d\tNumChunks: %d\tNum Types: %d\n", int(size), len(chunks), len(group.Types))
-
 		for _, chunk := range chunks {
 			for j := 0; j < len(chunk); j++ {
 				wgi.Add(1)
 				buffQQ <- chunk[j]
 			}
-
 		}
 
 		// for j := 0; j < len(group.Types); j++ {

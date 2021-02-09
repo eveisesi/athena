@@ -11,7 +11,7 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-type cloneInterface interface {
+type clonesInterface interface {
 	GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *athena.Etag, *http.Response, error)
 	GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *athena.Etag, *http.Response, error)
 }

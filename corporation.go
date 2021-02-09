@@ -12,6 +12,8 @@ type CorporationRepository interface {
 	Corporations(ctx context.Context, operators ...*Operator) ([]*Corporation, error)
 	CreateCorporation(ctx context.Context, corporation *Corporation) (*Corporation, error)
 	UpdateCorporation(ctx context.Context, id uint, corporation *Corporation) (*Corporation, error)
+	CorporationAllianceHistory(ctx context.Context, operators ...*Operator) ([]*CorporationAllianceHistory, error)
+	CreateCorporationAllianceHistory(ctx context.Context, id uint, history []*CorporationAllianceHistory) ([]*CorporationAllianceHistory, error)
 }
 
 type Corporation struct {
@@ -31,4 +33,14 @@ type Corporation struct {
 	WarEligible   bool        `db:"war_eligible" json:"war_eligible"`
 	CreatedAt     time.Time   `db:"created_at" json:"created_at" deep:"-"`
 	UpdatedAt     time.Time   `db:"updated_at" json:"updated_at" deep:"-"`
+}
+
+type CorporationAllianceHistory struct {
+	CorporationID uint      `db:"corporation_id" json:"id"`
+	AllianceID    uint      `db:"alliance_id" json:"alliance_id"`
+	IsDeleteed    bool      `db:"is_deleted" json:"is_deleted"`
+	RecordID      uint64    `db:"record_id" json:"record_id"`
+	StartDate     time.Time `db:"start_date" json:"start_date"`
+	CreatedAt     time.Time `db:"created_at" json:"created_at" deep:"-"`
+	UpdatedAt     time.Time `db:"updated_at" json:"updated_at" deep:"-"`
 }

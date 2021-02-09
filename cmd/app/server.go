@@ -34,7 +34,7 @@ func serverCommand(c *cli.Context) error {
 	// clone := clone.NewService(basics.logger, cache, esi, universe, basics.repositories.clone)
 	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
 	alliance := alliance.NewService(cache, esi, basics.repositories.alliance)
-	character := character.NewService(cache, esi, basics.repositories.character)
+	character := character.NewService(basics.logger, cache, esi, corporation, basics.repositories.character)
 	// contact := contact.NewService(basics.logger, cache, esi, etag, universe, basics.repositories.contact)
 
 	auth := auth.NewService(

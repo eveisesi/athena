@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,8 +23,12 @@ func migrateUpCommand(c *cli.Context) error {
 
 	basics := basics("migrate")
 
-	steps := c.Int("steps")
 	successes := 0
+	strSteps := c.Args().Get(0)
+	steps := 0
+	if strSteps != "" {
+		steps, _ = strconv.Atoi(strSteps)
+	}
 
 	files, err := filepath.Glob(fmt.Sprintf("%s*.up.sql", migrationDir))
 	if err != nil {
@@ -40,6 +45,8 @@ func migrateUpCommand(c *cli.Context) error {
 	}
 
 	basics.logger.Info("migrations table initialize successfully")
+
+	printMostRecentMigration(ctx, basics)
 
 	for _, file := range files {
 
@@ -98,17 +105,28 @@ func migrateUpCommand(c *cli.Context) error {
 
 func migrateDownCommand(c *cli.Context) error {
 
+	var ctx = context.Background()
+
 	basics := basics("migrate")
 
-	steps := c.Int("steps")
-	successes := 0
+	strSteps := c.Args().First()
+	steps := 0
+	if strSteps != "" {
+		steps, _ = strconv.Atoi(strSteps)
+	}
 
-	var ctx = context.Background()
+	if steps == 0 {
+		basics.logger.Fatal("Destructive down command requires explict negating of steps. To run all down migration, please pass -1 or pass N > 0")
+	}
+
+	successes := 0
 
 	migrations, err := basics.repositories.migration.Migrations(ctx)
 	if err != nil {
 		basics.logger.WithError(err).Fatal("failed to fetch migration from database")
 	}
+
+	printMostRecentMigration(ctx, basics)
 
 	for i := len(migrations) - 1; i >= 0; i-- {
 		migration := migrations[i]
@@ -168,7 +186,7 @@ func migrateCreateCommand(c *cli.Context) error {
 
 	now := time.Now()
 
-	filename := fmt.Sprintf("%s%s_%s.%%s.sql", migrationDir, now.Format("20060102150304"), name)
+	filename := fmt.Sprintf("%s%s_%s.%%s.sql", migrationDir, now.Format("20060102150405"), name)
 	up := fmt.Sprintf(filename, "up")
 	entry := basics.logger.WithFields(logrus.Fields{
 		"name": name,
@@ -188,5 +206,30 @@ func migrateCreateCommand(c *cli.Context) error {
 	entry.WithField("down", down).Info("migration created successfully")
 
 	return nil
+
+}
+
+func migrateCurrentCommand(c *cli.Context) error {
+
+	basics := basics("migrate")
+	var ctx = context.Background()
+
+	printMostRecentMigration(ctx, basics)
+	return nil
+}
+
+func printMostRecentMigration(ctx context.Context, basics *app) {
+
+	migrations, err := basics.repositories.migration.Migrations(ctx)
+	if err != nil {
+		basics.logger.WithError(err).Fatal("failed to fetch migration from database")
+	}
+
+	if len(migrations) == 0 {
+		basics.logger.Info("no migrations bave been run")
+		return
+	}
+
+	basics.logger.WithField("current", migrations[len(migrations)-1].Name).Info("current migration")
 
 }
