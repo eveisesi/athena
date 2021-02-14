@@ -93,6 +93,10 @@ const (
 	GetCharacterContractBids       endpointID = "GetCharacterContractBids"
 	GetCharacterFittings           endpointID = "GetCharacterFittings"
 	GetCharacterLocation           endpointID = "GetCharacterLocation"
+	GetCharacterMailHeaders        endpointID = "GetCharacterMailHeaders"
+	GetCharacterMailHeader         endpointID = "GetCharacterMailHeader"
+	GetCharacterMailLabels         endpointID = "GetCharacterMailLabels"
+	GetCharacterMailLists          endpointID = "GetCharacterMailLists"
 	GetCharacterOnline             endpointID = "GetCharacterOnline"
 	GetCharacterShip               endpointID = "GetCharacterShip"
 	GetCharacterWalletBalance      endpointID = "GetCharacterWalletBalance"
@@ -186,6 +190,18 @@ func (s *service) buildEndpointMap() {
 			Path:     "/v2/characters/%d/implants/",
 			KeyFunc:  characterImplantsKeyFunc,
 			PathFunc: characterImplantsPathFunc,
+		},
+		GetCharacterMailHeaders: &endpoint{
+			Path: "/v1/characters/{character_id}/mail/",
+		},
+		GetCharacterMailHeader: &endpoint{
+			Path: "/v1/characters/{character_id}/mail/{mail_id}/",
+		},
+		GetCharacterMailLists: &endpoint{
+			Path: "/v1/characters/{character_id}/mail/lists/",
+		},
+		GetCharacterMailLabels: &endpoint{
+			Path: "/v3/characters/{character_id}/mail/labels/",
 		},
 		GetCharacterLocation: &endpoint{
 			Path:     "/v2/characters/%d/location/",

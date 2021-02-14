@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
@@ -82,24 +81,17 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 
 func corporationKeyFunc(mods *modifiers) string {
 
-	if mods.corporation == nil {
-		panic("expected type *athena.Corporation to be provided, received nil for corporation instead")
-	}
+	requireCorporation(mods)
 
-	return buildKey(GetCorporation.String(), strconv.Itoa(int(mods.corporation.ID)))
+	return buildKey(GetCorporation.String(), strconv.FormatUint(uint64(mods.corporation.ID), 10))
+
 }
 
 func corporationPathFunc(mods *modifiers) string {
 
-	if mods.corporation == nil {
-		panic("expected type *athena.Corporation to be provided, received nil for corporation instead")
-	}
+	requireCorporation(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCorporation].Path, mods.corporation.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCorporation].Path, mods.corporation.ID)
 
 }
 
@@ -158,21 +150,17 @@ func (s *service) GetCorporationAllianceHistory(ctx context.Context, corporation
 }
 
 func corporationAllianceHistoryPathFunc(mods *modifiers) string {
-	if mods.corporation == nil {
-		panic("expected type *athena.Corporation to be provided, received nil for corporation instead")
-	}
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCorporationAllianceHistory].Path, mods.corporation.ID),
-	}
+	requireCorporation(mods)
 
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCorporationAllianceHistory].Path, mods.corporation.ID)
+
 }
 
 func corporationAllianceHistoryKeyFunc(mods *modifiers) string {
-	if mods.corporation == nil {
-		panic("expected type *athena.Corporation to be provided, received nil for corporation instead")
-	}
 
-	return buildKey(GetCorporationAllianceHistory.String(), strconv.Itoa(int(mods.corporation.ID)))
+	requireCorporation(mods)
+
+	return buildKey(GetCorporationAllianceHistory.String(), strconv.FormatUint(uint64(mods.corporation.ID), 10))
+
 }

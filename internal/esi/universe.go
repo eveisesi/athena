@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
@@ -407,9 +406,7 @@ func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*
 
 func categoryKeyFunc(mods *modifiers) string {
 
-	if mods.category == nil {
-		panic("expected type *athena.Category to be provided, received nil for category instead")
-	}
+	requireCategory(mods)
 
 	return buildKey(GetCategory.String(), strconv.FormatUint(uint64(mods.category.ID), 10))
 
@@ -417,15 +414,9 @@ func categoryKeyFunc(mods *modifiers) string {
 
 func categoryPathFunc(mods *modifiers) string {
 
-	if mods.category == nil {
-		panic("expected type *athena.Category to be provided, received nil for category instead")
-	}
+	requireCategory(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCategory].Path, mods.category.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCategory].Path, mods.category.ID)
 
 }
 
@@ -470,9 +461,7 @@ func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Gr
 
 func groupKeyFunc(mods *modifiers) string {
 
-	if mods.group == nil {
-		panic("expected type *athena.Group to be provided, received nil for group instead")
-	}
+	requireGroup(mods)
 
 	return buildKey(GetGroup.String(), strconv.FormatUint(uint64(mods.group.ID), 10))
 
@@ -480,15 +469,9 @@ func groupKeyFunc(mods *modifiers) string {
 
 func groupPathFunc(mods *modifiers) string {
 
-	if mods.group == nil {
-		panic("expected type *athena.Group to be provided, received nil for group instead")
-	}
+	requireGroup(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetGroup].Path, mods.group.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetGroup].Path, mods.member.ID)
 
 }
 
@@ -533,9 +516,7 @@ func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type,
 
 func typeKeyFunc(mods *modifiers) string {
 
-	if mods.item == nil {
-		panic("expected type *athena.Type to be provided, received nil for item instead")
-	}
+	requireItem(mods)
 
 	return buildKey(GetType.String(), strconv.FormatUint(uint64(mods.item.ID), 10))
 
@@ -543,15 +524,9 @@ func typeKeyFunc(mods *modifiers) string {
 
 func typePathFunc(mods *modifiers) string {
 
-	if mods.item == nil {
-		panic("expected type *athena.Type to be provided, received nil for item instead")
-	}
+	requireItem(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetType].Path, mods.item.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetType].Path, mods.item.ID)
 
 }
 
@@ -647,9 +622,7 @@ func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena
 
 func regionKeyFunc(mods *modifiers) string {
 
-	if mods.region == nil {
-		panic("expected type *athena.Region to be provided, received nil for region instead")
-	}
+	requireRegion(mods)
 
 	return buildKey(GetRegion.String(), strconv.FormatUint(uint64(mods.region.ID), 10))
 
@@ -657,15 +630,9 @@ func regionKeyFunc(mods *modifiers) string {
 
 func regionPathFunc(mods *modifiers) string {
 
-	if mods.region == nil {
-		panic("expected type *athena.Region to be provided, received nil for region instead")
-	}
+	requireRegion(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetRegion].Path, mods.region.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetRegion].Path, mods.region.ID)
 
 }
 
@@ -710,9 +677,7 @@ func (s *service) GetConstellation(ctx context.Context, constellation *athena.Co
 
 func constellationKeyFunc(mods *modifiers) string {
 
-	if mods.constellation == nil {
-		panic("expected type *athena.Constellation to be provided, received nil for constellation instead")
-	}
+	requireConstellation(mods)
 
 	return buildKey(GetConstellation.String(), strconv.FormatUint(uint64(mods.constellation.ID), 10))
 
@@ -720,15 +685,9 @@ func constellationKeyFunc(mods *modifiers) string {
 
 func constellationPathFunc(mods *modifiers) string {
 
-	if mods.constellation == nil {
-		panic("expected type *athena.Constellation to be provided, received nil for constellation instead")
-	}
+	requireConstellation(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetConstellation].Path, mods.constellation.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetConstellation].Path, mods.constellation.ID)
 
 }
 
@@ -773,9 +732,7 @@ func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarS
 
 func solarSystemKeyFunc(mods *modifiers) string {
 
-	if mods.solarSystem == nil {
-		panic("expected type *athena.SolarSystem to be provided, received nil for solarSystem instead")
-	}
+	requireSystem(mods)
 
 	return buildKey(GetSolarSystem.String(), strconv.FormatUint(uint64(mods.solarSystem.ID), 10))
 
@@ -783,15 +740,9 @@ func solarSystemKeyFunc(mods *modifiers) string {
 
 func solarSystemPathFunc(mods *modifiers) string {
 
-	if mods.solarSystem == nil {
-		panic("expected type *athena.SolarSystem to be provided, received nil for solarSystem instead")
-	}
+	requireSystem(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetSolarSystem].Path, mods.solarSystem.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetSolarSystem].Path, mods.solarSystem.ID)
 
 }
 
@@ -836,9 +787,7 @@ func (s *service) GetPlanet(ctx context.Context, planet *athena.Planet) (*athena
 
 func planetKeyFunc(mods *modifiers) string {
 
-	if mods.planet == nil {
-		panic("expected type *athena.Planet to be provided, received nil for planet instead")
-	}
+	requirePlanet(mods)
 
 	return buildKey(GetPlanet.String(), strconv.FormatUint(uint64(mods.planet.ID), 10))
 
@@ -846,15 +795,9 @@ func planetKeyFunc(mods *modifiers) string {
 
 func planetPathFunc(mods *modifiers) string {
 
-	if mods.planet == nil {
-		panic("expected type *athena.Planet to be provided, received nil for planet instead")
-	}
+	requirePlanet(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetPlanet].Path, mods.planet.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetPlanet].Path, mods.planet.ID)
 
 }
 
@@ -899,9 +842,7 @@ func (s *service) GetMoon(ctx context.Context, moon *athena.Moon) (*athena.Moon,
 
 func moonKeyFunc(mods *modifiers) string {
 
-	if mods.moon == nil {
-		panic("expected type *athena.Moon to be provided, received nil for moon instead")
-	}
+	requireMoon(mods)
 
 	return buildKey(GetMoon.String(), strconv.FormatUint(uint64(mods.moon.ID), 10))
 
@@ -909,39 +850,9 @@ func moonKeyFunc(mods *modifiers) string {
 
 func moonPathFunc(mods *modifiers) string {
 
-	if mods.moon == nil {
-		panic("expected type *athena.Moon to be provided, received nil for moon instead")
-	}
+	requireMoon(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetMoon].Path, mods.moon.ID),
-	}
-
-	return u.String()
-
-}
-
-func beltKeyFunc(mods *modifiers) string {
-
-	if mods.asteroidBelt == nil {
-		panic("expected type *athena.AsteroidBelt to be provided, received nil for belt instead")
-	}
-
-	return buildKey(GetAsteroidBelt.String(), strconv.FormatUint(uint64(mods.asteroidBelt.ID), 10))
-
-}
-
-func beltPathFunc(mods *modifiers) string {
-
-	if mods.asteroidBelt == nil {
-		panic("expected type *athena.AsteroidBelt to be provided, received nil for belt instead")
-	}
-
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetAsteroidBelt].Path, mods.asteroidBelt.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetMoon].Path, mods.moon.ID)
 
 }
 
@@ -981,6 +892,22 @@ func (s *service) GetAsteroidBelt(ctx context.Context, asteroidBelt *athena.Aste
 	}
 
 	return asteroidBelt, res, nil
+
+}
+
+func beltKeyFunc(mods *modifiers) string {
+
+	requireAsteriodBelt(mods)
+
+	return buildKey(GetAsteroidBelt.String(), strconv.FormatUint(uint64(mods.asteroidBelt.ID), 10))
+
+}
+
+func beltPathFunc(mods *modifiers) string {
+
+	requireAsteriodBelt(mods)
+
+	return fmt.Sprintf(endpoints[GetAsteroidBelt].Path, mods.asteroidBelt.ID)
 
 }
 
@@ -1025,9 +952,7 @@ func (s *service) GetStation(ctx context.Context, station *athena.Station) (*ath
 
 func stationKeyFunc(mods *modifiers) string {
 
-	if mods.station == nil {
-		panic("expected type *athena.Station to be provided, received nil for station instead")
-	}
+	requireStation(mods)
 
 	return buildKey(GetStation.String(), strconv.FormatUint(uint64(mods.station.ID), 10))
 
@@ -1035,15 +960,9 @@ func stationKeyFunc(mods *modifiers) string {
 
 func stationPathFunc(mods *modifiers) string {
 
-	if mods.station == nil {
-		panic("expected type *athena.Station to be provided, received nil for station instead")
-	}
+	requireStation(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetStation].Path, mods.station.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetStation].Path, mods.station.ID)
 
 }
 
@@ -1089,24 +1008,16 @@ func (s *service) GetStructure(ctx context.Context, member *athena.Member, struc
 
 func structureKeyFunc(mods *modifiers) string {
 
-	if mods.structure == nil {
-		panic("expected type *athena.Structure to be provided, received nil for structure instead")
-	}
+	requireStructure(mods)
 
-	return buildKey(GetStation.String(), strconv.FormatUint(mods.structure.ID, 10))
+	return buildKey(GetStructure.String(), strconv.FormatUint(mods.structure.ID, 10))
 
 }
 
 func structurePathFunc(mods *modifiers) string {
 
-	if mods.structure == nil {
-		panic("expected type *athena.Structure to be provided, received nil for structure instead")
-	}
+	requireStructure(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetStructure].Path, mods.structure.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetStructure].Path, mods.structure.ID)
 
 }

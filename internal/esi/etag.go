@@ -35,12 +35,13 @@ func (s *service) Etag(ctx context.Context, endpoint endpointID, modifierFunc ..
 		if oldest == nil {
 			oldest = etag
 			continue
-		} else if etag.CachedUntil.After(oldest.CachedUntil) {
+		} else if etag.CachedUntil.Before(oldest.CachedUntil) {
 			oldest = etag
 		}
 	}
 
 	return oldest, nil
+
 }
 
 func (s *service) ResetEtag(ctx context.Context, etag *athena.Etag) error {

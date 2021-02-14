@@ -67,24 +67,17 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 
 func characterAttributesKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for alliance instead")
-	}
+	requireMember(mods)
 
-	return buildKey(GetCharacterAttributes.String(), strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterAttributes.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+
 }
 
 func characterAttributesPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterAttributes].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterAttributes].Path, mods.member.ID)
 
 }
 
@@ -138,24 +131,17 @@ func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member,
 
 func characterSkillsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for alliance instead")
-	}
+	requireMember(mods)
 
-	return buildKey(GetCharacterSkills.String(), strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterSkills.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+
 }
 
 func characterSkillsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterSkills].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterSkills].Path, mods.member.ID)
 
 }
 

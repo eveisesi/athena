@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
@@ -17,18 +16,12 @@ func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Memb
 
 	mods := s.modifiers(ModWithMember(member))
 
-	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
-	if err != nil {
-		return nil, nil, err
-	}
-
 	path := endpoint.PathFunc(mods)
 
 	_, res, err := s.request(
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
@@ -37,12 +30,6 @@ func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Memb
 
 	if res.StatusCode >= http.StatusBadRequest {
 		return contracts, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, res.StatusCode)
-	} else if res.StatusCode == http.StatusNotModified {
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
-		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
-		}
 	}
 
 	pages := s.retrieveXPagesFromHeader(res.Header)
@@ -104,9 +91,7 @@ func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Memb
 
 func characterContractsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
 	param := append(make([]string, 0), GetCharacterContracts.String(), strconv.Itoa(int(mods.member.ID)))
 
@@ -115,19 +100,14 @@ func characterContractsKeyFunc(mods *modifiers) string {
 	}
 
 	return buildKey(param...)
+
 }
 
 func characterContractsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterContracts].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterContracts].Path, mods.member.ID)
 
 }
 
@@ -181,28 +161,18 @@ func (s *service) GetCharacterContractItems(ctx context.Context, member *athena.
 
 func characterContractItemsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
-
-	if mods.contract == nil {
-		panic("expected type *athena.MemberContract to be provided, received nil for member instead")
-	}
+	requireMember(mods)
+	requireContract(mods)
 
 	return buildKey(GetCharacterContractItems.String(), strconv.FormatUint(uint64(mods.member.ID), 10), strconv.FormatUint(uint64(mods.contract.ContractID), 10))
 }
 
 func characterContractItemsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
+	requireContract(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterContractItems].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterContractItems].Path, mods.member.ID, mods.contract.ContractID)
 
 }
 
@@ -256,13 +226,8 @@ func (s *service) GetCharacterContractBids(ctx context.Context, member *athena.M
 
 func characterContractBidsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
-
-	if mods.contract == nil {
-		panic("expected type *athena.MemberContract to be provided, received nil for member instead")
-	}
+	requireMember(mods)
+	requireContract(mods)
 
 	return buildKey(GetCharacterContractBids.String(), strconv.FormatUint(uint64(mods.member.ID), 10), strconv.FormatUint(uint64(mods.contract.ContractID), 10))
 
@@ -270,14 +235,9 @@ func characterContractBidsKeyFunc(mods *modifiers) string {
 
 func characterContractBidsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
+	requireContract(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterContractBids].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterContractBids].Path, mods.member.ID, mods.contract.ContractID)
 
 }

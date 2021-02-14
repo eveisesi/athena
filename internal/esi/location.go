@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
@@ -73,24 +72,17 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 
 func characterLocationsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	return buildKey(GetCharacterLocation.String(), strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterLocation.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+
 }
 
 func characterLocationsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterLocation].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterLocation].Path, mods.member.ID)
 
 }
 
@@ -147,24 +139,17 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 
 func characterOnlinesKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	return buildKey(GetCharacterOnline.String(), strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterOnline.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+
 }
 
 func characterOnlinesPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterOnline].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterOnline].Path, mods.member.ID)
 
 }
 
@@ -218,23 +203,16 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 
 func characterShipsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	return buildKey(GetCharacterShip.String(), strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterShip.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+
 }
 
 func characterShipsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterShip].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterShip].Path, mods.member.ID)
 
 }

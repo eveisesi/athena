@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
 )
 
 type allianceInterface interface {
-	// Alliances
 	GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *athena.Etag, *http.Response, error)
 }
 
@@ -45,7 +43,11 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 
 	path := endpoint.PathFunc(mods)
 
-	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(endpoint.PathFunc(mods)), WithEtag(etag))
+	b, res, err := s.request(ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -79,23 +81,16 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 
 func allianceKeyFunc(mods *modifiers) string {
 
-	if mods.alliance == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
-	}
+	requireAlliance(mods)
 
 	return buildKey(GetAlliance.String(), strconv.Itoa(int(mods.alliance.ID)))
+
 }
 
 func alliancePathFunc(mods *modifiers) string {
 
-	if mods.alliance == nil {
-		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
-	}
+	requireAlliance(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetAlliance].Path, mods.alliance.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetAlliance].Path, mods.alliance.ID)
 
 }

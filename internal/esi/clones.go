@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
@@ -73,24 +72,17 @@ func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member,
 
 func characterClonesKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	return buildKey(GetCharacterClones.String(), strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterClones.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+
 }
 
 func characterClonesPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterClones].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterClones].Path, mods.member.ID)
 
 }
 
@@ -150,23 +142,15 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 
 func characterImplantsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
 	return buildKey(GetCharacterImplants.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
 func characterImplantsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterImplants].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterImplants].Path, mods.member.ID)
 
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
@@ -61,29 +60,16 @@ func (s *service) GetCharacterFittings(ctx context.Context, member *athena.Membe
 
 func characterFittingsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	param := append(make([]string, 0), GetCharacterFittings.String(), strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterFittings.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
 
-	if mods.page != nil {
-		param = append(param, strconv.Itoa(*mods.page))
-	}
-
-	return buildKey(param...)
 }
 
 func characterFittingsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterFittings].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterFittings].Path, mods.member.ID)
 
 }

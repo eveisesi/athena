@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
@@ -22,18 +21,12 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 
 	mods := s.modifiers(ModWithMember(member))
 
-	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
 	path := endpoint.PathFunc(mods)
 
 	_, res, err := s.request(
 		ctx,
-		WithMethod(http.MethodGet),
+		WithMethod(http.MethodHead),
 		WithPath(path),
-		WithEtag(etag),
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
@@ -41,18 +34,7 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 	}
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return contacts, etag, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.ID, res.StatusCode)
-	} else {
-		etag.Etag = s.retrieveEtagHeader(res.Header)
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
-		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
-		}
-
-		if res.StatusCode == http.StatusNotModified {
-			return contacts, etag, res, nil
-		}
+		return contacts, nil, res, fmt.Errorf("failed to exec contacts head request for character %d, received status code of %d", member.ID, res.StatusCode)
 	}
 
 	pages := s.retrieveXPagesFromHeader(res.Header)
@@ -70,8 +52,6 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 		if err != nil {
 			return nil, nil, nil, err
 		}
-
-		path := endpoint.PathFunc(mods)
 
 		b, res, err := s.request(
 			ctx,
@@ -98,7 +78,7 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 			pageEtag.Etag = s.retrieveEtagHeader(res.Header)
 
 		case sc >= http.StatusBadRequest:
-			return contacts, etag, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.ID, sc)
+			return contacts, nil, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.ID, sc)
 		}
 
 		pageEtag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
@@ -108,15 +88,13 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 		}
 	}
 
-	return contacts, etag, res, nil
+	return contacts, nil, res, nil
 
 }
 
 func characterContactsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
 	param := append(make([]string, 0), GetCharacterContacts.String(), strconv.Itoa(int(mods.member.ID)))
 
@@ -130,15 +108,9 @@ func characterContactsKeyFunc(mods *modifiers) string {
 
 func characterContactsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterContacts].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterContacts].Path, mods.member.ID)
 
 }
 
@@ -192,23 +164,16 @@ func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.
 
 func characterContactLabelsKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
 	return buildKey(GetCharacterContactLabels.String(), strconv.Itoa(int(mods.member.ID)))
+
 }
 
 func characterContactLabelsPathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireMember(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterContactLabels].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterContactLabels].Path, mods.member.ID)
 
 }

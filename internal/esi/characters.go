@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
@@ -81,24 +80,16 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 
 func characterKeyFunc(mods *modifiers) string {
 
-	if mods.character == nil {
-		panic("expected type *athena.Character to be provided, received nil for character instead")
-	}
+	requireCharacter(mods)
 
 	return buildKey(GetCharacter.String(), strconv.Itoa(int(mods.character.ID)))
 }
 
 func characterPathFunc(mods *modifiers) string {
 
-	if mods.character == nil {
-		panic("expected type *athena.Character to be provided, received nil for character instead")
-	}
+	requireCharacter(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacter].Path, mods.character.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacter].Path, mods.character.ID)
 
 }
 
@@ -157,9 +148,7 @@ func (s *service) GetCharacterCorporationHistory(ctx context.Context, character 
 
 func characterCorporationHistoryKeyFunc(mods *modifiers) string {
 
-	if mods.character == nil {
-		panic("expected type *athena.Character to be provided, received nil for character instead")
-	}
+	requireCharacter(mods)
 
 	return buildKey(GetCharacterCorporationHistory.String(), strconv.Itoa(int(mods.character.ID)))
 
@@ -167,14 +156,8 @@ func characterCorporationHistoryKeyFunc(mods *modifiers) string {
 
 func characterCorporationHistoryPathFunc(mods *modifiers) string {
 
-	if mods.character == nil {
-		panic("expected type *athena.Character to be provided, received nil for character instead")
-	}
+	requireCharacter(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterCorporationHistory].Path, mods.character.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterCorporationHistory].Path, mods.character.ID)
 
 }

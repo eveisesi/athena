@@ -68,7 +68,7 @@ func (r *mailRepository) CreateMailHeaders(ctx context.Context, headers []*athen
 	for _, header := range headers {
 		mailIDs = append(mailIDs, header.MailID)
 		i = i.Values(
-			header.MailID, header.From,
+			header.MailID, header.Sender,
 			header.Subject, header.Timestamp,
 			sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 		)
