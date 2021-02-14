@@ -27,7 +27,7 @@ const (
 
 func (s *service) Character(ctx context.Context, id uint) (*athena.Character, error) {
 
-	key := format.Formatm(keyMemberContacts, format.Values{
+	key := format.Formatm(keyCharacter, format.Values{
 		"id": id,
 	})
 	result, err := s.client.Get(ctx, key).Result()
@@ -104,17 +104,22 @@ func (s *service) SetCharacterCorporationHistory(ctx context.Context, id uint, r
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	members := make([]interface{}, len(records))
-	for i, record := range records {
-		members[i] = record
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		data, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("failed to marshal character corporation history records for cache: %w", err)
+		}
+
+		members = append(members, string(data))
 	}
 
 	key := format.Formatm(keyCharacterCorporationHistory, format.Values{
 		"id": id,
 	})
-	_, err := s.client.SAdd(ctx, key, members...).Result()
+	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to cache contacts for member %d: %w", id, err)
+		return fmt.Errorf("[Cache Layer] Failed to cache corporation history for character %d: %w", id, err)
 	}
 
 	_, err = s.client.Expire(ctx, key, options.expiry).Result()

@@ -72,7 +72,7 @@ func (r *characterRepository) CreateCharacter(ctx context.Context, character *at
 		character.Gender, character.Birthday, character.BloodlineID,
 		character.RaceID, character.SecurityStatus, character.Title,
 		character.AncestryID, character.AllianceID, character.FactionID,
-		sq.Expr(`NOW()`, sq.Expr(`NOW()`)),
+		sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 	)
 
 	query, args, err := i.ToSql()
@@ -100,12 +100,12 @@ func (r *characterRepository) UpdateCharacter(ctx context.Context, id uint, char
 		Set("updated_at", sq.Expr(`NOW()`)).
 		Where(sq.Eq{"id": id}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Corporation Repository] Failed to generate update query: %w", err)
+		return nil, fmt.Errorf("[Character Repository] Failed to generate update query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Corporation Repository] Failed to update records: %w", err)
+		return nil, fmt.Errorf("[Character Repository] Failed to update records: %w", err)
 	}
 
 	return r.Character(ctx, character.ID)
@@ -146,7 +146,7 @@ func (r *characterRepository) CreateCharacterCorporationHistory(ctx context.Cont
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Corporation Repository] Failed to generate insert query: %w", err)
+		return nil, fmt.Errorf("[Character Repository] Failed to generate insert query: %w", err)
 	}
 
 	_, err = r.db.Exec(query, args...)

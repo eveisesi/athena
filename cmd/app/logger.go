@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/newrelic/go-agent/v3/integrations/logcontext/nrlogrusplugin"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -72,12 +73,39 @@ type writerHook struct {
 
 func (w *writerHook) Fire(entry *logrus.Entry) error {
 
+	if txn := newrelic.FromContext(entry.Context); txn != nil && entry.Level < logrus.InfoLevel {
+
+		data := entry.Data
+
+		msg := entry.Message
+
+		nre := newrelic.Error{}
+		nre.Stack = newrelic.NewStackTrace()
+
+		if err, ok := data["error"]; ok {
+			msg = fmt.Sprintf("%s: %v", msg, err)
+			delete(data, "error")
+		}
+
+		if service, ok := data["service"]; ok {
+			nre.Class = service.(string)
+		}
+
+		nre.Message = msg
+		nre.Attributes = data
+
+		txn.NoticeError(nre)
+
+	}
+
 	line, err := entry.String()
 	if err != nil {
 		return err
 	}
+
 	_, err = w.Writer.Write([]byte(line))
 	return err
+
 }
 
 func (w *writerHook) Levels() []logrus.Level {

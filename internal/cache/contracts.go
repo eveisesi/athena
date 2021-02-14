@@ -136,9 +136,14 @@ func (s *service) MemberContractItems(ctx context.Context, memberID uint, contra
 
 func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, contractID int, items []*athena.MemberContractItem, optionFuncs ...OptionFunc) error {
 
-	members := make([]interface{}, len(items))
-	for i, item := range items {
-		members[i] = item
+	members := make([]string, 0, len(items))
+	for _, item := range items {
+		data, err := json.Marshal(item)
+		if err != nil {
+			return fmt.Errorf("failed to marshal skill queue position: %w", err)
+		}
+
+		members = append(members, string(data))
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
@@ -148,7 +153,7 @@ func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, con
 		"contractID": contractID,
 	})
 
-	_, err := s.client.SAdd(ctx, key, members...).Result()
+	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToCacheMembers, key, err)
 	}

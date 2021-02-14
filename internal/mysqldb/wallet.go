@@ -33,7 +33,7 @@ func (r *memberWalletRepository) MemberWalletBalance(ctx context.Context, member
 	).From(r.balance).Where(sq.Eq{"member_id": memberID}).ToSql()
 
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to generate query: %w", err)
 	}
 
 	var balance = new(athena.MemberWalletBalance)
@@ -54,12 +54,12 @@ func (r *memberWalletRepository) CreateMemberWalletBalance(ctx context.Context, 
 	)
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberWalletBalance(ctx, memberID)
@@ -73,12 +73,12 @@ func (r *memberWalletRepository) UpdateMemberWalletBalance(ctx context.Context, 
 		Set("updated_at", sq.Expr(`NOW()`)).
 		Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberWalletBalance(ctx, memberID)
@@ -95,11 +95,11 @@ func (r *memberWalletRepository) MemberWalletTransactions(ctx context.Context, o
 		"date", "created_at", "updated_at",
 	).From(r.transactions), operators...).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to generate query: %w", err)
 	}
 
 	var transactions = make([]*athena.MemberWalletTransaction, 0)
-	err = r.db.SelectContext(ctx, transactions, query, args...)
+	err = r.db.SelectContext(ctx, &transactions, query, args...)
 
 	return transactions, err
 
@@ -107,14 +107,14 @@ func (r *memberWalletRepository) MemberWalletTransactions(ctx context.Context, o
 
 func (r *memberWalletRepository) CreateMemberWalletTransactions(ctx context.Context, memberID uint, transactions []*athena.MemberWalletTransaction) ([]*athena.MemberWalletTransaction, error) {
 
-	i := sq.Insert(r.transactions).Columns(
+	i := sq.Insert(r.transactions).Options("IGNORE").Columns(
 		"member_id", "transaction_id", "journal_ref_id",
 		"client_id", "client_type", "location_id",
 		"location_type", "type_id", "quantity",
 		"unit_price", "is_buy", "is_personal",
 		"date", "created_at", "updated_at",
 	)
-	transactionIDs := make([]uint64, 0)
+	transactionIDs := make([]interface{}, 0, len(transactions))
 	for _, transaction := range transactions {
 		i = i.Values(
 			memberID,
@@ -130,15 +130,15 @@ func (r *memberWalletRepository) CreateMemberWalletTransactions(ctx context.Cont
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to insert records: %w", err)
 	}
 
-	return r.MemberWalletTransactions(ctx, athena.NewInOperator("transaction_id", transactionIDs))
+	return r.MemberWalletTransactions(ctx, athena.NewInOperator("transaction_id", transactionIDs...))
 
 }
 
@@ -146,18 +146,18 @@ func (r *memberWalletRepository) MemberWalletJournals(ctx context.Context, opera
 
 	query, args, err := BuildFilters(sq.Select(
 		"member_id", "journal_id", "ref_type",
-		"context_id", "context_id_type", "description",
+		"context_id", "context_type", "description",
 		"reason", "first_party_id", "first_party_type",
 		"second_party_id", "second_party_type", "amount",
 		"balance", "tax", "tax_receiver_id",
 		"date", "created_at", "updated_at",
 	).From(r.journals), operators...).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to generate query: %w", err)
 	}
 
 	var journals = make([]*athena.MemberWalletJournal, 0)
-	err = r.db.SelectContext(ctx, journals, query, args...)
+	err = r.db.SelectContext(ctx, &journals, query, args...)
 
 	return journals, err
 
@@ -165,15 +165,15 @@ func (r *memberWalletRepository) MemberWalletJournals(ctx context.Context, opera
 
 func (r *memberWalletRepository) CreateMemberWalletJournals(ctx context.Context, memberID uint, journals []*athena.MemberWalletJournal) ([]*athena.MemberWalletJournal, error) {
 
-	i := sq.Insert(r.transactions).Columns(
+	i := sq.Insert(r.journals).Options("IGNORE").Columns(
 		"member_id", "journal_id", "ref_type",
-		"context_id", "context_id_type", "description",
+		"context_id", "context_type", "description",
 		"reason", "first_party_id", "first_party_type",
 		"second_party_id", "second_party_type", "amount",
 		"balance", "tax", "tax_receiver_id",
 		"date", "created_at", "updated_at",
 	)
-	journalIDs := make([]uint64, 0)
+	journalIDs := make([]interface{}, 0)
 	for _, journal := range journals {
 		i = i.Values(
 			memberID,
@@ -190,14 +190,14 @@ func (r *memberWalletRepository) CreateMemberWalletJournals(ctx context.Context,
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Wallet Repository] Failed to insert records: %w", err)
 	}
 
-	return r.MemberWalletJournals(ctx, athena.NewInOperator("journal_id", journalIDs))
+	return r.MemberWalletJournals(ctx, athena.NewInOperator("journal_id", journalIDs...))
 
 }

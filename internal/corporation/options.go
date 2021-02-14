@@ -1,17 +1,15 @@
 package corporation
 
 type options struct {
-	skipCache bool
+	history bool
 }
 
 type OptionFunc func(*options) *options
 
-func NewOptionFuncs(optionFuncs ...OptionFunc) []OptionFunc {
-	return optionFuncs
-}
-
 func (s *service) options(optionFuncs []OptionFunc) *options {
-	options := &options{}
+	options := &options{
+		history: false,
+	}
 
 	for _, optionFunc := range optionFuncs {
 		options = optionFunc(options)
@@ -20,9 +18,9 @@ func (s *service) options(optionFuncs []OptionFunc) *options {
 	return options
 }
 
-func SkipCache() OptionFunc {
+func WithHistory() OptionFunc {
 	return func(o *options) *options {
-		o.skipCache = true
+		o.history = true
 		return o
 	}
 }

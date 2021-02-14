@@ -58,17 +58,23 @@ func (s *service) SetMemberContacts(ctx context.Context, memberID uint, contacts
 	options := applyOptionFuncs(nil, optionFuncs)
 
 	// Build the interface to send to redis
-	members := make([]interface{}, len(contacts))
-	for i, contact := range contacts {
-		members[i] = contact
+	members := make([]string, 0, len(contacts))
+	for _, contact := range contacts {
+		data, err := json.Marshal(contact)
+		if err != nil {
+			return fmt.Errorf("failed to marshal skill queue position: %w", err)
+		}
+
+		members = append(members, string(data))
 	}
 
 	// Send members to redis
 	key := format.Formatm(keyMemberContacts, format.Values{
 		"id": memberID,
 	})
-	_, err := s.client.SAdd(ctx, key, members...).Result()
+	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
+		// spew.Dump("Original:", contacts, "Members: ", members)
 		return fmt.Errorf("[Cache Layer] Failed to cache contacts for member %d: %w", memberID, err)
 	}
 

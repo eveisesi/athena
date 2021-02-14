@@ -37,9 +37,9 @@ type Corporation struct {
 
 type CorporationAllianceHistory struct {
 	CorporationID uint      `db:"corporation_id" json:"id"`
-	AllianceID    uint      `db:"alliance_id" json:"alliance_id"`
-	IsDeleteed    bool      `db:"is_deleted" json:"is_deleted"`
-	RecordID      uint64    `db:"record_id" json:"record_id"`
+	RecordID      uint      `db:"record_id" json:"record_id"`
+	AllianceID    null.Uint `db:"alliance_id" json:"alliance_id"`
+	IsDeleteed    null.Bool `db:"is_deleted" json:"is_deleted"`
 	StartDate     time.Time `db:"start_date" json:"start_date"`
 	CreatedAt     time.Time `db:"created_at" json:"created_at" deep:"-"`
 	UpdatedAt     time.Time `db:"updated_at" json:"updated_at" deep:"-"`

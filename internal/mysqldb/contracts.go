@@ -52,7 +52,7 @@ func (r *memberContractRepository) MemberContracts(ctx context.Context, memberID
 		"type", "volume", "created_at", "updated_at",
 	).From(r.contracts), operators...).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Contract Repository] Failed to generate query: %w", err)
 	}
 
 	var contracts = make([]*athena.MemberContract, 0)
@@ -89,12 +89,12 @@ func (r *memberContractRepository) CreateContracts(ctx context.Context, memberID
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Contract Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Contract Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberContracts(ctx, memberID, athena.NewInOperator("contract_id", contractIDs))
@@ -131,12 +131,12 @@ func (r *memberContractRepository) UpdateContract(ctx context.Context, memberID 
 			Set("updated_at", sq.Expr(`NOW()`)).
 			Where(sq.Eq{"member_id": memberID, "contract_id": contract.ContractID}).ToSql()
 		if err != nil {
-			return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+			return nil, fmt.Errorf("[Contract Repository] Failed to generate query: %w", err)
 		}
 
 		_, err = r.db.ExecContext(ctx, query, args...)
 		if err != nil {
-			return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+			return nil, fmt.Errorf("[Contract Repository] Failed to insert records: %w", err)
 		}
 
 	}
@@ -154,7 +154,7 @@ func (r *memberContractRepository) MemberContractItems(ctx context.Context, memb
 		"created_at", "updated_at",
 	).From(r.items), operators...).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Contract Repository] Failed to generate query: %w", err)
 	}
 
 	var items = make([]*athena.MemberContractItem, 0)
@@ -184,12 +184,12 @@ func (r *memberContractRepository) CreateMemberContractItems(ctx context.Context
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Contract Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Contract Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberContractItems(ctx, memberID, contractID)
@@ -202,7 +202,7 @@ func (r *memberContractRepository) MemberContractBids(ctx context.Context, membe
 		"member_id", "contract_id", "bid_id", "bidder", "amount", "bid_date", "created_at", "updated_at",
 	).From(r.bids).Where(sq.Eq{"member_id": memberID, "contract_id": contractID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Contract Repository] Failed to generate query: %w", err)
 	}
 
 	var bids = make([]*athena.MemberContractBid, 0)
@@ -228,12 +228,12 @@ func (r *memberContractRepository) CreateMemberContractBids(ctx context.Context,
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Contract Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Contract Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberContractBids(ctx, memberID, contractID)

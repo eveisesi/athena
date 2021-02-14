@@ -27,6 +27,7 @@ const (
 	ReadContactsV1   Scope = "esi-characters.read_contacts.v1"
 	ReadSkillQueueV1 Scope = "esi-skills.read_skillqueue.v1"
 	ReadSkillsV1     Scope = "esi-skills.read_skills.v1"
+	ReadWalletV1     Scope = "esi-wallet.read_character_wallet.v1"
 )
 
 var AllScopes = []Scope{
@@ -38,6 +39,7 @@ var AllScopes = []Scope{
 	ReadContactsV1,
 	ReadSkillQueueV1,
 	ReadSkillsV1,
+	ReadWalletV1,
 }
 
 func (s Scope) String() string {

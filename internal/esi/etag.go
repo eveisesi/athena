@@ -8,11 +8,11 @@ import (
 )
 
 type etagInterface interface {
-	Etag(ctx context.Context, endpoint *endpoint, modifierFunc ...modifierFunc) (*athena.Etag, error)
+	Etag(ctx context.Context, endpoint endpointID, modifierFunc ...modifierFunc) (*athena.Etag, error)
 	ResetEtag(ctx context.Context, etag *athena.Etag) error
 }
 
-func (s *service) Etag(ctx context.Context, endpoint *endpoint, modifierFunc ...modifierFunc) (*athena.Etag, error) {
+func (s *service) Etag(ctx context.Context, endpoint endpointID, modifierFunc ...modifierFunc) (*athena.Etag, error) {
 
 	mods := s.modifiers(modifierFunc...)
 
@@ -20,8 +20,10 @@ func (s *service) Etag(ctx context.Context, endpoint *endpoint, modifierFunc ...
 		mods.page = nil
 	}
 
+	e := endpoints[endpoint]
+
 	// Use endpoint to resolve endpoint resolver function
-	key := endpoint.KeyFunc(mods)
+	key := e.KeyFunc(mods)
 
 	etags, err := s.etag.Etags(ctx, athena.NewLikeOperator("etag_id", key))
 	if err != nil {

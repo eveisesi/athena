@@ -18,7 +18,7 @@ type contactsInterface interface {
 
 func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Member, contacts []*athena.MemberContact) ([]*athena.MemberContact, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterContacts.Name]
+	endpoint := endpoints[GetCharacterContacts]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -112,13 +112,13 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 
 }
 
-func (s *service) characterContactsKeyFunc(mods *modifiers) string {
+func characterContactsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	param := append(make([]string, 0), GetCharacterContacts.Name, strconv.Itoa(int(mods.member.ID)))
+	param := append(make([]string, 0), GetCharacterContacts.String(), strconv.Itoa(int(mods.member.ID)))
 
 	if mods.page != nil {
 		param = append(param, strconv.Itoa(*mods.page))
@@ -128,31 +128,23 @@ func (s *service) characterContactsKeyFunc(mods *modifiers) string {
 
 }
 
-func (s *service) characterContactsPathFunc(mods *modifiers) string {
+func characterContactsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterContacts.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterContacts].Path, mods.member.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetCharacterContactsEndpoint() *endpoint {
-
-	GetCharacterContacts.KeyFunc = s.characterContactsKeyFunc
-	GetCharacterContacts.PathFunc = s.characterContactsPathFunc
-	return GetCharacterContacts
-
-}
-
 func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.Member, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterContactLabels.Name]
+	endpoint := endpoints[GetCharacterContactLabels]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -198,33 +190,25 @@ func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.
 
 }
 
-func (s *service) characterContactLabelsKeyFunc(mods *modifiers) string {
+func characterContactLabelsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterContactLabels.Name, strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterContactLabels.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
-func (s *service) characterContactLabelsPathFunc(mods *modifiers) string {
+func characterContactLabelsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterContactLabels.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterContactLabels].Path, mods.member.ID),
 	}
 
 	return u.String()
-
-}
-
-func (s *service) newGetCharacterContactLabelsEndpoint() *endpoint {
-
-	GetCharacterContactLabels.KeyFunc = s.characterContactLabelsKeyFunc
-	GetCharacterContactLabels.PathFunc = s.characterContactLabelsPathFunc
-	return GetCharacterContactLabels
 
 }

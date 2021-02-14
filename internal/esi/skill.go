@@ -19,7 +19,7 @@ type skillsInterface interface {
 
 func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberAttributes) (*athena.MemberAttributes, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterAttributes.Name]
+	endpoint := endpoints[GetCharacterAttributes]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -65,38 +65,32 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 
 }
 
-func (s *service) characterAttributesKeyFunc(mods *modifiers) string {
+func characterAttributesKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for alliance instead")
 	}
 
-	return buildKey(GetCharacterAttributes.Name, strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterAttributes.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
-func (s *service) characterAttributesPathFunc(mods *modifiers) string {
+func characterAttributesPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterAttributes.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterAttributes].Path, mods.member.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetCharacterAttributesEndpoint() *endpoint {
-	GetCharacterAttributes.KeyFunc = s.characterAttributesKeyFunc
-	GetCharacterAttributes.PathFunc = s.characterAttributesPathFunc
-	return GetCharacterAttributes
-}
-
 func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member, skills *athena.MemberSkills) (*athena.MemberSkills, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterSkills.Name]
+	endpoint := endpoints[GetCharacterSkills]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -142,38 +136,32 @@ func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member,
 
 }
 
-func (s *service) characterSkillsKeyFunc(mods *modifiers) string {
+func characterSkillsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for alliance instead")
 	}
 
-	return buildKey(GetCharacterSkills.Name, strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterSkills.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
-func (s *service) characterSkillsPathFunc(mods *modifiers) string {
+func characterSkillsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterSkills.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterSkills].Path, mods.member.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetCharacterSkillsEndpoint() *endpoint {
-	GetCharacterSkills.KeyFunc = s.characterSkillsKeyFunc
-	GetCharacterSkills.PathFunc = s.characterSkillsPathFunc
-	return GetCharacterSkills
-}
-
 func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Member, queue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterSkillQueue.Name]
+	endpoint := endpoints[GetCharacterSkillQueue]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -219,31 +207,25 @@ func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Mem
 
 }
 
-func (s *service) characterSkillQueueKeyFunc(mods *modifiers) string {
+func characterSkillQueueKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for alliance instead")
 	}
 
-	return buildKey(GetCharacterSkillQueue.Name, strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterSkillQueue.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
-func (s *service) characterSkillQueuePathFunc(mods *modifiers) string {
+func characterSkillQueuePathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterSkillQueue.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterSkillQueue].Path, mods.member.ID),
 	}
 
 	return u.String()
 
-}
-
-func (s *service) newGetCharacterSkillQueueEndpoint() *endpoint {
-	GetCharacterSkillQueue.KeyFunc = s.characterSkillQueueKeyFunc
-	GetCharacterSkillQueue.PathFunc = s.characterSkillQueuePathFunc
-	return GetCharacterSkillQueue
 }

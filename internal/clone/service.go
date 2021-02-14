@@ -11,7 +11,6 @@ import (
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/eveisesi/athena/internal/universe"
-	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,6 +31,10 @@ type service struct {
 	clones athena.CloneRepository
 }
 
+const (
+	serviceIdentifier = "Clone Service"
+)
+
 func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, universe universe.Service, clones athena.CloneRepository) Service {
 	return &service{
 		logger: logger,
@@ -48,7 +51,7 @@ func (s *service) EmptyMemberClones(ctx context.Context, member *athena.Member) 
 
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithMember(member))
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
+		return nil, fmt.Errorf("failed to fetch etag object")
 	}
 
 	if etag != nil && etag.CachedUntil.After(time.Now()) {
@@ -63,42 +66,49 @@ func (s *service) EmptyMemberClones(ctx context.Context, member *athena.Member) 
 
 func (s *service) MemberClones(ctx context.Context, member *athena.Member) (*athena.MemberClones, *athena.Etag, error) {
 
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "MemberClones",
+	})
+
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithMember(member))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch etag object: %w", err)
+		entry.WithError(err).Error("failed to fetch etag object")
+		return nil, nil, fmt.Errorf("failed to fetch etag object")
 	}
-	upsert := false
+
+	exists := true
 	cached := true
 
 	clones, err := s.cache.MemberClones(ctx, member.ID)
 	if err != nil {
-		return nil, nil, err
+		entry.WithError(err).Error("failed to fetch member clones from cache")
+		return nil, nil, fmt.Errorf("failed to fetch member clones from cache")
 	}
 
 	if clones == nil {
 		cached = false
 		clones, err = s.clones.MemberClones(ctx, member.ID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, err
+			entry.WithError(err).Error("failed to fetch member clones from DB")
+			return nil, nil, fmt.Errorf("failed to fetch member clones from DB")
 		}
 
-		if errors.Is(err, sql.ErrNoRows) {
-			upsert = true
-			clones = &athena.MemberClones{MemberID: member.ID}
-			err = s.esi.ResetEtag(ctx, etag)
-			if err != nil {
-				return nil, nil, err
+		if clones == nil || errors.Is(err, sql.ErrNoRows) {
+			exists = false
+			clones = &athena.MemberClones{
+				MemberID: member.ID,
 			}
 		}
-
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) && !upsert && clones != nil {
+	if etag != nil && etag.CachedUntil.After(time.Now()) && exists && clones != nil {
 
 		if !cached {
 			err = s.cache.SetMemberClones(ctx, member.ID, clones)
 			if err != nil {
-				newrelic.FromContext(ctx).NoticeError(err)
+				entry.WithError(err).Error("failed to cache member clones")
 			}
 
 		}
@@ -109,33 +119,42 @@ func (s *service) MemberClones(ctx context.Context, member *athena.Member) (*ath
 
 	clones, etag, _, err = s.esi.GetCharacterClones(ctx, member, clones)
 	if err != nil {
-		return nil, nil, err
+		entry.WithError(err).Error("failed to fetch member clones from ESI")
+		return nil, nil, fmt.Errorf("failed to fetch member clones from ESI")
 	}
 
 	s.resolveCloneAttributes(ctx, member, clones)
 
-	switch upsert {
+	switch exists {
 	case true:
-		clones, err = s.clones.CreateMemberClones(ctx, clones)
-		if err != nil {
-			return nil, nil, err
-		}
-	case false:
 		clones, err = s.clones.UpdateMemberClones(ctx, clones)
 		if err != nil {
-			return nil, nil, err
+			entry.WithError(err).Error("failed to update member clones in database")
+			return nil, nil, fmt.Errorf("failed to update member clones in database")
+		}
+	case false:
+		clones, err = s.clones.CreateMemberClones(ctx, clones)
+		if err != nil {
+			entry.WithError(err).Error("failed to create member clones in database")
+			return nil, nil, fmt.Errorf("failed to create member clones in database")
 		}
 	}
 
 	err = s.cache.SetMemberClones(ctx, clones.MemberID, clones)
 	if err != nil {
-		newrelic.FromContext(ctx).NoticeError(err)
+		entry.WithError(err).Error("failed to cache member clones")
 	}
 
 	return clones, etag, nil
 }
 
 func (s *service) resolveCloneAttributes(ctx context.Context, member *athena.Member, clones *athena.MemberClones) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "resolveCloneAttributes",
+	})
 
 	clones.MemberID = member.ID
 
@@ -144,12 +163,18 @@ func (s *service) resolveCloneAttributes(ctx context.Context, member *athena.Mem
 	case "structure":
 		_, err := s.universe.Structure(ctx, member, homeClone.LocationID)
 		if err != nil {
-			s.logger.WithError(err).WithField("structure_id", homeClone.LocationID).WithField("member_id", member.ID).Error("failed to resolve structure id")
+			entry.WithError(err).WithFields(logrus.Fields{
+				"location_id":   homeClone.LocationID,
+				"location_type": homeClone.LocationType,
+			}).Error("failed to resolve structure id")
 		}
 	case "station":
 		_, err := s.universe.Station(ctx, uint(homeClone.LocationID))
 		if err != nil {
-			s.logger.WithError(err).WithField("structure_id", homeClone.LocationID).Error("failed to resolve station id")
+			entry.WithError(err).WithFields(logrus.Fields{
+				"location_id":   homeClone.LocationID,
+				"location_type": homeClone.LocationType,
+			}).Error("failed to resolve station id")
 		}
 	}
 
@@ -159,19 +184,27 @@ func (s *service) resolveCloneAttributes(ctx context.Context, member *athena.Mem
 		case "structure":
 			_, err := s.universe.Structure(ctx, member, jumpClone.LocationID)
 			if err != nil {
-				s.logger.WithError(err).WithField("structure_id", jumpClone.LocationID).WithField("member_id", member.ID).Error("failed to resolve structure id")
+				entry.WithError(err).WithFields(logrus.Fields{
+					"location_id":   jumpClone.LocationID,
+					"location_type": jumpClone.LocationType,
+				}).Error("failed to resolve structure id")
 			}
 		case "station":
 			_, err := s.universe.Station(ctx, uint(jumpClone.LocationID))
 			if err != nil {
-				s.logger.WithError(err).WithField("station_id", jumpClone.LocationID).Error("failed to resolve station id")
+				entry.WithError(err).WithFields(logrus.Fields{
+					"location_id":   jumpClone.LocationID,
+					"location_type": jumpClone.LocationType,
+				}).Error("failed to resolve station id")
 			}
 		}
 
 		for _, implant := range jumpClone.Implants {
 			_, err := s.universe.Type(ctx, uint(implant))
 			if err != nil {
-				s.logger.WithError(err).WithField("implant_type_id", jumpClone.LocationID).Error("failed to resolve implent type id")
+				entry.WithError(err).WithFields(logrus.Fields{
+					"implant_type_id": implant,
+				}).Error("failed to resolve station id")
 			}
 		}
 
@@ -198,32 +231,42 @@ func (s *service) EmptyMemberImplants(ctx context.Context, member *athena.Member
 
 func (s *service) MemberImplants(ctx context.Context, member *athena.Member) ([]*athena.MemberImplant, *athena.Etag, error) {
 
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "MemberImplants",
+	})
+
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterImplants, esi.ModWithMember(member))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch etag object: %w", err)
+		entry.WithError(err).Error("failed to fetch etag object")
+		return nil, nil, fmt.Errorf("failed to fetch etag object")
 	}
 
 	cached := true
 
 	implants, err := s.cache.MemberImplants(ctx, member.ID)
 	if err != nil {
-		return nil, nil, err
+		entry.WithError(err).Error("failed to fetch member implants from cache")
+		return nil, nil, fmt.Errorf("failed to fetch member implants from cache")
 	}
 
 	if len(implants) == 0 {
 		cached = false
 		implants, err = s.clones.MemberImplants(ctx, member.ID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, err
+			entry.WithError(err).Error("failed to fetch member implants from DB")
+			return nil, nil, fmt.Errorf("failed to fetch member implants from DB")
 		}
+
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) && len(implants) > 0 {
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
 
 		if !cached {
 			err = s.cache.SetMemberImplants(ctx, member.ID, implants)
 			if err != nil {
-				newrelic.FromContext(ctx).NoticeError(err)
+				entry.WithError(err).Error("failed to cache member implants")
 			}
 		}
 
@@ -232,20 +275,18 @@ func (s *service) MemberImplants(ctx context.Context, member *athena.Member) ([]
 
 	newImplants, etag, _, err := s.esi.GetCharacterImplants(ctx, member, make([]uint, 0))
 	if err != nil {
-		s.logger.WithError(err).Error("failed to fetch implants for member")
-		return nil, nil, err
+		entry.WithError(err).Error("failed to fetch member implants from ESI")
+		return nil, nil, fmt.Errorf("failed to fetch member implants from ESI")
 	}
 
 	implants, err = s.resolveImplantAttributes(ctx, member, newImplants)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to resolve member implants")
 	}
 
-	if len(implants) > 0 {
-		err = s.cache.SetMemberImplants(ctx, member.ID, implants)
-		if err != nil {
-			newrelic.FromContext(ctx).NoticeError(err)
-		}
+	err = s.cache.SetMemberImplants(ctx, member.ID, implants)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache member implants")
 	}
 
 	return implants, etag, nil
@@ -254,15 +295,21 @@ func (s *service) MemberImplants(ctx context.Context, member *athena.Member) ([]
 
 func (s *service) resolveImplantAttributes(ctx context.Context, member *athena.Member, new []uint) ([]*athena.MemberImplant, error) {
 
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "resolveImplantAttributes",
+	})
+
 	implants := make([]*athena.MemberImplant, len(new))
 
 	for i, raw := range new {
 
 		implant, err := s.universe.Type(ctx, raw)
 		if err != nil {
-			err = fmt.Errorf("[Clones Service] Failed to resolve implent type id %d: %w", raw, err)
-			newrelic.FromContext(ctx).AddAttribute("implant_type_id", raw)
-			newrelic.FromContext(ctx).NoticeError(err)
+			entry.WithError(err).WithFields(logrus.Fields{
+				"implant_type_id": raw,
+			}).Error("failed to resolve implant type id")
 			continue
 		}
 
@@ -274,18 +321,18 @@ func (s *service) resolveImplantAttributes(ctx context.Context, member *athena.M
 
 	_, err := s.clones.DeleteMemberImplants(ctx, member.ID)
 	if err != nil {
-		err = fmt.Errorf("[Clone Service] Failed to delete member %d implants: %w", member.ID, err)
-		newrelic.FromContext(ctx).NoticeError(err)
-		return nil, err
+		entry.WithError(err).Error("failed to delete member implants")
+		return implants, fmt.Errorf("failed to delete member implants")
 	}
 
-	implants, err = s.clones.CreateMemberImplants(ctx, member.ID, implants)
-	if err != nil {
-		err = fmt.Errorf("[Clone Service] Failed to create implants for member %d: %w", member.ID, err)
-		newrelic.FromContext(ctx).NoticeError(err)
-		return nil, err
+	if len(implants) > 0 {
+		implants, err = s.clones.CreateMemberImplants(ctx, member.ID, implants)
+		if err != nil {
+			entry.WithError(err).Error("failed to create implants for member")
+		}
+
 	}
 
-	return implants, nil
+	return implants, err
 
 }

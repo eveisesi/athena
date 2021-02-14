@@ -104,9 +104,14 @@ func (s *service) SetMemberImplants(ctx context.Context, memberID uint, implants
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	members := make([]interface{}, len(implants))
-	for i, implant := range implants {
-		members[i] = implant
+	members := make([]string, 0, len(implants))
+	for _, implant := range implants {
+		data, err := json.Marshal(implant)
+		if err != nil {
+			return fmt.Errorf("failed to marshal implants for cache: %w", err)
+		}
+
+		members = append(members, string(data))
 	}
 
 	key := format.Formatm(keyMemberImplants, format.Values{

@@ -40,7 +40,7 @@ func (r *allianceRepository) Alliances(ctx context.Context, operators ...*athena
 	query, args, err := BuildFilters(sq.Select(
 		"id", "name", "ticker", "date_founded", "creator_id",
 		"creator_corporation_id", "executor_corporation_id",
-		"faction_id", "is_closed", "created_at", "updated_at",
+		"is_closed", "created_at", "updated_at",
 	), operators...).From("alliances").ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("[Alliance Repository] Failed to generate query: %w", err)
@@ -56,13 +56,14 @@ func (r *allianceRepository) Alliances(ctx context.Context, operators ...*athena
 func (r *allianceRepository) CreateAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, error) {
 
 	i := sq.Insert("alliances").
-		Columns("id", "name", "ticker", "date_founded", "creator_id",
-			"creator_corporation_id", "executor_corporation_id", "faction_id",
+		Columns(
+			"id", "name", "ticker", "date_founded",
+			"creator_id", "creator_corporation_id", "executor_corporation_id",
 			"is_closed", "created_at", "updated_at").
 		Values(
 			alliance.ID, alliance.Name, alliance.Ticker, alliance.DateFounded,
 			alliance.CreatorID, alliance.CreatorCorporationID, alliance.ExecutorCorporationID,
-			alliance.FactionID, sq.Expr(`NOW()`, sq.Expr(`NOW()`)),
+			alliance.IsClosed, sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 		)
 
 	query, args, err := i.ToSql()
@@ -84,7 +85,6 @@ func (r *allianceRepository) UpdateAlliance(ctx context.Context, id uint, allian
 	u := sq.Update("alliances").
 		Set("executor_corporation_id", alliance.ExecutorCorporationID).
 		Set("is_closed", alliance.IsClosed).
-		Set("faction_id", alliance.FactionID).
 		Set("updated_at", sq.Expr(`NOW()`)).
 		Where(sq.Eq{"id": id})
 

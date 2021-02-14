@@ -123,7 +123,7 @@ func (r *corporationRepository) CorporationAllianceHistory(ctx context.Context, 
 		"created_at", "updated_at",
 	).From(r.history), operators...).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Character Repository] Failed to generate select query: %w", err)
+		return nil, fmt.Errorf("[Corporation Repository] Failed to generate select query: %w", err)
 	}
 
 	var histories = make([]*athena.CorporationAllianceHistory, 0)
@@ -157,7 +157,7 @@ func (r *corporationRepository) CreateCorporationAllianceHistory(ctx context.Con
 
 	_, err = r.db.Exec(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Character Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Corporation Repository] Failed to insert records: %w", err)
 	}
 
 	return r.CorporationAllianceHistory(ctx, athena.NewEqualOperator("corporation_id", id))

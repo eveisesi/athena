@@ -49,7 +49,7 @@ func (r *mailRepository) MailHeaders(ctx context.Context, operators ...*athena.O
 		"mail_id", "from", "subject", "timestamp", "created_at", "updated_at",
 	).From(r.mail), operators...).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 	}
 
 	var headers = make([]*athena.MailHeader, 0)
@@ -76,12 +76,12 @@ func (r *mailRepository) CreateMailHeaders(ctx context.Context, headers []*athen
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to insert records: %w", err)
 	}
 
 	// return s.
@@ -95,7 +95,7 @@ func (r *mailRepository) MemberMailHeaders(ctx context.Context, operators ...*at
 		"member_id", "mail_id", "labels", "created_at", "updated_at",
 	).From(r.member), operators...).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 	}
 
 	var headers = make([]*athena.MemberMailHeader, 0)
@@ -123,12 +123,12 @@ func (r *mailRepository) CreateMemberMailHeaders(ctx context.Context, memberID u
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberMailHeaders(ctx, athena.NewEqualOperator("member_id", memberID), athena.NewInOperator("mail_id", mailIDs))
@@ -148,12 +148,12 @@ func (r *mailRepository) UpdateMemberMailHeaders(ctx context.Context, memberID u
 			Set("updated_at", header.UpdatedAt).
 			Where(sq.Eq{"member_id": memberID, "mail_id": header.MailID}).ToSql()
 		if err != nil {
-			return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+			return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 		}
 
 		_, err = r.db.ExecContext(ctx, query, args...)
 		if err != nil {
-			return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+			return nil, fmt.Errorf("[Mail Repository] Failed to insert records: %w", err)
 		}
 		mailIDs = append(mailIDs, header.MailID)
 
@@ -169,7 +169,7 @@ func (r *mailRepository) MailRecipients(ctx context.Context, operators ...*athen
 		"member_id", "mail_id", "recipient_id", "recipient_type", "created_at", "updated_at",
 	).From(r.recipients), operators...).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 	}
 
 	var recipients = make([]*athena.MailRecipient, 0)
@@ -198,12 +198,12 @@ func (r *mailRepository) CreateMailRecipients(ctx context.Context, mailID int, r
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MailRecipients(ctx, athena.NewEqualOperator("mail_id", mailIDs))
@@ -216,7 +216,7 @@ func (r *mailRepository) MemberMailLabels(ctx context.Context, memberID uint) (*
 		"member_id", "labels", "total_unread_count", "created_at", "updated_at",
 	).From(r.labels).Where("member_id", memberID).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 	}
 
 	var labels = new(athena.MemberMailLabels)
@@ -233,12 +233,12 @@ func (r *mailRepository) CreateMemberMailLabel(ctx context.Context, memberID uin
 		memberID, labels.Labels, labels.TotalUnreadCount, sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 	).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberMailLabels(ctx, memberID)
@@ -253,12 +253,12 @@ func (r *mailRepository) UpdateMemberMailLabel(ctx context.Context, memberID uin
 		Set("updated_at", sq.Expr(`NOW()`)).
 		Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Mail Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberMailLabels(ctx, memberID)

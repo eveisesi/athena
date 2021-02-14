@@ -25,6 +25,28 @@
             "args": ["processor"],
             "showLog": true,
             "envFile": "${workspaceFolder}/.config/app.env"
+        },
+        {
+            "name": "Debug Test",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/app",
+            "env": {},
+            "args": ["test"],
+            "showLog": true,
+            "envFile": "${workspaceFolder}/.config/app.env"
+        },
+        {
+            "name": "Debug Universe",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/cmd/app",
+            "env": {},
+            "args": ["universe", "--skip", "chr", "--skip", "inv"],
+            "showLog": true,
+            "envFile": "${workspaceFolder}/.config/app.env"
         }
     ]
 }

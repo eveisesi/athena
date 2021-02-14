@@ -85,3 +85,20 @@ func (s SliceUint) Value() (driver.Value, error) {
 	return data, nil
 
 }
+
+func (s SliceUint) MarshalJSON() ([]byte, error) {
+	return json.Marshal([]uint64(s))
+}
+
+func (s *SliceUint) UnmarshalJSON(value []byte) error {
+
+	x := make([]uint64, 0)
+	err := json.Unmarshal(value, &x)
+	if err != nil {
+		return err
+	}
+	a := SliceUint(x)
+	*s = a
+	return nil
+
+}

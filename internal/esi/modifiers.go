@@ -7,14 +7,18 @@ import (
 type (
 	modifiers struct {
 		alliance      *athena.Alliance
+		asteroidBelt  *athena.AsteroidBelt
 		category      *athena.Category
 		character     *athena.Character
 		constellation *athena.Constellation
+		contract      *athena.MemberContract
 		corporation   *athena.Corporation
 		group         *athena.Group
 		item          *athena.Type
 		member        *athena.Member
+		moon          *athena.Moon
 		page          *int
+		planet        *athena.Planet
 		region        *athena.Region
 		station       *athena.Station
 		solarSystem   *athena.SolarSystem
@@ -26,7 +30,7 @@ type (
 	pathFunc func(mod *modifiers) string
 	keyFunc  func(mod *modifiers) string
 
-	endpointMap map[string]*endpoint
+	endpointMap map[endpointID]*endpoint
 )
 
 func (s *service) modifiers(modFuncs ...modifierFunc) *modifiers {
@@ -43,6 +47,27 @@ func (s *service) modifiers(modFuncs ...modifierFunc) *modifiers {
 func ModWithPage(page *int) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.page = page
+		return mod
+	}
+}
+
+func ModWithAsteroidBelt(belt *athena.AsteroidBelt) modifierFunc {
+	return func(mod *modifiers) *modifiers {
+		mod.asteroidBelt = belt
+		return mod
+	}
+}
+
+func ModWithMoon(moon *athena.Moon) modifierFunc {
+	return func(mod *modifiers) *modifiers {
+		mod.moon = moon
+		return mod
+	}
+}
+
+func ModWithContract(contract *athena.MemberContract) modifierFunc {
+	return func(mod *modifiers) *modifiers {
+		mod.contract = contract
 		return mod
 	}
 }
@@ -78,6 +103,13 @@ func ModWithCharacter(character *athena.Character) modifierFunc {
 func ModWithCorporation(corporation *athena.Corporation) modifierFunc {
 	return func(mod *modifiers) *modifiers {
 		mod.corporation = corporation
+		return mod
+	}
+}
+
+func ModWithPlanet(planet *athena.Planet) modifierFunc {
+	return func(mod *modifiers) *modifiers {
+		mod.planet = planet
 		return mod
 	}
 }

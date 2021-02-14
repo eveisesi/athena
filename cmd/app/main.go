@@ -43,6 +43,7 @@ type repositories struct {
 	migration   athena.MigrationRepository
 	skill       athena.MemberSkillRepository
 	universe    athena.UniverseRepository
+	wallet      athena.MemberWalletRepository
 }
 
 // basics initializes the following
@@ -100,6 +101,7 @@ func basics(command string) *app {
 		skill:       mysqldb.NewSkillRepository(app.db),
 		location:    mysqldb.NewMemberLocationRepository(app.db),
 		contact:     mysqldb.NewMemberContactRepository(app.db),
+		wallet:      mysqldb.NewMemberWalletRepository(app.db),
 	}
 
 	return &app
@@ -192,6 +194,16 @@ func main() {
 						},
 						cli.BoolFlag{
 							Name: "reset",
+						},
+					},
+				},
+				{
+					Name:   "reset",
+					Action: resetMemberByCLI,
+					Flags: []cli.Flag{
+						cli.Int64Flag{
+							Name:     "id",
+							Required: true,
 						},
 					},
 				},

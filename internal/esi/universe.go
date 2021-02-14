@@ -11,9 +11,109 @@ import (
 	"github.com/eveisesi/athena"
 )
 
+type universeInterface interface {
+	GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error)
+	GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error)
+	GetCategories(ctx context.Context, ids []uint) ([]uint, *http.Response, error)
+	GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error)
+	GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error)
+	GetFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error)
+	GetGroup(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error)
+	GetMoon(ctx context.Context, moon *athena.Moon) (*athena.Moon, *http.Response, error)
+	GetAsteroidBelt(ctx context.Context, belt *athena.AsteroidBelt) (*athena.AsteroidBelt, *http.Response, error)
+	GetPlanet(ctx context.Context, planet *athena.Planet) (*athena.Planet, *http.Response, error)
+	GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Response, error)
+	GetRegion(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error)
+	GetRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error)
+	GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error)
+	GetStation(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error)
+	GetStructure(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error)
+	GetType(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error)
+
+	PostUniverseNames(ctx context.Context, ids []uint) ([]*PostUniverseNamesOK, *http.Response, error)
+}
+
+type PostUniverseNamesOK struct {
+	Category Category `json:"category"`
+	ID       uint     `json:"id"`
+	Name     string   `json:"name"`
+}
+
+type Category string
+
+const (
+	CategoryAlliance      Category = "alliance"
+	CategoryCharacter     Category = "character"
+	CategoryCorporation   Category = "corporation"
+	CategoryConstellation Category = "constellation"
+	CategoryInventoryType Category = "inventory_type"
+	CategoryRegion        Category = "region"
+	CategorySolarSystem   Category = "solar_system"
+	CategoryStation       Category = "station"
+	CategoryFaction       Category = "faction"
+)
+
+func (s *service) PostUniverseNames(ctx context.Context, ids []uint) ([]*PostUniverseNamesOK, *http.Response, error) {
+
+	endpoint := endpoints[PostUniverseNames]
+
+	mods := s.modifiers()
+
+	path := endpoint.PathFunc(mods)
+
+	if len(ids) == 0 {
+		return nil, nil, fmt.Errorf("0 ids received, must be greater than 0")
+	}
+
+	if len(ids) > 250 {
+		return nil, nil, fmt.Errorf("more than 250 ids received, limit is 250")
+	}
+
+	data, err := json.Marshal(ids)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to marsahl ids to byte array: %w", err)
+	}
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodPost),
+		WithPath(path),
+		WithBody(data),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var names = make([]*PostUniverseNamesOK, 0)
+
+	switch sc := res.StatusCode; {
+	case sc == http.StatusOK:
+		err = json.Unmarshal(b, &names)
+		if err != nil {
+			return nil, nil, fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		}
+
+	case sc >= http.StatusBadRequest:
+		var e = new(GenericError)
+		err = json.Unmarshal(b, e)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Failed to unmarsahl error onto error struct, data: %s: %w", string(b), err)
+		}
+
+		return nil, res, fmt.Errorf("failed to post names, received status code of %d: %w", sc, e)
+	}
+
+	return names, res, nil
+
+}
+
+func universeNamesPathFunc(mods *modifiers) string {
+	return endpoints[PostUniverseNames].Path
+}
+
 func (s *service) GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error) {
 
-	endpoint := s.endpoints[GetAncestries.Name]
+	endpoint := endpoints[GetAncestries]
 
 	mods := s.modifiers()
 
@@ -50,29 +150,21 @@ func (s *service) GetAncestries(ctx context.Context, ancestries []*athena.Ancest
 
 }
 
-func (s *service) ancestriesKeyFunc(mods *modifiers) string {
+func ancestriesKeyFunc(mods *modifiers) string {
 
-	return buildKey(GetAncestries.Name)
-
-}
-
-func (s *service) ancestriesPathFunc(mods *modifiers) string {
-
-	return GetAncestries.FmtPath
+	return buildKey(GetAncestries.String())
 
 }
 
-func (s *service) newGetAncestriesEndpoint() *endpoint {
+func ancestriesPathFunc(mods *modifiers) string {
 
-	GetAncestries.KeyFunc = s.ancestriesKeyFunc
-	GetAncestries.PathFunc = s.ancestriesPathFunc
-	return GetAncestries
+	return endpoints[GetAncestries].Path
 
 }
 
 func (s *service) GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error) {
 
-	endpoint := s.endpoints[GetBloodlines.Name]
+	endpoint := endpoints[GetBloodlines]
 
 	mods := s.modifiers()
 
@@ -109,29 +201,21 @@ func (s *service) GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodl
 
 }
 
-func (s *service) bloodlinesKeyFunc(mods *modifiers) string {
+func bloodlinesKeyFunc(mods *modifiers) string {
 
-	return buildKey(GetBloodlines.Name)
-
-}
-
-func (s *service) bloodlinesPathFunc(mods *modifiers) string {
-
-	return GetBloodlines.FmtPath
+	return buildKey(GetBloodlines.String())
 
 }
 
-func (s *service) newGetBloodlinesEndpoint() *endpoint {
+func bloodlinesPathFunc(mods *modifiers) string {
 
-	GetBloodlines.KeyFunc = s.bloodlinesKeyFunc
-	GetBloodlines.PathFunc = s.bloodlinesPathFunc
-	return GetBloodlines
+	return endpoints[GetBloodlines].Path
 
 }
 
 func (s *service) GetRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error) {
 
-	endpoint := s.endpoints[GetRaces.Name]
+	endpoint := endpoints[GetRaces]
 
 	mods := s.modifiers()
 
@@ -168,29 +252,21 @@ func (s *service) GetRaces(ctx context.Context, races []*athena.Race) ([]*athena
 
 }
 
-func (s *service) racesKeyFunc(mods *modifiers) string {
+func racesKeyFunc(mods *modifiers) string {
 
-	return buildKey(GetRaces.Name)
-
-}
-
-func (s *service) racesPathFunc(mods *modifiers) string {
-
-	return GetRaces.FmtPath
+	return buildKey(GetRaces.String())
 
 }
 
-func (s *service) newGetRacesEndpoint() *endpoint {
+func racesPathFunc(mods *modifiers) string {
 
-	GetRaces.KeyFunc = s.racesKeyFunc
-	GetRaces.PathFunc = s.racesPathFunc
-	return GetRaces
+	return endpoints[GetRaces].Path
 
 }
 
 func (s *service) GetFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error) {
 
-	endpoint := s.endpoints[GetFactions.Name]
+	endpoint := endpoints[GetFactions]
 
 	mods := s.modifiers()
 
@@ -227,29 +303,21 @@ func (s *service) GetFactions(ctx context.Context, factions []*athena.Faction) (
 
 }
 
-func (s *service) factionsKeyFunc(mods *modifiers) string {
+func factionsKeyFunc(mods *modifiers) string {
 
-	return buildKey(GetFactions.Name)
-
-}
-
-func (s *service) factionsPathFunc(mods *modifiers) string {
-
-	return GetFactions.FmtPath
+	return buildKey(GetFactions.String())
 
 }
 
-func (s *service) newGetFactionsEndpoint() *endpoint {
+func factionsPathFunc(mods *modifiers) string {
 
-	GetFactions.KeyFunc = s.factionsKeyFunc
-	GetFactions.PathFunc = s.factionsPathFunc
-	return GetFactions
+	return endpoints[GetFactions].Path
 
 }
 
 func (s *service) GetCategories(ctx context.Context, ids []uint) ([]uint, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCategories.Name]
+	endpoint := endpoints[GetCategories]
 
 	mods := s.modifiers()
 
@@ -286,29 +354,21 @@ func (s *service) GetCategories(ctx context.Context, ids []uint) ([]uint, *http.
 
 }
 
-func (s *service) categoriesKeyFunc(mods *modifiers) string {
+func categoriesKeyFunc(mods *modifiers) string {
 
-	return buildKey(GetCategories.Name)
-
-}
-
-func (s *service) categoriesPathFunc(mods *modifiers) string {
-
-	return GetCategories.FmtPath
+	return buildKey(GetCategories.String())
 
 }
 
-func (s *service) newGetCategoriesEndpoint() *endpoint {
+func categoriesPathFunc(mods *modifiers) string {
 
-	GetCategories.KeyFunc = s.categoriesKeyFunc
-	GetCategories.PathFunc = s.categoriesPathFunc
-	return GetCategories
+	return endpoints[GetCategories].Path
 
 }
 
 func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCategory.Name]
+	endpoint := endpoints[GetCategory]
 
 	mods := s.modifiers(ModWithCategory(category))
 
@@ -345,41 +405,33 @@ func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*
 
 }
 
-func (s *service) categoryKeyFunc(mods *modifiers) string {
+func categoryKeyFunc(mods *modifiers) string {
 
 	if mods.category == nil {
 		panic("expected type *athena.Category to be provided, received nil for category instead")
 	}
 
-	return buildKey(GetCategory.Name, strconv.FormatUint(uint64(mods.category.ID), 10))
+	return buildKey(GetCategory.String(), strconv.FormatUint(uint64(mods.category.ID), 10))
 
 }
 
-func (s *service) categoryPathFunc(mods *modifiers) string {
+func categoryPathFunc(mods *modifiers) string {
 
 	if mods.category == nil {
 		panic("expected type *athena.Category to be provided, received nil for category instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCategory.FmtPath, mods.category.ID),
+		Path: fmt.Sprintf(endpoints[GetCategory].Path, mods.category.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetCategoryEndpoint() *endpoint {
-
-	GetCategory.KeyFunc = s.categoryKeyFunc
-	GetCategory.PathFunc = s.categoryPathFunc
-	return GetCategory
-
-}
-
 func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error) {
 
-	endpoint := s.endpoints[GetGroup.Name]
+	endpoint := endpoints[GetGroup]
 
 	mods := s.modifiers(ModWithGroup(group))
 
@@ -416,41 +468,33 @@ func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Gr
 
 }
 
-func (s *service) groupKeyFunc(mods *modifiers) string {
+func groupKeyFunc(mods *modifiers) string {
 
 	if mods.group == nil {
 		panic("expected type *athena.Group to be provided, received nil for group instead")
 	}
 
-	return buildKey(GetGroup.Name, strconv.FormatUint(uint64(mods.group.ID), 10))
+	return buildKey(GetGroup.String(), strconv.FormatUint(uint64(mods.group.ID), 10))
 
 }
 
-func (s *service) groupPathFunc(mods *modifiers) string {
+func groupPathFunc(mods *modifiers) string {
 
 	if mods.group == nil {
 		panic("expected type *athena.Group to be provided, received nil for group instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetGroup.FmtPath, mods.group.ID),
+		Path: fmt.Sprintf(endpoints[GetGroup].Path, mods.group.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetGroupEndpoint() *endpoint {
-
-	GetGroup.KeyFunc = s.groupKeyFunc
-	GetGroup.PathFunc = s.groupPathFunc
-	return GetGroup
-
-}
-
 func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error) {
 
-	endpoint := s.endpoints[GetType.Name]
+	endpoint := endpoints[GetType]
 
 	mods := s.modifiers(ModWithItem(item))
 
@@ -487,41 +531,33 @@ func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type,
 
 }
 
-func (s *service) typeKeyFunc(mods *modifiers) string {
+func typeKeyFunc(mods *modifiers) string {
 
 	if mods.item == nil {
 		panic("expected type *athena.Type to be provided, received nil for item instead")
 	}
 
-	return buildKey(GetType.Name, strconv.FormatUint(uint64(mods.item.ID), 10))
+	return buildKey(GetType.String(), strconv.FormatUint(uint64(mods.item.ID), 10))
 
 }
 
-func (s *service) typePathFunc(mods *modifiers) string {
+func typePathFunc(mods *modifiers) string {
 
 	if mods.item == nil {
 		panic("expected type *athena.Type to be provided, received nil for item instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetType.FmtPath, mods.item.ID),
+		Path: fmt.Sprintf(endpoints[GetType].Path, mods.item.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetTypeEndpoint() *endpoint {
-
-	GetType.KeyFunc = s.typeKeyFunc
-	GetType.PathFunc = s.typePathFunc
-	return GetType
-
-}
-
 func (s *service) GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Response, error) {
 
-	endpoint := s.endpoints[GetRegions.Name]
+	endpoint := endpoints[GetRegions]
 
 	mods := s.modifiers()
 
@@ -558,29 +594,21 @@ func (s *service) GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Res
 
 }
 
-func (s *service) regionsKeyFunc(mods *modifiers) string {
+func regionsKeyFunc(mods *modifiers) string {
 
-	return buildKey(GetRegions.Name)
-
-}
-
-func (s *service) regionsPathFunc(mods *modifiers) string {
-
-	return GetRegions.FmtPath
+	return buildKey(GetRegions.String())
 
 }
 
-func (s *service) newGetRegionsEndpoint() *endpoint {
+func regionsPathFunc(mods *modifiers) string {
 
-	GetRegions.KeyFunc = s.regionsKeyFunc
-	GetRegions.PathFunc = s.regionsPathFunc
-	return GetRegions
+	return endpoints[GetRegions].Path
 
 }
 
 func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error) {
 
-	endpoint := s.endpoints[GetRegion.Name]
+	endpoint := endpoints[GetRegion]
 
 	mods := s.modifiers(ModWithRegion(region))
 
@@ -617,41 +645,33 @@ func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena
 
 }
 
-func (s *service) regionKeyFunc(mods *modifiers) string {
+func regionKeyFunc(mods *modifiers) string {
 
 	if mods.region == nil {
 		panic("expected type *athena.Region to be provided, received nil for region instead")
 	}
 
-	return buildKey(GetRegion.Name, strconv.FormatUint(uint64(mods.region.ID), 10))
+	return buildKey(GetRegion.String(), strconv.FormatUint(uint64(mods.region.ID), 10))
 
 }
 
-func (s *service) regionPathFunc(mods *modifiers) string {
+func regionPathFunc(mods *modifiers) string {
 
 	if mods.region == nil {
 		panic("expected type *athena.Region to be provided, received nil for region instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetRegion.FmtPath, mods.region.ID),
+		Path: fmt.Sprintf(endpoints[GetRegion].Path, mods.region.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetRegionEndpoint() *endpoint {
-
-	GetRegion.KeyFunc = s.regionKeyFunc
-	GetRegion.PathFunc = s.regionPathFunc
-	return GetRegion
-
-}
-
 func (s *service) GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error) {
 
-	endpoint := s.endpoints[GetConstellation.Name]
+	endpoint := endpoints[GetConstellation]
 
 	mods := s.modifiers(ModWithConstellation(constellation))
 
@@ -688,41 +708,33 @@ func (s *service) GetConstellation(ctx context.Context, constellation *athena.Co
 
 }
 
-func (s *service) constellationKeyFunc(mods *modifiers) string {
+func constellationKeyFunc(mods *modifiers) string {
 
 	if mods.constellation == nil {
 		panic("expected type *athena.Constellation to be provided, received nil for constellation instead")
 	}
 
-	return buildKey(GetConstellation.Name, strconv.FormatUint(uint64(mods.constellation.ID), 10))
+	return buildKey(GetConstellation.String(), strconv.FormatUint(uint64(mods.constellation.ID), 10))
 
 }
 
-func (s *service) constellationPathFunc(mods *modifiers) string {
+func constellationPathFunc(mods *modifiers) string {
 
 	if mods.constellation == nil {
 		panic("expected type *athena.Constellation to be provided, received nil for constellation instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetConstellation.FmtPath, mods.constellation.ID),
+		Path: fmt.Sprintf(endpoints[GetConstellation].Path, mods.constellation.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetConstellationEndpoint() *endpoint {
-
-	GetConstellation.KeyFunc = s.constellationKeyFunc
-	GetConstellation.PathFunc = s.constellationPathFunc
-	return GetConstellation
-
-}
-
 func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error) {
 
-	endpoint := s.endpoints[GetSolarSystem.Name]
+	endpoint := endpoints[GetSolarSystem]
 
 	mods := s.modifiers(ModWithSystem(solarSystem))
 
@@ -759,41 +771,222 @@ func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarS
 
 }
 
-func (s *service) solarSystemKeyFunc(mods *modifiers) string {
+func solarSystemKeyFunc(mods *modifiers) string {
 
 	if mods.solarSystem == nil {
 		panic("expected type *athena.SolarSystem to be provided, received nil for solarSystem instead")
 	}
 
-	return buildKey(GetSolarSystem.Name, strconv.FormatUint(uint64(mods.solarSystem.ID), 10))
+	return buildKey(GetSolarSystem.String(), strconv.FormatUint(uint64(mods.solarSystem.ID), 10))
 
 }
 
-func (s *service) solarSystemPathFunc(mods *modifiers) string {
+func solarSystemPathFunc(mods *modifiers) string {
 
 	if mods.solarSystem == nil {
 		panic("expected type *athena.SolarSystem to be provided, received nil for solarSystem instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetSolarSystem.FmtPath, mods.solarSystem.ID),
+		Path: fmt.Sprintf(endpoints[GetSolarSystem].Path, mods.solarSystem.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetSolarSystemEndpoint() *endpoint {
+func (s *service) GetPlanet(ctx context.Context, planet *athena.Planet) (*athena.Planet, *http.Response, error) {
 
-	GetSolarSystem.KeyFunc = s.solarSystemKeyFunc
-	GetSolarSystem.PathFunc = s.solarSystemPathFunc
-	return GetSolarSystem
+	endpoint := endpoints[GetPlanet]
+
+	mods := s.modifiers(ModWithPlanet(planet))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	switch sc := res.StatusCode; {
+	case sc == http.StatusOK:
+		err = json.Unmarshal(b, &planet)
+		if err != nil {
+			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+			return nil, nil, err
+		}
+
+	case sc >= http.StatusBadRequest:
+		return planet, res, fmt.Errorf("failed to fetch planet %d, received status code of %d", planet.ID, sc)
+	}
+
+	return planet, res, nil
+
+}
+
+func planetKeyFunc(mods *modifiers) string {
+
+	if mods.planet == nil {
+		panic("expected type *athena.Planet to be provided, received nil for planet instead")
+	}
+
+	return buildKey(GetPlanet.String(), strconv.FormatUint(uint64(mods.planet.ID), 10))
+
+}
+
+func planetPathFunc(mods *modifiers) string {
+
+	if mods.planet == nil {
+		panic("expected type *athena.Planet to be provided, received nil for planet instead")
+	}
+
+	u := url.URL{
+		Path: fmt.Sprintf(endpoints[GetPlanet].Path, mods.planet.ID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) GetMoon(ctx context.Context, moon *athena.Moon) (*athena.Moon, *http.Response, error) {
+
+	endpoint := endpoints[GetMoon]
+
+	mods := s.modifiers(ModWithMoon(moon))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	switch sc := res.StatusCode; {
+	case sc == http.StatusOK:
+		err = json.Unmarshal(b, &moon)
+		if err != nil {
+			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+			return nil, nil, err
+		}
+
+	case sc >= http.StatusBadRequest:
+		return moon, res, fmt.Errorf("failed to fetch moon %d, received status code of %d", moon.ID, sc)
+	}
+
+	return moon, res, nil
+
+}
+
+func moonKeyFunc(mods *modifiers) string {
+
+	if mods.moon == nil {
+		panic("expected type *athena.Moon to be provided, received nil for moon instead")
+	}
+
+	return buildKey(GetMoon.String(), strconv.FormatUint(uint64(mods.moon.ID), 10))
+
+}
+
+func moonPathFunc(mods *modifiers) string {
+
+	if mods.moon == nil {
+		panic("expected type *athena.Moon to be provided, received nil for moon instead")
+	}
+
+	u := url.URL{
+		Path: fmt.Sprintf(endpoints[GetMoon].Path, mods.moon.ID),
+	}
+
+	return u.String()
+
+}
+
+func beltKeyFunc(mods *modifiers) string {
+
+	if mods.asteroidBelt == nil {
+		panic("expected type *athena.AsteroidBelt to be provided, received nil for belt instead")
+	}
+
+	return buildKey(GetAsteroidBelt.String(), strconv.FormatUint(uint64(mods.asteroidBelt.ID), 10))
+
+}
+
+func beltPathFunc(mods *modifiers) string {
+
+	if mods.asteroidBelt == nil {
+		panic("expected type *athena.AsteroidBelt to be provided, received nil for belt instead")
+	}
+
+	u := url.URL{
+		Path: fmt.Sprintf(endpoints[GetAsteroidBelt].Path, mods.asteroidBelt.ID),
+	}
+
+	return u.String()
+
+}
+
+func (s *service) GetAsteroidBelt(ctx context.Context, asteroidBelt *athena.AsteroidBelt) (*athena.AsteroidBelt, *http.Response, error) {
+
+	endpoint := endpoints[GetAsteroidBelt]
+
+	mods := s.modifiers(ModWithAsteroidBelt(asteroidBelt))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	switch sc := res.StatusCode; {
+	case sc == http.StatusOK:
+		err = json.Unmarshal(b, &asteroidBelt)
+		if err != nil {
+			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+			return nil, nil, err
+		}
+
+	case sc >= http.StatusBadRequest:
+		return asteroidBelt, res, fmt.Errorf("failed to fetch asteroidBelt %d, received status code of %d", asteroidBelt.ID, sc)
+	}
+
+	return asteroidBelt, res, nil
 
 }
 
 func (s *service) GetStation(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error) {
 
-	endpoint := s.endpoints[GetStation.Name]
+	endpoint := endpoints[GetStation]
 
 	mods := s.modifiers(ModWithStation(station))
 
@@ -830,41 +1023,33 @@ func (s *service) GetStation(ctx context.Context, station *athena.Station) (*ath
 
 }
 
-func (s *service) stationKeyFunc(mods *modifiers) string {
+func stationKeyFunc(mods *modifiers) string {
 
 	if mods.station == nil {
 		panic("expected type *athena.Station to be provided, received nil for station instead")
 	}
 
-	return buildKey(GetStation.Name, strconv.FormatUint(uint64(mods.station.ID), 10))
+	return buildKey(GetStation.String(), strconv.FormatUint(uint64(mods.station.ID), 10))
 
 }
 
-func (s *service) stationPathFunc(mods *modifiers) string {
+func stationPathFunc(mods *modifiers) string {
 
 	if mods.station == nil {
 		panic("expected type *athena.Station to be provided, received nil for station instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetStation.FmtPath, mods.station.ID),
+		Path: fmt.Sprintf(endpoints[GetStation].Path, mods.station.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetStationEndpoint() *endpoint {
-
-	GetStation.KeyFunc = s.stationKeyFunc
-	GetStation.PathFunc = s.stationPathFunc
-	return GetStation
-
-}
-
 func (s *service) GetStructure(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error) {
 
-	endpoint := s.endpoints[GetStructure.Name]
+	endpoint := endpoints[GetStructure]
 
 	mods := s.modifiers(ModWithStructure(structure))
 
@@ -902,34 +1087,26 @@ func (s *service) GetStructure(ctx context.Context, member *athena.Member, struc
 
 }
 
-func (s *service) structureKeyFunc(mods *modifiers) string {
+func structureKeyFunc(mods *modifiers) string {
 
 	if mods.structure == nil {
 		panic("expected type *athena.Structure to be provided, received nil for structure instead")
 	}
 
-	return buildKey(GetStation.Name, strconv.FormatUint(mods.structure.ID, 10))
+	return buildKey(GetStation.String(), strconv.FormatUint(mods.structure.ID, 10))
 
 }
 
-func (s *service) structurePathFunc(mods *modifiers) string {
+func structurePathFunc(mods *modifiers) string {
 
 	if mods.structure == nil {
 		panic("expected type *athena.Structure to be provided, received nil for structure instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetStructure.FmtPath, mods.structure.ID),
+		Path: fmt.Sprintf(endpoints[GetStructure].Path, mods.structure.ID),
 	}
 
 	return u.String()
-
-}
-
-func (s *service) newGetStructureEndpoint() *endpoint {
-
-	GetStructure.KeyFunc = s.structureKeyFunc
-	GetStructure.PathFunc = s.structurePathFunc
-	return GetStructure
 
 }

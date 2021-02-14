@@ -13,26 +13,40 @@ import (
 
 type universeRepository struct {
 	db *sqlx.DB
-	ancestries, bloodlines, categories, constellations,
-	factions, groups, races, regions,
-	solarSystems, stations, structures, types string
+
+	ancestries, bloodlines,
+	races, factions string
+
+	regions, constellations, solarSystems string
+
+	asteroidBelts, moons,
+	planets, stations, structures string
+
+	categories, groups, types string
 }
 
 func NewUniverseRepository(db *sql.DB) athena.UniverseRepository {
 	return &universeRepository{
-		db:             sqlx.NewDb(db, "mysql"),
-		ancestries:     "ancestries",
-		bloodlines:     "bloodlines",
-		categories:     "type_categories",
-		constellations: "constellations",
-		factions:       "factions",
-		groups:         "type_groups",
-		races:          "races",
-		regions:        "regions",
-		solarSystems:   "solar_systems",
-		stations:       "stations",
-		structures:     "structures",
-		types:          "types",
+		db: sqlx.NewDb(db, "mysql"),
+
+		ancestries: "ancestries",
+		bloodlines: "bloodlines",
+		factions:   "factions",
+		races:      "races",
+
+		regions:        "map_regions",
+		constellations: "map_constellations",
+		solarSystems:   "map_solar_systems",
+
+		asteroidBelts: "map_asteroid_belts",
+		moons:         "map_moons",
+		planets:       "map_planets",
+		stations:      "map_stations",
+		structures:    "map_structures",
+
+		types:      "types",
+		categories: "type_categories",
+		groups:     "type_groups",
 	}
 }
 
@@ -582,6 +596,184 @@ func (r *universeRepository) DeleteGroup(ctx context.Context, id uint) (bool, er
 	_, err = r.db.ExecContext(ctx, query, args...)
 
 	return err == nil, err
+
+}
+
+func (r *universeRepository) Planet(ctx context.Context, id uint) (*athena.Planet, error) {
+
+	planets, err := r.Planets(ctx, athena.NewEqualOperator("id", id))
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
+	if len(planets) != 1 {
+		return nil, nil
+	}
+
+	return planets[0], nil
+
+}
+
+func (r *universeRepository) Planets(ctx context.Context, operators ...*athena.Operator) ([]*athena.Planet, error) {
+
+	query, args, err := BuildFilters(sq.Select(
+		"id",
+		"name",
+		"system_id",
+		"type_id",
+		"created_at",
+		"updated_at",
+	).From(r.planets), operators...).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("[Universe Repository] Failed to generate sql query: %w", err)
+	}
+
+	var planets = make([]*athena.Planet, 0)
+	err = r.db.SelectContext(ctx, &planets, query, args...)
+
+	return planets, err
+
+}
+
+func (r *universeRepository) CreatePlanet(ctx context.Context, planet *athena.Planet) (*athena.Planet, error) {
+
+	query, args, err := sq.Insert(r.planets).Columns(
+		"id", "name",
+		"system_id", "type_id",
+		"created_at", "updated_at",
+	).Values(
+		planet.ID, planet.Name,
+		planet.SystemID, planet.TypeID,
+		sq.Expr(`NOW()`), sq.Expr(`NOW()`),
+	).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("[Universe Repository] Failed to generate sql query: %w", err)
+	}
+
+	_, err = r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("[Universe Repository] Failed to insert record: %w", err)
+	}
+
+	return r.Planet(ctx, planet.ID)
+
+}
+
+func (r *universeRepository) Moon(ctx context.Context, id uint) (*athena.Moon, error) {
+
+	moons, err := r.Moons(ctx, athena.NewEqualOperator("id", id))
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
+	if len(moons) != 1 {
+		return nil, nil
+	}
+
+	return moons[0], nil
+
+}
+
+func (r *universeRepository) Moons(ctx context.Context, operators ...*athena.Operator) ([]*athena.Moon, error) {
+
+	query, args, err := BuildFilters(sq.Select(
+		"id",
+		"name",
+		"system_id",
+		"created_at",
+		"updated_at",
+	).From(r.moons), operators...).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("[Universe Repository] Failed to generate sql query: %w", err)
+	}
+
+	var moons = make([]*athena.Moon, 0)
+	err = r.db.SelectContext(ctx, &moons, query, args...)
+
+	return moons, err
+
+}
+
+func (r *universeRepository) CreateMoon(ctx context.Context, planet *athena.Moon) (*athena.Moon, error) {
+
+	query, args, err := sq.Insert(r.moons).Columns(
+		"id", "name",
+		"system_id",
+		"created_at", "updated_at",
+	).Values(
+		planet.ID, planet.Name,
+		planet.SystemID,
+		sq.Expr(`NOW()`), sq.Expr(`NOW()`),
+	).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("[Universe Repository] Failed to generate sql query: %w", err)
+	}
+
+	_, err = r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("[Universe Repository] Failed to insert record: %w", err)
+	}
+
+	return r.Moon(ctx, planet.ID)
+
+}
+
+func (r *universeRepository) AsteroidBelt(ctx context.Context, id uint) (*athena.AsteroidBelt, error) {
+
+	asteroidBelts, err := r.AsteroidBelts(ctx, athena.NewEqualOperator("id", id))
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
+	if len(asteroidBelts) != 1 {
+		return nil, nil
+	}
+
+	return asteroidBelts[0], nil
+
+}
+
+func (r *universeRepository) AsteroidBelts(ctx context.Context, operators ...*athena.Operator) ([]*athena.AsteroidBelt, error) {
+
+	query, args, err := BuildFilters(sq.Select(
+		"id",
+		"name",
+		"system_id",
+		"created_at",
+		"updated_at",
+	).From(r.asteroidBelts), operators...).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("[Universe Repository] Failed to generate sql query: %w", err)
+	}
+
+	var asteroidBelts = make([]*athena.AsteroidBelt, 0)
+	err = r.db.SelectContext(ctx, &asteroidBelts, query, args...)
+
+	return asteroidBelts, err
+
+}
+
+func (r *universeRepository) CreateAsteroidBelt(ctx context.Context, belt *athena.AsteroidBelt) (*athena.AsteroidBelt, error) {
+
+	query, args, err := sq.Insert(r.asteroidBelts).Columns(
+		"id", "name",
+		"system_id",
+		"created_at", "updated_at",
+	).Values(
+		belt.ID, belt.Name,
+		belt.SystemID,
+		sq.Expr(`NOW()`), sq.Expr(`NOW()`),
+	).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("[Universe Repository] Failed to generate sql query: %w", err)
+	}
+
+	_, err = r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("[Universe Repository] Failed to insert record: %w", err)
+	}
+
+	return r.AsteroidBelt(ctx, belt.ID)
 
 }
 

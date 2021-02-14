@@ -24,7 +24,7 @@ type clonesInterface interface {
 // Cache: 120 (2 min)
 func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterClones.Name]
+	endpoint := endpoints[GetCharacterClones]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -71,34 +71,26 @@ func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member,
 
 }
 
-func (s *service) characterClonesKeyFunc(mods *modifiers) string {
+func characterClonesKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterClones.Name, strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterClones.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
-func (s *service) characterClonesPathFunc(mods *modifiers) string {
+func characterClonesPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterClones.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterClones].Path, mods.member.ID),
 	}
 
 	return u.String()
-
-}
-
-func (s *service) newGetCharacterClonesEndpoint() *endpoint {
-
-	GetCharacterClones.KeyFunc = s.characterClonesKeyFunc
-	GetCharacterClones.PathFunc = s.characterClonesPathFunc
-	return GetCharacterClones
 
 }
 
@@ -110,7 +102,7 @@ func (s *service) newGetCharacterClonesEndpoint() *endpoint {
 // Cache: 120 (2 min)
 func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterImplants.Name]
+	endpoint := endpoints[GetCharacterImplants]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -156,33 +148,25 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 
 }
 
-func (s *service) characterImplantsKeyFunc(mods *modifiers) string {
+func characterImplantsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterImplants.Name, strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterImplants.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
-func (s *service) characterImplantsPathFunc(mods *modifiers) string {
+func characterImplantsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterImplants.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterImplants].Path, mods.member.ID),
 	}
 
 	return u.String()
-
-}
-
-func (s *service) newGetCharacterImplantsEndpoint() *endpoint {
-
-	GetCharacterImplants.KeyFunc = s.characterImplantsKeyFunc
-	GetCharacterImplants.PathFunc = s.characterImplantsPathFunc
-	return GetCharacterImplants
 
 }

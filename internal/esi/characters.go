@@ -31,7 +31,7 @@ func isCharacterValid(r *athena.Character) bool {
 // Cache: 86400 sec (24 Hour)
 func (s *service) GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacter.Name]
+	endpoint := endpoints[GetCharacter]
 
 	mods := s.modifiers(ModWithCharacter(character))
 
@@ -79,29 +79,23 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 
 }
 
-func (s *service) newGetCharacterEndpoint() *endpoint {
-	GetCharacter.KeyFunc = s.characterKeyFunc
-	GetCharacter.PathFunc = s.characterPathFunc
-	return GetCharacter
-}
-
-func (s *service) characterKeyFunc(mods *modifiers) string {
+func characterKeyFunc(mods *modifiers) string {
 
 	if mods.character == nil {
 		panic("expected type *athena.Character to be provided, received nil for character instead")
 	}
 
-	return buildKey(GetCharacter.Name, strconv.Itoa(int(mods.character.ID)))
+	return buildKey(GetCharacter.String(), strconv.Itoa(int(mods.character.ID)))
 }
 
-func (s *service) characterPathFunc(mods *modifiers) string {
+func characterPathFunc(mods *modifiers) string {
 
 	if mods.character == nil {
 		panic("expected type *athena.Character to be provided, received nil for character instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacter.FmtPath, mods.character.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacter].Path, mods.character.ID),
 	}
 
 	return u.String()
@@ -116,7 +110,7 @@ func (s *service) characterPathFunc(mods *modifiers) string {
 // Cache: 86400 sec (24 Hour)
 func (s *service) GetCharacterCorporationHistory(ctx context.Context, character *athena.Character, history []*athena.CharacterCorporationHistory) ([]*athena.CharacterCorporationHistory, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterCorporationHistory.Name]
+	endpoint := endpoints[GetCharacterCorporationHistory]
 
 	mods := s.modifiers(ModWithCharacter(character))
 
@@ -161,32 +155,24 @@ func (s *service) GetCharacterCorporationHistory(ctx context.Context, character 
 
 }
 
-func (s *service) newGetCharacterCorporationHistoryEndpoint() *endpoint {
-
-	GetCharacterCorporationHistory.KeyFunc = s.characterCorporationHistoryKeyFunc
-	GetCharacterCorporationHistory.PathFunc = s.characterCorporationHistoryPathFunc
-	return GetCharacterCorporationHistory
-
-}
-
-func (s *service) characterCorporationHistoryKeyFunc(mods *modifiers) string {
+func characterCorporationHistoryKeyFunc(mods *modifiers) string {
 
 	if mods.character == nil {
 		panic("expected type *athena.Character to be provided, received nil for character instead")
 	}
 
-	return buildKey(GetCharacterCorporationHistory.Name, strconv.Itoa(int(mods.character.ID)))
+	return buildKey(GetCharacterCorporationHistory.String(), strconv.Itoa(int(mods.character.ID)))
 
 }
 
-func (s *service) characterCorporationHistoryPathFunc(mods *modifiers) string {
+func characterCorporationHistoryPathFunc(mods *modifiers) string {
 
 	if mods.character == nil {
 		panic("expected type *athena.Character to be provided, received nil for character instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterCorporationHistory.FmtPath, mods.character.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterCorporationHistory].Path, mods.character.ID),
 	}
 
 	return u.String()

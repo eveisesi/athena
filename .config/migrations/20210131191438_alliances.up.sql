@@ -5,6 +5,7 @@ CREATE TABLE `alliances` (
     `creator_id` INT UNSIGNED NOT NULL,
     `creator_corporation_id` INT UNSIGNED NOT NULL,
     `executor_corporation_id` INT UNSIGNED NULL DEFAULT NULL,
+    `is_closed` TINYINT NOT NULL DEFAULT '0',
     `date_founded` TIMESTAMP NULL DEFAULT NULL,
     `created_at` TIMESTAMP NOT NULL,
     `updated_at` TIMESTAMP NOT NULL,

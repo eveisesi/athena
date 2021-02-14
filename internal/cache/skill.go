@@ -99,9 +99,14 @@ func (s *service) SetMemberSkillQueue(ctx context.Context, id uint, positions []
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	members := make([]interface{}, len(positions))
-	for i, position := range positions {
-		members[i] = position
+	members := make([]string, 0, len(positions))
+	for _, position := range positions {
+		data, err := json.Marshal(position)
+		if err != nil {
+			return fmt.Errorf("failed to marshal skill queue position: %w", err)
+		}
+
+		members = append(members, string(data))
 	}
 
 	key := fmt.Sprintf(keyMemberSkillQueue, id)
@@ -150,13 +155,18 @@ func (s *service) SetMemberSkills(ctx context.Context, id uint, skills []*athena
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	members := make([]interface{}, len(skills))
-	for i, skill := range skills {
-		members[i] = skill
+	members := make([]string, 0, len(skills))
+	for _, skill := range skills {
+		data, err := json.Marshal(skill)
+		if err != nil {
+			return fmt.Errorf("failed to marshal skill queue position: %w", err)
+		}
+
+		members = append(members, string(data))
 	}
 
 	key := fmt.Sprintf(keyMemberSkills, id)
-	_, err := s.client.SAdd(ctx, key, members...).Result()
+	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to cache skills for member %d: %w", id, err)
 	}

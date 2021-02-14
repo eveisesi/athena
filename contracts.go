@@ -33,8 +33,8 @@ type memberContractBidRepository interface {
 type MemberContract struct {
 	MemberID            uint                 `db:"member_id" json:"member_id"`
 	ContractID          uint                 `db:"contract_id" json:"contract_id"`
-	AcceptorID          null.Int             `db:"acceptor_id" json:"acceptor_id"`
-	AssigneeID          null.Int             `db:"assignee_id" json:"assignee_id"`
+	AcceptorID          null.Uint            `db:"acceptor_id" json:"acceptor_id"`
+	AssigneeID          null.Uint            `db:"assignee_id" json:"assignee_id"`
 	Availability        ContractAvailability `db:"availability" json:"availability"`
 	Buyout              null.Float64         `db:"buyout,omitempty" json:"buyout,omitempty"`
 	Collateral          null.Float64         `db:"collateral,omitempty" json:"collateral,omitempty"`
@@ -42,14 +42,14 @@ type MemberContract struct {
 	DateCompleted       null.Time            `db:"date_completed,omitempty" json:"date_completed,omitempty"`
 	DateExpired         time.Time            `db:"date_expired" json:"date_expired"`
 	DateIssued          time.Time            `db:"date_issued" json:"date_issued"`
-	DaysToComplete      null.Int             `db:"days_to_complete,omitempty" json:"days_to_complete,omitempty"`
-	EndLocationID       null.Int64           `db:"end_location_id,omitempty" json:"end_location_id,omitempty"`
+	DaysToComplete      null.Uint            `db:"days_to_complete,omitempty" json:"days_to_complete,omitempty"`
+	EndLocationID       null.Uint64          `db:"end_location_id,omitempty" json:"end_location_id,omitempty"`
 	ForCorporation      bool                 `db:"for_corporation" json:"for_corporation"`
 	IssuerCorporationID uint                 `db:"issuer_corporation_id" json:"issuer_corporation_id"`
 	IssuerID            uint64               `db:"issuer_id" json:"issuer_id"`
-	Price               null.Int             `db:"price,omitempty" json:"price,omitempty"`
-	Reward              null.Int             `db:"reward,omitempty" json:"reward,omitempty"`
-	StartLocationID     null.Int64           `db:"start_location_id,omitempty" json:"start_location_id,omitempty"`
+	Price               null.Uint            `db:"price,omitempty" json:"price,omitempty"`
+	Reward              null.Uint            `db:"reward,omitempty" json:"reward,omitempty"`
+	StartLocationID     null.Uint64          `db:"start_location_id,omitempty" json:"start_location_id,omitempty"`
 	Status              ContractStatus       `db:"status" json:"status"`
 	Title               null.String          `db:"title,omitempty" json:"title,omitempty"`
 	Type                ContractType         `db:"type" json:"type"`
@@ -185,7 +185,7 @@ type MemberContractItem struct {
 
 	// -1 indicates that the item is a singleton (non-stackable).
 	// If the item happens to be a Blueprint, -1 is an Original and -2 is a Blueprint Copy
-	RawQuantity uint `db:"raw_quantity" json:"raw_quantity"`
+	RawQuantity int `db:"raw_quantity" json:"raw_quantity"`
 
 	// true if the contract issuer has submitted this item with the contract, false if the isser is asking for this item in the contract
 	IsIncluded  bool `db:"is_included" json:"is_included"`

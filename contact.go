@@ -26,15 +26,15 @@ type memberContactLabelRepository interface {
 }
 
 type MemberContact struct {
-	MemberID    uint      `db:"member_id" json:"member_id" deep:"-"`
-	ContactID   uint      `db:"contact_id" json:"contact_id"`
-	ContactType string    `db:"contact_type" json:"contact_type"`
-	IsBlocked   bool      `db:"is_blocked" json:"is_blocked"`
-	IsWatched   bool      `db:"is_watched" json:"is_watched"`
-	LabelIDs    SliceUint `db:"label_ids" json:"label_ids"`
-	Standing    float64   `db:"standing" json:"standing"`
-	CreatedAt   time.Time `db:"created_at" json:"created_at" deep:"-"`
-	UpdatedAt   time.Time `db:"updated_at" json:"updated_at" deep:"-"`
+	MemberID    uint   `db:"member_id" json:"member_id" deep:"-"`
+	ContactID   uint   `db:"contact_id" json:"contact_id"`
+	ContactType string `db:"contact_type" json:"contact_type"`
+	IsBlocked   bool   `db:"is_blocked" json:"is_blocked"`
+	IsWatched   bool   `db:"is_watched" json:"is_watched"`
+	// LabelIDs    SliceUint `db:"label_ids" json:"label_ids"`
+	Standing  float64   `db:"standing" json:"standing"`
+	CreatedAt time.Time `db:"created_at" json:"created_at" deep:"-"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at" deep:"-"`
 }
 
 type MemberContactLabel struct {

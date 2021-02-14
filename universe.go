@@ -14,6 +14,9 @@ type UniverseRepository interface {
 	constellationRepository
 	factionRepository
 	groupRepository
+	planetRepository
+	moonRepository
+	asteroidBeltRepository
 	raceRepository
 	regionRepository
 	solarSystemRepository
@@ -68,6 +71,24 @@ type groupRepository interface {
 	CreateGroup(ctx context.Context, group *Group) (*Group, error)
 	UpdateGroup(ctx context.Context, id uint, group *Group) (*Group, error)
 	DeleteGroup(ctx context.Context, id uint) (bool, error)
+}
+
+type planetRepository interface {
+	Planet(ctx context.Context, id uint) (*Planet, error)
+	Planets(ctx context.Context, operators ...*Operator) ([]*Planet, error)
+	CreatePlanet(ctx context.Context, group *Planet) (*Planet, error)
+}
+
+type moonRepository interface {
+	Moon(ctx context.Context, id uint) (*Moon, error)
+	Moons(ctx context.Context, operators ...*Operator) ([]*Moon, error)
+	CreateMoon(ctx context.Context, group *Moon) (*Moon, error)
+}
+
+type asteroidBeltRepository interface {
+	AsteroidBelt(ctx context.Context, id uint) (*AsteroidBelt, error)
+	AsteroidBelts(ctx context.Context, operators ...*Operator) ([]*AsteroidBelt, error)
+	CreateAsteroidBelt(ctx context.Context, group *AsteroidBelt) (*AsteroidBelt, error)
 }
 
 type raceRepository interface {
@@ -181,6 +202,33 @@ type Group struct {
 	Types      []uint    `db:"-" json:"types,omitempty"`
 	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt  time.Time `db:"updated_at" json:"updated_at"`
+}
+
+type Planet struct {
+	ID        uint      `db:"id" json:"planet_id"`
+	Name      string    `db:"name" json:"name"`
+	SystemID  uint      `db:"system_id" json:"system_id"`
+	TypeID    uint      `db:"type_id" json:"type_id"`
+	MoonIDs   []uint    `db:"-" json:"moons"`
+	BeltIDs   []uint    `db:"-" json:"asteroid_belts"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+type Moon struct {
+	ID        uint      `db:"id" json:"moon_id"`
+	Name      string    `db:"name" json:"name"`
+	SystemID  uint      `db:"system_id" json:"system_id"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+type AsteroidBelt struct {
+	ID        uint      `db:"id" json:"id"`
+	Name      string    `db:"name" json:"name"`
+	SystemID  uint      `db:"system_id" json:"system_id"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type Race struct {

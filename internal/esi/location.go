@@ -25,7 +25,7 @@ type locationInterface interface {
 // Cache: 5 secs
 func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterLocation.Name]
+	endpoint := endpoints[GetCharacterLocation]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -71,40 +71,32 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 
 }
 
-func (s *service) characterLocationsKeyFunc(mods *modifiers) string {
+func characterLocationsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterLocation.Name, strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterLocation.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
-func (s *service) characterLocationsPathFunc(mods *modifiers) string {
+func characterLocationsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterLocation.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterLocation].Path, mods.member.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetCharacterLocationEndpoint() *endpoint {
-
-	GetCharacterLocation.KeyFunc = s.characterLocationsKeyFunc
-	GetCharacterLocation.PathFunc = s.characterLocationsPathFunc
-	return GetCharacterLocation
-
-}
-
 func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterOnline.Name]
+	endpoint := endpoints[GetCharacterOnline]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -153,40 +145,32 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 
 }
 
-func (s *service) characterOnlinesKeyFunc(mods *modifiers) string {
+func characterOnlinesKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterOnline.Name, strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterOnline.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
-func (s *service) characterOnlinesPathFunc(mods *modifiers) string {
+func characterOnlinesPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterOnline.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterOnline].Path, mods.member.ID),
 	}
 
 	return u.String()
 
 }
 
-func (s *service) newGetCharacterOnlineEndpoint() *endpoint {
-
-	GetCharacterOnline.KeyFunc = s.characterOnlinesKeyFunc
-	GetCharacterOnline.PathFunc = s.characterOnlinesPathFunc
-	return GetCharacterOnline
-
-}
-
 func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *athena.Etag, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterShip.Name]
+	endpoint := endpoints[GetCharacterShip]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -232,33 +216,25 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 
 }
 
-func (s *service) characterShipsKeyFunc(mods *modifiers) string {
+func characterShipsKeyFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	return buildKey(GetCharacterShip.Name, strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterShip.String(), strconv.Itoa(int(mods.member.ID)))
 }
 
-func (s *service) characterShipsPathFunc(mods *modifiers) string {
+func characterShipsPathFunc(mods *modifiers) string {
 
 	if mods.member == nil {
 		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetCharacterShip.FmtPath, mods.member.ID),
+		Path: fmt.Sprintf(endpoints[GetCharacterShip].Path, mods.member.ID),
 	}
 
 	return u.String()
-
-}
-
-func (s *service) newGetCharacterShipEndpoint() *endpoint {
-
-	GetCharacterShip.KeyFunc = s.characterShipsKeyFunc
-	GetCharacterShip.PathFunc = s.characterShipsPathFunc
-	return GetCharacterShip
 
 }

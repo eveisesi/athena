@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
+	"github.com/eveisesi/athena/internal"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/sirupsen/logrus"
@@ -31,6 +32,8 @@ type Service interface {
 	Factions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Faction, error)
 	Group(ctx context.Context, id uint) (*athena.Group, error)
 	Groups(ctx context.Context, operators ...*athena.Operator) ([]*athena.Group, error)
+	Planet(ctx context.Context, id uint) (*athena.Planet, error)
+	Planets(ctx context.Context, operators ...*athena.Operator) ([]*athena.Planet, error)
 	Race(ctx context.Context, id uint) (*athena.Race, error)
 	Region(ctx context.Context, id uint) (*athena.Region, error)
 	Regions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Region, error)
@@ -295,7 +298,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 			return fmt.Errorf("failed to fetch region id for ESI: %w", err)
 		}
 
-		regionsName := "Constellations"
+		regionsName := "Regions"
 		regionsBar := p.AddBar(int64(len(regionIDs)),
 			mpb.PrependDecorators(
 				// simple name decorator
@@ -461,7 +464,7 @@ func (s *service) groupWorker(wid int, buffQ chan uint, wg *sync.WaitGroup, prog
 
 		size := math.Ceil(float64(len(group.Types)) / float64(numWorkers))
 
-		chunks := s.chunkSliceUints(group.Types, int(size))
+		chunks := internal.ChunkSliceUints(group.Types, int(size))
 
 		for _, chunk := range chunks {
 			for j := 0; j < len(chunk); j++ {
@@ -704,6 +707,32 @@ func (s *service) Groups(ctx context.Context, operators ...*athena.Operator) ([]
 	panic("universe.Groups has not been implemented")
 }
 
+func (s *service) Planet(ctx context.Context, id uint) (*athena.Planet, error) {
+
+	planet, err := s.cache.Planet(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if planet != nil {
+		return planet, nil
+	}
+
+	planet, err = s.universe.Planet(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.cache.SetPlanet(ctx, planet)
+
+	return planet, err
+
+}
+
+func (s *service) Planets(ctx context.Context, operators ...*athena.Operator) ([]*athena.Planet, error) {
+	panic("universe.Planets has not been implemented")
+}
+
 func (s *service) Race(ctx context.Context, id uint) (*athena.Race, error) {
 
 	race, err := s.cache.Race(ctx, id)
@@ -907,27 +936,4 @@ func (s *service) Type(ctx context.Context, id uint) (*athena.Type, error) {
 
 func (s *service) Types(ctx context.Context, operators ...*athena.Operator) ([]*athena.Type, error) {
 	panic("universe.Types has not been implemented")
-}
-
-func (s *service) chunkSliceUints(slc []uint, size int) [][]uint {
-	var slcLen = len(slc)
-	var divided = make([][]uint, slcLen/size)
-
-	j := 0
-	for i := 0; i < slcLen; i += size {
-		end := i + size
-
-		if end > slcLen {
-			end = slcLen
-		}
-
-		if j < len(divided) {
-			divided[j] = slc[i:end]
-		} else {
-			divided = append(divided, slc[i:end])
-		}
-		j++
-	}
-
-	return divided
 }

@@ -26,14 +26,14 @@ func serverCommand(c *cli.Context) error {
 	basics := basics("server")
 
 	cache := cache.NewService(basics.redis)
-	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
+	etag := etag.NewService(cache, basics.repositories.etag)
 	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
 	// universe := universe.NewService(basics.logger, cache, esi, basics.repositories.universe)
 	// location := location.NewService(basics.logger, cache, esi, universe, basics.repositories.location)
 	// clone := clone.NewService(basics.logger, cache, esi, universe, basics.repositories.clone)
-	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
-	alliance := alliance.NewService(cache, esi, basics.repositories.alliance)
+	alliance := alliance.NewService(basics.logger, cache, esi, basics.repositories.alliance)
+	corporation := corporation.NewService(basics.logger, cache, esi, alliance, basics.repositories.corporation)
 	character := character.NewService(basics.logger, cache, esi, corporation, basics.repositories.character)
 	// contact := contact.NewService(basics.logger, cache, esi, etag, universe, basics.repositories.contact)
 

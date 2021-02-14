@@ -15,7 +15,6 @@ import (
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/eveisesi/athena/internal/universe"
 	"github.com/go-test/deep"
-	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,7 +39,7 @@ type service struct {
 }
 
 const (
-	errPrefix = "[Contact Service]"
+	serviceIdentifier = "Contact Service"
 )
 
 func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, universe universe.Service, alliance alliance.Service, character character.Service, corporation corporation.Service, contacts athena.MemberContactRepository) Service {
@@ -79,40 +78,41 @@ func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member
 
 func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]*athena.MemberContact, *athena.Etag, error) {
 
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "MemberContacts",
+	})
+
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithMember(member))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch etag object: %w", err)
+		entry.WithError(err).Error("failed to fetch etag object")
+		return nil, nil, fmt.Errorf("failed to fetch etag object")
 	}
 
-	exists := true
 	cached := true
 
 	contacts, err := s.cache.MemberContacts(ctx, member.ID)
 	if err != nil {
-		return nil, nil, err
+		entry.WithError(err).Error("failed to fetch member contacts from cache")
+		return nil, nil, fmt.Errorf("failed to fetch member contacts from cache")
 	}
 
 	if contacts == nil {
 		cached = false
-
 		contacts, err = s.contacts.MemberContacts(ctx, member.ID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, err
-		}
-
-		if contacts == nil || errors.Is(err, sql.ErrNoRows) {
-			contacts = make([]*athena.MemberContact, 0)
-			exists = false
+			entry.WithError(err).Error("failed to fetch member contacts from DB")
+			return nil, nil, fmt.Errorf("failed to fetch member contacts from DB")
 		}
 	}
 
-	// TODO: Check to see if it is possible to have 0 contacts
-	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
 
 		if !cached {
 			err = s.cache.SetMemberContacts(ctx, member.ID, contacts)
 			if err != nil {
-				newrelic.FromContext(ctx).NoticeError(err)
+				entry.WithError(err).Error("failed to cache member contacts")
 			}
 		}
 
@@ -121,26 +121,34 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 
 	newContacts, etag, _, err := s.esi.GetCharacterContacts(ctx, member, make([]*athena.MemberContact, 0))
 	if err != nil {
-		return nil, nil, fmt.Errorf("[Contacts Service] Failed to fetch contacts for member %d: %w", member.ID, err)
+		entry.WithError(err).Error("failed to fetch member contacts from ESI")
+		return nil, nil, fmt.Errorf("failed to fetch member contacts from ESI")
 	}
 
 	if len(newContacts) > 0 {
 		s.resolveContactAttributes(ctx, newContacts)
 		contacts, err = s.diffAndUpdateContacts(ctx, member, contacts, newContacts)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s Failed to diffAndUpdateContacts: %w", errPrefix, err)
+			return nil, nil, fmt.Errorf("failed to diff and update contacts")
 		}
-		err := s.cache.SetMemberContacts(ctx, member.ID, contacts)
-		if err != nil {
-			newrelic.FromContext(ctx).NoticeError(err)
+		if len(contacts) > 0 {
+			err := s.cache.SetMemberContacts(ctx, member.ID, contacts)
+			if err != nil {
+				entry.WithError(err).Error("failed to cache member contacts")
+			}
 		}
 	}
 
-	return contacts, etag, err
+	return contacts, etag, nil
 
 }
 
 func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Member, old []*athena.MemberContact, new []*athena.MemberContact) ([]*athena.MemberContact, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "diffAndUpdateContacts",
+	})
 
 	contactsToCreate := make([]*athena.MemberContact, 0)
 	contactsToUpdate := make([]*athena.MemberContact, 0)
@@ -176,11 +184,21 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 		}
 	}
 
+	if len(contactsToDelete) > 0 {
+		_, err := s.contacts.DeleteMemberContacts(ctx, member.ID, contactsToDelete)
+		if err != nil {
+			entry.WithError(err).Error("failed to delete member contacts in the database")
+			return nil, fmt.Errorf("failed to delete member contacts in the database")
+		}
+
+	}
+
 	var final = make([]*athena.MemberContact, 0)
 	if len(contactsToCreate) > 0 {
 		createdContacts, err := s.contacts.CreateMemberContacts(ctx, member.ID, contactsToCreate)
 		if err != nil {
-			return nil, err
+			entry.WithError(err).Error("failed to create member contacts in the database")
+			return nil, fmt.Errorf("failed to create member contacts in the database")
 		}
 		final = append(final, createdContacts...)
 	}
@@ -189,20 +207,10 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 		for _, contact := range contactsToUpdate {
 			updated, err := s.contacts.UpdateMemberContact(ctx, member.ID, contact)
 			if err != nil {
-				return nil, err
+				entry.WithError(err).Error("failed to update member contacts in the database")
+				return nil, fmt.Errorf("failed to update member contacts in the database")
 			}
 			final = append(final, updated)
-		}
-	}
-
-	if len(contactsToDelete) > 0 {
-		deleteOK, err := s.contacts.DeleteMemberContacts(ctx, member.ID, contactsToDelete)
-		if err != nil {
-			return nil, err
-		}
-
-		if !deleteOK {
-			return nil, fmt.Errorf("Expected to delete %d documents, deleted none", len(contactsToDelete))
 		}
 	}
 
@@ -211,12 +219,17 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 
 func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athena.MemberContact) {
 
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "resolveContactAttributes",
+	})
+
 	for _, contact := range contacts {
 		switch contact.ContactType {
 		case "alliance":
 			_, err := s.alliance.Alliance(ctx, contact.ContactID)
 			if err != nil {
-				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
+				entry.WithError(err).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
 					"contact_type": contact.ContactType,
 				}).Error("failed to resolve alliance contact type")
@@ -224,7 +237,7 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 		case "character":
 			_, err := s.character.Character(ctx, contact.ContactID)
 			if err != nil {
-				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
+				entry.WithError(err).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
 					"contact_type": contact.ContactType,
 				}).Error("failed to resolve character contact type")
@@ -232,7 +245,7 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 		case "corporation":
 			_, err := s.corporation.Corporation(ctx, contact.ContactID)
 			if err != nil {
-				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
+				entry.WithError(err).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
 					"contact_type": contact.ContactType,
 				}).Error("failed to resolve corporation contact type")
@@ -240,13 +253,13 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 		case "faction":
 			_, err := s.universe.Faction(ctx, contact.ContactID)
 			if err != nil {
-				s.logger.WithError(err).WithContext(ctx).WithFields(logrus.Fields{
+				entry.WithError(err).WithFields(logrus.Fields{
 					"contact_id":   contact.ContactID,
 					"contact_type": contact.ContactType,
 				}).Error("failed to resolve faction contact type")
 			}
 		default:
-			s.logger.WithContext(ctx).WithFields(logrus.Fields{
+			entry.WithFields(logrus.Fields{
 				"contact_id":   contact.ContactID,
 				"contact_type": contact.ContactType,
 			}).Error("unknown contact type")
@@ -275,23 +288,32 @@ func (s *service) EmptyMemberContactLabels(ctx context.Context, member *athena.M
 
 func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, *athena.Etag, error) {
 
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "MemberContacts",
+	})
+
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterContactLabels, esi.ModWithMember(member))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch etag object: %w", err)
+		entry.WithError(err).Error("failed to fetch etag object")
+		return nil, nil, fmt.Errorf("failed to fetch etag object")
 	}
 
 	cached := true
 
 	labels, err := s.cache.MemberContactLabels(ctx, member.ID)
 	if err != nil {
-		return nil, nil, err
+		entry.WithError(err).Error("failed to fetch member contact labels from cache")
+		return nil, nil, fmt.Errorf("failed to fetch member contact labels from cache")
 	}
 
 	if labels == nil {
 		cached = false
 		labels, err = s.contacts.MemberContactLabels(ctx, member.ID)
 		if err != nil {
-			return nil, nil, err
+			entry.WithError(err).Error("failed to fetch member contact labels from DB")
+			return nil, nil, fmt.Errorf("failed to fetch member contact labels from DB")
 		}
 	}
 
@@ -300,7 +322,7 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 		if !cached && len(labels) > 0 {
 			err = s.cache.SetMemberContactLabels(ctx, member.ID, labels)
 			if err != nil {
-				newrelic.FromContext(ctx).NoticeError(err)
+				entry.WithError(err).Error("failed to cache member contact labels")
 			}
 		}
 
@@ -309,19 +331,20 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 
 	newLabels, etag, _, err := s.esi.GetCharacterContactLabels(ctx, member, make([]*athena.MemberContactLabel, 0))
 	if err != nil {
-		return nil, nil, fmt.Errorf("[Contacts Service] Failed to fetch labels for member %d: %w", member.ID, err)
+		entry.WithError(err).Error("failed to fetch member contact labels from ESI")
+		return nil, nil, fmt.Errorf("failed to fetch member contact labels from ESI")
 	}
 
 	if len(newLabels) > 0 {
 		labels, err = s.diffAndUpdateLabels(ctx, member, labels, newLabels)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to diff and update contacts")
 		}
 
 		if len(labels) > 0 {
 			err = s.cache.SetMemberContactLabels(ctx, member.ID, labels)
 			if err != nil {
-				newrelic.FromContext(ctx).NoticeError(err)
+				entry.WithError(err).Error("failed to cache member contacts")
 			}
 		}
 	}
@@ -331,6 +354,11 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 }
 
 func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member, old []*athena.MemberContactLabel, new []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "diffAndUpdateLabels",
+	})
 
 	labelsToCreate := make([]*athena.MemberContactLabel, 0)
 	labelsToUpdate := make([]*athena.MemberContactLabel, 0)
@@ -366,7 +394,8 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 	if len(labelsToDelete) > 0 {
 		_, err := s.contacts.DeleteMemberContactLabels(ctx, member.ID, labelsToDelete)
 		if err != nil {
-			return nil, err
+			entry.WithError(err).Error("failed to delete member contact labels in the database")
+			return nil, fmt.Errorf("failed to delete member contact labels in the database")
 		}
 	}
 
@@ -374,7 +403,8 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 	if len(labelsToCreate) > 0 {
 		createdLabels, err := s.contacts.CreateMemberContactLabels(ctx, member.ID, labelsToCreate)
 		if err != nil {
-			return nil, err
+			entry.WithError(err).Error("failed to create member contact labels in the database")
+			return nil, fmt.Errorf("failed to create member contact labels in the database")
 		}
 		final = append(final, createdLabels...)
 	}
@@ -382,7 +412,8 @@ func (s *service) diffAndUpdateLabels(ctx context.Context, member *athena.Member
 	if len(labelsToUpdate) > 0 {
 		updated, err := s.contacts.UpdateMemberContactLabel(ctx, member.ID, labelsToUpdate)
 		if err != nil {
-			return nil, err
+			entry.WithError(err).Error("failed to update member contact labels in the database")
+			return nil, fmt.Errorf("failed to update member contact labels in the database")
 		}
 		final = append(final, updated...)
 	}

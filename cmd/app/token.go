@@ -54,12 +54,12 @@ func refreshMemberToken(c *cli.Context) error {
 	var ctx = context.Background()
 
 	cache := cache.NewService(basics.redis)
-	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
+	etag := etag.NewService(cache, basics.repositories.etag)
 	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
-	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
+	alliance := alliance.NewService(basics.logger, cache, esi, basics.repositories.alliance)
+	corporation := corporation.NewService(basics.logger, cache, esi, alliance, basics.repositories.corporation)
 	character := character.NewService(basics.logger, cache, esi, corporation, basics.repositories.character)
-	alliance := alliance.NewService(cache, esi, basics.repositories.alliance)
 
 	auth := auth.NewService(
 		cache,
@@ -103,16 +103,47 @@ func refreshMemberToken(c *cli.Context) error {
 
 }
 
+func resetMemberByCLI(c *cli.Context) error {
+
+	basics := basics("token-reset")
+	var ctx = context.Background()
+
+	memberID := c.Int64("id")
+	members, err := basics.repositories.member.Members(ctx, athena.NewEqualOperator("id", memberID))
+	if err != nil {
+		basics.logger.WithError(err).Fatal("failed to fetch member from db")
+	}
+
+	if len(members) != 1 {
+		basics.logger.WithField("count", len(members)).Fatal("unexpected number of member returned")
+	}
+
+	member := members[0]
+
+	for i := range member.Scopes {
+		member.Scopes[i].Expiry = null.TimeFromPtr(nil)
+	}
+	_, err = basics.repositories.member.UpdateMember(ctx, member.ID, member)
+	if err != nil {
+		basics.logger.WithError(err).Fatal("failed to update member")
+	}
+
+	fmt.Println("Member Scopes reset successfully")
+
+	return nil
+
+}
+
 func addMemberByCLI(c *cli.Context) error {
 	basics := basics("token-refresh")
 
 	cache := cache.NewService(basics.redis)
-	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
+	etag := etag.NewService(cache, basics.repositories.etag)
 	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
-	corporation := corporation.NewService(cache, esi, basics.repositories.corporation)
+	alliance := alliance.NewService(basics.logger, cache, esi, basics.repositories.alliance)
+	corporation := corporation.NewService(basics.logger, cache, esi, alliance, basics.repositories.corporation)
 	character := character.NewService(basics.logger, cache, esi, corporation, basics.repositories.character)
-	alliance := alliance.NewService(cache, esi, basics.repositories.alliance)
 
 	auth := auth.NewService(
 		cache,

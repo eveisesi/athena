@@ -191,17 +191,31 @@ func migrateCreateCommand(c *cli.Context) error {
 	entry := basics.logger.WithFields(logrus.Fields{
 		"name": name,
 	})
-	_, err := os.Create(up)
+	upFile, err := os.Create(up)
 	if err != nil {
 		entry.WithField("up", up).WithError(err).Fatal("failed to create up file")
 	}
+	defer upFile.Close()
+	_, _ = upFile.WriteString(
+		fmt.Sprintf(
+			"CREATE TABLE `%s` (\n\t%s\n\n\t%s\n\t%s\n\t%s\n\t%s\n) COLLATE = 'utf8mb4_unicode_ci' ENGINE = InnoDB;",
+			name,
+			"`member_id` INT UNSIGNED NOT NULL,",
+			"`created_at` TIMESTAMP NOT NULL,",
+			"`updated_at` TIMESTAMP NOT NULL,",
+			"PRIMARY KEY (`member_id`) USING BTREE,",
+			fmt.Sprintf("CONSTRAINT `%s_member_id_foreign` FOREIGN KEY (`member_id`) REFERENCES `athena`.`members` (`id`) ON UPDATE CASCADE ON DELETE CASCADE", name),
+		),
+	)
 
 	entry.WithField("up", up).Info("migration created successfully")
 	down := fmt.Sprintf(filename, "down")
-	_, err = os.Create(down)
+	downFile, err := os.Create(down)
 	if err != nil {
 		entry.WithField("down", down).WithError(err).Fatal("failed to create down file")
 	}
+	defer downFile.Close()
+	_, _ = downFile.WriteString(fmt.Sprintf("DROP TABLE `%s`;", name))
 
 	entry.WithField("down", down).Info("migration created successfully")
 

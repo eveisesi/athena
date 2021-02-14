@@ -99,7 +99,7 @@ func (r *etagRepository) DeleteEtag(ctx context.Context, id string) (bool, error
 
 	query, args, err := sq.Delete(r.table).Where(sq.Eq{"etag_id": id}).ToSql()
 	if err != nil {
-		return false, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return false, fmt.Errorf("[Etag Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)

@@ -3,7 +3,9 @@ package athena
 import (
 	"bytes"
 	"context"
+	"database/sql/driver"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/volatiletech/null"
@@ -42,7 +44,7 @@ type MemberWalletTransaction struct {
 	MemberID           uint         `db:"member_id" json:"member_id"`
 	TransactionID      uint64       `db:"transaction_id" json:"transaction_id"`
 	JournalReferenceID uint64       `db:"journal_ref_id" json:"journal_ref_id"`
-	ClientID           uint32       `db:"client_id" json:"client_id"`
+	ClientID           uint         `db:"client_id" json:"client_id"`
 	ClientType         ClientType   `db:"client_type" json:"client_type"`
 	LocationID         uint64       `db:"location_id" json:"location_id"`
 	LocationType       LocationType `db:"location_type" json:"location_type"`
@@ -59,13 +61,15 @@ type MemberWalletTransaction struct {
 type ClientType string
 
 const (
-	ClientTypeCharacter   ClientType = "Character"
-	ClientTypeCorporation ClientType = "Corporation"
+	ClientTypeCharacter   ClientType = "character"
+	ClientTypeCorporation ClientType = "corporation"
+	ClientTypeUnknown     ClientType = "unknown"
 )
 
 var AllClientTypes = []ClientType{
 	ClientTypeCharacter,
 	ClientTypeCorporation,
+	ClientTypeUnknown,
 }
 
 func (i ClientType) Valid() bool {
@@ -85,13 +89,15 @@ func (i ClientType) String() string {
 type LocationType string
 
 const (
-	LocationTypeStation   LocationType = "Station"
-	LocationTypeStructure LocationType = "Structure"
+	LocationTypeStation   LocationType = "station"
+	LocationTypeStructure LocationType = "structure"
+	LocationTypeUnknown   LocationType = "unknown"
 )
 
 var AllLocationTypes = []LocationType{
 	LocationTypeStation,
 	LocationTypeStructure,
+	LocationTypeUnknown,
 }
 
 func (i LocationType) Valid() bool {
@@ -112,18 +118,18 @@ type MemberWalletJournal struct {
 	MemberID        uint                  `db:"member_id" json:"member_id"`
 	JournalID       uint64                `db:"journal_id" json:"id"`
 	RefType         RefType               `db:"ref_type" json:"ref_type"`
-	ContextID       null.Int64            `db:"context_id,omitempty" json:"context_id,omitempty"`
-	ContextType     NullableContextIDType `db:"context_id_type,omitempty" json:"context_id_type,omitempty"`
+	ContextID       null.Uint64           `db:"context_id" json:"context_id"`
+	ContextType     NullableContextIDType `db:"context_type" json:"context_id_type"`
 	Description     string                `db:"description" json:"description"`
-	Reason          null.String           `db:"reason,omitempty" json:"reason,omitempty"`
-	FirstPartyID    null.Int              `db:"first_party_id,omitempty" json:"first_party_id,omitempty"`
-	FirstPartyType  null.String           `db:"first_party_type,omitempty" json:"first_party_type,omitempty"`
-	SecondPartyID   null.Int              `db:"second_party_id,omitempty" json:"second_party_id,omitempty"`
-	SecondPartyType null.String           `db:"second_party_type,omitempty" json:"second_party_type,omitempty"`
-	Amount          null.Float64          `db:"amount,omitempty" json:"amount,omitempty"`
-	Balance         null.Float64          `db:"balance,omitempty" json:"balance,omitempty"`
-	Tax             null.Float64          `db:"tax,omitempty" json:"tax,omitempty"`
-	TaxReceiverID   null.Int              `db:"tax_receiver_id,omitempty" json:"tax_receiver_id,omitempty"`
+	Reason          null.String           `db:"reason" json:"reason"`
+	FirstPartyID    null.Uint             `db:"first_party_id" json:"first_party_id"`
+	FirstPartyType  null.String           `db:"first_party_type" json:"first_party_type"`
+	SecondPartyID   null.Uint             `db:"second_party_id" json:"second_party_id"`
+	SecondPartyType null.String           `db:"second_party_type" json:"second_party_type"`
+	Amount          null.Float64          `db:"amount" json:"amount"`
+	Balance         null.Float64          `db:"balance" json:"balance"`
+	Tax             null.Float64          `db:"tax" json:"tax"`
+	TaxReceiverID   null.Uint             `db:"tax_receiver_id" json:"tax_receiver_id"`
 	Date            time.Time             `db:"date" json:"date"`
 	CreatedAt       time.Time             `db:"created_at" json:"created_at"`
 	UpdatedAt       time.Time             `db:"updated_at" json:"updated_at"`
@@ -354,6 +360,45 @@ type NullableContextIDType struct {
 	ContextIDType ContextIDType
 }
 
+func (i NullableContextIDType) Value() (driver.Value, error) {
+
+	if !i.Valid || !i.ContextIDType.Valid() {
+		return nil, nil
+	}
+
+	return i.ContextIDType.String(), nil
+
+}
+
+func (i *NullableContextIDType) Scan(value interface{}) error {
+
+	if value == nil {
+		i.ContextIDType, i.Valid = "", false
+		return nil
+	}
+	switch v := value.(type) {
+	case []byte:
+		if strings.ToLower(string(v)) == "null" {
+			i.Valid = false
+			return nil
+		}
+		i.Valid = true
+		i.ContextIDType = ContextIDType(string(v))
+	case string:
+		if strings.ToLower(v) == "null" {
+			i.Valid = false
+			return nil
+		}
+		i.Valid = true
+		i.ContextIDType = ContextIDType(v)
+	default:
+		i.Valid = false
+	}
+
+	return nil
+
+}
+
 // MarshalJSON implements json.Marshaler.
 func (i NullableContextIDType) MarshalJSON() ([]byte, error) {
 	if !i.Valid {
@@ -379,7 +424,7 @@ func (i *NullableContextIDType) UnmarshalJSON(data []byte) error {
 
 }
 
-// IsZero returns true for invalid NullableContextIDType's, for future omitempty support (Go 1.4?)
+// IsZero returns true for invalid NullableContextIDType's, for future omitempty support
 func (i NullableContextIDType) IsZero() bool {
 	return !i.Valid
 }

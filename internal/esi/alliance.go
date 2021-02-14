@@ -11,6 +11,11 @@ import (
 	"github.com/eveisesi/athena"
 )
 
+type allianceInterface interface {
+	// Alliances
+	GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *athena.Etag, *http.Response, error)
+}
+
 func isAllianceValid(r *athena.Alliance) bool {
 	if r.Name == "" || r.Ticker == "" {
 		return false
@@ -24,10 +29,10 @@ func isAllianceValid(r *athena.Alliance) bool {
 // Documentation: https://esi.evetech.net/ui/#/Alliance/get_alliances_alliance_id
 // Version: v3
 // Cache: 3600 sec (1 Hour)
-func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error) {
+func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *athena.Etag, *http.Response, error) {
 
 	// Fetch configuration for this endpoint
-	endpoint := s.endpoints[GetAlliance.Name]
+	endpoint := endpoints[GetAlliance]
 
 	// Prime modifiers with alliance
 	mods := s.modifiers(ModWithAlliance(alliance))
@@ -35,14 +40,14 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 	// Fetch Etag for request
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
 
 	b, res, err := s.request(ctx, WithMethod(http.MethodGet), WithPath(endpoint.PathFunc(mods)), WithEtag(etag))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	switch sc := res.StatusCode; {
@@ -50,55 +55,47 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 		err = json.Unmarshal(b, alliance)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		etag.Etag = s.retrieveEtagHeader(res.Header)
 
 		if !isAllianceValid(alliance) {
-			return nil, nil, fmt.Errorf("invalid alliance returned from esi, missing name or ticker")
+			return nil, nil, nil, fmt.Errorf("invalid alliance returned from esi, missing name or ticker")
 		}
 	case sc >= http.StatusBadRequest:
-		return alliance, res, fmt.Errorf("failed to fetch alliance %d, received status code of %d", alliance.ID, sc)
+		return alliance, etag, res, fmt.Errorf("failed to fetch alliance %d, received status code of %d", alliance.ID, sc)
 	}
 
 	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
 	}
 
-	return alliance, res, nil
+	return alliance, etag, res, nil
 
 }
 
-func (s *service) allianceKeyFunc(mods *modifiers) string {
+func allianceKeyFunc(mods *modifiers) string {
 
 	if mods.alliance == nil {
 		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
-	return buildKey(GetAlliance.Name, strconv.Itoa(int(mods.alliance.ID)))
+	return buildKey(GetAlliance.String(), strconv.Itoa(int(mods.alliance.ID)))
 }
 
-func (s *service) alliancePathFunc(mods *modifiers) string {
+func alliancePathFunc(mods *modifiers) string {
 
 	if mods.alliance == nil {
 		panic("expected type *athena.Alliance to be provided, received nil for alliance instead")
 	}
 
 	u := url.URL{
-		Path: fmt.Sprintf(GetAlliance.FmtPath, mods.alliance.ID),
+		Path: fmt.Sprintf(endpoints[GetAlliance].Path, mods.alliance.ID),
 	}
 
 	return u.String()
-
-}
-
-func (s *service) newGetAllianceEndpoint() *endpoint {
-
-	GetAlliance.KeyFunc = s.allianceKeyFunc
-	GetAlliance.PathFunc = s.alliancePathFunc
-	return GetAlliance
 
 }

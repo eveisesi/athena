@@ -23,7 +23,6 @@ type Service interface {
 	Login(ctx context.Context, code, state string) error
 	ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error)
 	MemberFromToken(ctx context.Context, token jwt.Token) (*athena.Member, error)
-	// ExpiredTokens(ctx context.Context) ([]*athena.Member, error)
 }
 
 type service struct {
@@ -35,6 +34,10 @@ type service struct {
 
 	member athena.MemberRepository
 }
+
+// const (
+// 	serviceIdentifier = "Member Service"
+// )
 
 func NewService(auth auth.Service, cache cache.Service, alliance alliance.Service, character character.Service, corporation corporation.Service, member athena.MemberRepository) Service {
 	return &service{

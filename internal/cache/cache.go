@@ -21,6 +21,7 @@ type Service interface {
 	processorService
 	skillService
 	universeService
+	walletService
 }
 
 type service struct {

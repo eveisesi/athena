@@ -8,7 +8,6 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
-	"github.com/sirupsen/logrus"
 )
 
 type Service interface {
@@ -16,17 +15,13 @@ type Service interface {
 }
 
 type service struct {
-	logger *logrus.Logger
-
 	cache cache.Service
 
 	athena.EtagRepository
 }
 
-func NewService(logger *logrus.Logger, cache cache.Service, etag athena.EtagRepository) Service {
+func NewService(cache cache.Service, etag athena.EtagRepository) Service {
 	return &service{
-		logger: logger,
-
 		cache: cache,
 
 		EtagRepository: etag,
@@ -73,9 +68,7 @@ func (s *service) UpdateEtag(ctx context.Context, etagID string, etag *athena.Et
 	}
 
 	_ = s.cache.SetEtag(
-		ctx,
-		etag.EtagID,
-		etag,
+		ctx, etag.EtagID, etag,
 		cache.WithCustomExpiry(
 			time.Since(
 				etag.CachedUntil,

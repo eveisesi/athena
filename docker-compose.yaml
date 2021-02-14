@@ -1,16 +1,17 @@
 version: "3.7"
 
 services:
-  athena_mysql:
+  mysql:
     image: mysql:8
     restart: always
     volumes:
       - ./_data/mysql:/var/lib/mysql
+      - ./.config/mysqlconf/athena.conf:/etc/mysql/athena.conf
     env_file: ./.config/mysql.env
     ports:
       - "46120:3306"
     container_name: athena-mysql
-  athena_redis:
+  redis:
     image: redis:6
     restart: always
     ports:

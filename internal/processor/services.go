@@ -115,13 +115,14 @@ func (s *service) processMember(ctx context.Context, memberID uint) {
 		}
 
 		if _, ok := s.scopes[scope.Scope]; !ok {
-			entry.Error("scope not supported")
+			// entry.Error("scope not supported")
 			time.Sleep(time.Second)
 			continue
 		}
 
 		for _, resolver := range s.scopes[scope.Scope] {
 			entry := entry.WithField("name", resolver.Name)
+			entry.Info()
 
 			etag, err := resolver.Func(ctx, member)
 			if err != nil {

@@ -34,7 +34,7 @@ func (r *memberLocationRepository) MemberLocation(ctx context.Context, memberID 
 		"created_at", "updated_at",
 	).From(r.location).Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to generate query: %w", err)
 	}
 
 	var location = new(athena.MemberLocation)
@@ -56,12 +56,12 @@ func (r *memberLocationRepository) CreateMemberLocation(ctx context.Context, mem
 		sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 	).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberLocation(ctx, memberID)
@@ -77,12 +77,12 @@ func (r *memberLocationRepository) UpdateMemberLocation(ctx context.Context, mem
 		Set("updated_at", sq.Expr(`NOW()`)).
 		Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberLocation(ctx, memberID)
@@ -99,7 +99,7 @@ func (r *memberLocationRepository) MemberOnline(ctx context.Context, memberID ui
 		"updated_at",
 	).From(r.online).Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to generate query: %w", err)
 	}
 
 	var online = new(athena.MemberOnline)
@@ -123,12 +123,12 @@ func (r *memberLocationRepository) CreateMemberOnline(ctx context.Context, membe
 		sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 	).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberOnline(ctx, memberID)
@@ -145,12 +145,12 @@ func (r *memberLocationRepository) UpdateMemberOnline(ctx context.Context, membe
 		Set("updated_at", sq.Expr(`NOW()`)).
 		Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberOnline(ctx, memberID)
@@ -165,7 +165,7 @@ func (r *memberLocationRepository) MemberShip(ctx context.Context, memberID uint
 		"created_at", "updated_at",
 	).From(r.ship).Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to generate query: %w", err)
 	}
 
 	var ship = new(athena.MemberShip)
@@ -187,12 +187,12 @@ func (r *memberLocationRepository) CreateMemberShip(ctx context.Context, memberI
 		sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 	).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberShip(ctx, memberID)
@@ -208,12 +208,12 @@ func (r *memberLocationRepository) UpdateMemberShip(ctx context.Context, memberI
 		Set("updated_at", sq.Expr(`NOW()`)).
 		Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Location Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberShip(ctx, memberID)

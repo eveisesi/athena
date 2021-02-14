@@ -16,7 +16,7 @@ func universeCommand(c *cli.Context) error {
 	debug := c.Bool("debug")
 
 	cache := cache.NewService(basics.redis)
-	etag := etag.NewService(basics.logger, cache, basics.repositories.etag)
+	etag := etag.NewService(cache, basics.repositories.etag)
 	esi := esi.NewService(basics.client, cache, etag, basics.cfg.UserAgent)
 
 	universeServ := universe.NewService(basics.logger, cache, esi, basics.repositories.universe)

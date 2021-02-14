@@ -30,7 +30,7 @@ func (r *memberFittingRepository) MemberFitting(ctx context.Context, memberID, f
 		"name", "description", "created_at", "updated_at",
 	).From(r.fittings).Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	var fitting = new(athena.MemberFitting)
@@ -47,7 +47,7 @@ func (r *memberFittingRepository) MemberFittings(ctx context.Context, memberID u
 		"name", "description", "created_at", "updated_at",
 	).From(r.fittings).Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	var fittings = make([]*athena.MemberFitting, 0)
@@ -74,12 +74,12 @@ func (r *memberFittingRepository) CreateMemberFittings(ctx context.Context, memb
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Fitting Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberFittings(ctx, memberID)
@@ -93,12 +93,12 @@ func (r *memberFittingRepository) UpdateMemberFitting(ctx context.Context, membe
 		Set("description", fitting.Description).
 		Where(sq.Eq{"member_id": memberID, "fitting_id": fittingID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Fitting Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberFitting(ctx, memberID, fitting.FittingID)
@@ -109,12 +109,12 @@ func (r *memberFittingRepository) DeleteMemberFitting(ctx context.Context, membe
 
 	query, args, err := sq.Delete(r.fittings).Where(sq.Eq{"member_id": memberID, "fitting_id": fittingID}).ToSql()
 	if err != nil {
-		return false, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return false, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return false, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return false, fmt.Errorf("[Fitting Repository] Failed to insert records: %w", err)
 	}
 
 	return true, nil
@@ -125,12 +125,12 @@ func (r *memberFittingRepository) DeleteMemberFittings(ctx context.Context, memb
 
 	query, args, err := sq.Delete(r.fittings).Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return false, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return false, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return false, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return false, fmt.Errorf("[Fitting Repository] Failed to insert records: %w", err)
 	}
 
 	return true, nil
@@ -145,7 +145,7 @@ func (r *memberFittingRepository) MemberFittingItems(ctx context.Context, member
 		"flag", "created_at", "updated_at",
 	).From(r.items).Where(sq.Eq{"member_id": memberID, "fitting_id": fittingID}).ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	var items = make([]*athena.MemberFittingItem, 0)
@@ -173,12 +173,12 @@ func (r *memberFittingRepository) CreateMemberFittingItems(ctx context.Context, 
 
 	query, args, err := i.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return nil, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return nil, fmt.Errorf("[Fitting Repository] Failed to insert records: %w", err)
 	}
 
 	return r.MemberFittingItems(ctx, memberID, fittingID)
@@ -189,12 +189,12 @@ func (r *memberFittingRepository) DeleteMemberFittingItems(ctx context.Context, 
 
 	query, args, err := sq.Delete(r.items).Where(sq.Eq{"member_id": memberID, "fitting_id": fittingID}).ToSql()
 	if err != nil {
-		return false, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return false, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return false, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return false, fmt.Errorf("[Fitting Repository] Failed to insert records: %w", err)
 	}
 
 	return true, nil
@@ -205,12 +205,12 @@ func (r *memberFittingRepository) DeleteMemberFittingItemsAll(ctx context.Contex
 
 	query, args, err := sq.Delete(r.items).Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
-		return false, fmt.Errorf("[Clones Repository] Failed to generate query: %w", err)
+		return false, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}
 
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return false, fmt.Errorf("[Clones Repository] Failed to insert records: %w", err)
+		return false, fmt.Errorf("[Fitting Repository] Failed to insert records: %w", err)
 	}
 
 	return true, nil

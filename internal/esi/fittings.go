@@ -13,7 +13,7 @@ import (
 
 func (s *service) GetCharacterFittings(ctx context.Context, member *athena.Member, fittings []*athena.MemberFitting) ([]*athena.MemberFitting, *http.Response, error) {
 
-	endpoint := s.endpoints[GetCharacterFittings.Name]
+	endpoint := endpoints[GetCharacterFittings]
 
 	mods := s.modifiers(ModWithMember(member))
 
@@ -59,37 +59,31 @@ func (s *service) GetCharacterFittings(ctx context.Context, member *athena.Membe
 
 }
 
-func (s *service) newGetCharacterFittingsEndpoint() *endpoint {
+func characterFittingsKeyFunc(mods *modifiers) string {
 
-	GetCharacterFittings.KeyFunc = func(mods *modifiers) string {
-
-		if mods.member == nil {
-			panic("expected type *athena.Member to be provided, received nil for member instead")
-		}
-
-		param := append(make([]string, 0), GetCharacterFittings.Name, strconv.Itoa(int(mods.member.ID)))
-
-		if mods.page != nil {
-			param = append(param, strconv.Itoa(*mods.page))
-		}
-
-		return buildKey(param...)
+	if mods.member == nil {
+		panic("expected type *athena.Member to be provided, received nil for member instead")
 	}
 
-	GetCharacterFittings.PathFunc = func(mods *modifiers) string {
+	param := append(make([]string, 0), GetCharacterFittings.String(), strconv.Itoa(int(mods.member.ID)))
 
-		if mods.member == nil {
-			panic("expected type *athena.Member to be provided, received nil for member instead")
-		}
-
-		u := url.URL{
-			Path: fmt.Sprintf(GetCharacterFittings.FmtPath, mods.member.ID),
-		}
-
-		return u.String()
-
+	if mods.page != nil {
+		param = append(param, strconv.Itoa(*mods.page))
 	}
 
-	return GetCharacterFittings
+	return buildKey(param...)
+}
+
+func characterFittingsPathFunc(mods *modifiers) string {
+
+	if mods.member == nil {
+		panic("expected type *athena.Member to be provided, received nil for member instead")
+	}
+
+	u := url.URL{
+		Path: fmt.Sprintf(endpoints[GetCharacterFittings].Path, mods.member.ID),
+	}
+
+	return u.String()
 
 }

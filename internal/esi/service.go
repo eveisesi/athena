@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/etag"
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -25,48 +24,16 @@ const (
 
 type (
 	Service interface {
-		etagInterface
+		allianceInterface
 		characterInterface
 		clonesInterface
 		contactsInterface
+		corporationInterface
+		etagInterface
 		locationInterface
 		skillsInterface
-
-		// Alliances
-		GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *http.Response, error)
-
-		// Corporations
-		GetCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *http.Response, error)
-
-		// 		// Killmails
-		// 		GetKillmailsKillmailIDKillmailHash(ctx context.Context, id uint, hash string) (*athena.Killmail, *http.Response, error)
-
-		// 		// Market
-		// 		HeadMarketsRegionIDTypes(ctx context.Context, regionID uint) *http.Response, error
-		// 		GetMarketGroups(ctx context.Context) ([]int, *http.Response, error)
-		// 		GetMarketGroupsMarketGroupID(ctx context.Context, id int) (*athena.MarketGroup, *http.Response, error)
-		// 		GetMarketsRegionIDTypes(ctx context.Context, regionID uint, page null.String) ([]int, *http.Response, error)
-		// 		GetMarketsRegionIDHistory(ctx context.Context, regionID uint, typeID uint) ([]*athena.HistoricalRecord, *http.Response, error)
-		// 		GetMarketsPrices(ctx context.Context) ([]*athena.MarketPrices, *http.Response, error)
-
-		// 		// Status
-		// 		GetStatus(ctx context.Context) (*athena.ServerStatus, *http.Response, error)
-
-		// Universe
-		GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error)
-		GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error)
-		GetCategories(ctx context.Context, ids []uint) ([]uint, *http.Response, error)
-		GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error)
-		GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error)
-		GetFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error)
-		GetGroup(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error)
-		GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Response, error)
-		GetRegion(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error)
-		GetRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error)
-		GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error)
-		GetStation(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error)
-		GetStructure(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error)
-		GetType(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error)
+		walletInterface
+		universeInterface
 	}
 
 	service struct {
@@ -75,8 +42,7 @@ type (
 		cache cache.Service
 		etag  etag.Service
 
-		ua        string
-		endpoints endpointMap
+		ua string
 	}
 )
 
@@ -98,140 +64,274 @@ func NewService(client *http.Client, cache cache.Service, etag etag.Service, uag
 
 }
 
-type endpoint struct {
-	Name     string
-	FmtPath  string
-	PathFunc pathFunc
-	KeyFunc  keyFunc
-}
-
-var (
-	// Alliances
-	GetAlliance = &endpoint{Name: "GetAlliance", FmtPath: "/v3/alliances/%d/"}
-
-	// Characters
-	GetCharacter                   = &endpoint{Name: "GetCharacter", FmtPath: "/v4/characters/%d/"}
-	GetCharacterCorporationHistory = &endpoint{Name: "GetCharacterCorporationHistory", FmtPath: "/v1/characters/%d/corporationhistory/"}
-
-	// Skills
-	GetCharacterAttributes = &endpoint{Name: "GetCharacterAttributes", FmtPath: "/v1/characters/%d/attributes/"}
-	GetCharacterSkills     = &endpoint{Name: "GetCharacterSkills", FmtPath: "/v4/characters/%d/skills/"}
-	GetCharacterSkillQueue = &endpoint{Name: "GetCharacterSkillQueue", FmtPath: "/v2/characters/%d/skillqueue/"}
-
-	// Clones
-	GetCharacterClones   = &endpoint{Name: "GetCharacterClones", FmtPath: "/v4/characters/%d/clones/"}
-	GetCharacterImplants = &endpoint{Name: "GetCharacterImplants", FmtPath: "/v2/characters/%d/implants/"}
-
-	// Contacts
-	GetCharacterContacts      = &endpoint{Name: "GetCharacterContacts", FmtPath: "/v2/characters/%d/contacts/"}
-	GetCharacterContactLabels = &endpoint{Name: "GetCharacterContactLabels", FmtPath: "/v1/characters/%d/contacts/labels/"}
-
-	// Contracts
-	GetCharacterContracts     = &endpoint{Name: "GetCharacterContracts", FmtPath: "/v1/characters/%d/contracts/"}
-	GetCharacterContractItems = &endpoint{Name: "GetCharacterContractItems", FmtPath: "/v1/characters/%d/contracts/%d/items/"}
-	GetCharacterContractBids  = &endpoint{Name: "GetCharacterContractBids", FmtPath: "/v1/characters/%d/contracts/%d/bids/"}
-
-	// Fittings
-	GetCharacterFittings = &endpoint{Name: "GetCharacterFittings", FmtPath: "/v2/characters/%d/fittings/"}
-
-	// Locations
-	GetCharacterLocation = &endpoint{Name: "GetCharacterLocation", FmtPath: "/v2/characters/%d/location/"}
-	GetCharacterOnline   = &endpoint{Name: "GetCharacterOnline", FmtPath: "/v3/characters/%d/online/"}
-	GetCharacterShip     = &endpoint{Name: "GetCharacterShip", FmtPath: "/v2/characters/%d/ship/"}
-
-	// Corporations
-	GetCorporation                = &endpoint{Name: "GetCorporation", FmtPath: "/v4/corporations/%d/"}
-	GetCorporationAllianceHistory = &endpoint{Name: "GetCorporationAllianceHistory", FmtPath: "/v2/corporations/%d/alliancehistory/"}
-
-	// Universe
-	GetAncestries    = &endpoint{Name: "GetAncestries", FmtPath: "/v1/universe/ancestries/"}
-	GetBloodlines    = &endpoint{Name: "GetBloodlines", FmtPath: "/v1/universe/bloodlines/"}
-	GetCategories    = &endpoint{Name: "GetCategories", FmtPath: "/v1/universe/categories/"}
-	GetCategory      = &endpoint{Name: "GetCategory", FmtPath: "/v1/universe/categories/%d/"}
-	GetConstellation = &endpoint{Name: "GetConstellation", FmtPath: "/v1/universe/constellations/%d/"}
-	GetFactions      = &endpoint{Name: "GetFactions", FmtPath: "/v2/universe/factions/"}
-	GetGroup         = &endpoint{Name: "GetGroup", FmtPath: "/v1/universe/groups/%d/"}
-	GetRaces         = &endpoint{Name: "GetRaces", FmtPath: "/v1/universe/races/"}
-	GetRegions       = &endpoint{Name: "GetRegions", FmtPath: "/v1/universe/regions/"}
-	GetRegion        = &endpoint{Name: "GetRegion", FmtPath: "/v1/universe/regions/%d/"}
-	GetSolarSystem   = &endpoint{Name: "GetSolarSystem", FmtPath: "/v4/universe/systems/%d/"}
-	GetStation       = &endpoint{Name: "GetStation", FmtPath: "/v2/universe/stations/%d/"}
-	GetStructure     = &endpoint{Name: "GetStructure", FmtPath: "/v2/universe/structures/%d/"}
-	GetType          = &endpoint{Name: "GetType", FmtPath: "/v3/universe/types/%d/"}
+type (
+	endpoint struct {
+		Path     string
+		PathFunc pathFunc
+		KeyFunc  keyFunc
+	}
+	endpointID string
 )
 
-var AllEndpoints = []*endpoint{
-	GetAlliance,
-	GetCharacter,
-	GetCharacterCorporationHistory,
-	GetCharacterAttributes,
-	GetCharacterClones,
-	GetCharacterContacts,
-	GetCharacterContactLabels,
-	GetCharacterContracts,
-	GetCharacterContractItems,
-	GetCharacterContractBids,
-	GetCharacterFittings,
-	GetCharacterImplants,
-	GetCharacterLocation,
-	GetCharacterOnline,
-	GetCharacterShip,
-	GetCharacterSkills,
-	GetCharacterSkillQueue,
-	GetCorporation,
-	GetCorporationAllianceHistory,
-	GetAncestries,
-	GetBloodlines,
-	GetCategories,
-	GetCategory,
-	GetConstellation,
-	GetFactions,
-	GetGroup,
-	GetRaces,
-	GetRegions,
-	GetRegion,
-	GetSolarSystem,
-	GetStation,
-	GetStructure,
-	GetType,
+func (e endpointID) String() string {
+	return string(e)
 }
+
+const (
+	GetAlliance                    endpointID = "GetAlliance"
+	GetCharacter                   endpointID = "GetCharacter"
+	GetCharacterCorporationHistory endpointID = "GetCharacterCorporationHistory"
+	GetCharacterAttributes         endpointID = "GetCharacterAttributes"
+	GetCharacterSkills             endpointID = "GetCharacterSkills"
+	GetCharacterSkillQueue         endpointID = "GetCharacterSkillQueue"
+	GetCharacterClones             endpointID = "GetCharacterClones"
+	GetCharacterImplants           endpointID = "GetCharacterImplants"
+	GetCharacterContacts           endpointID = "GetCharacterContacts"
+	GetCharacterContactLabels      endpointID = "GetCharacterContactLabels"
+	GetCharacterContracts          endpointID = "GetCharacterContracts"
+	GetCharacterContractItems      endpointID = "GetCharacterContractItems"
+	GetCharacterContractBids       endpointID = "GetCharacterContractBids"
+	GetCharacterFittings           endpointID = "GetCharacterFittings"
+	GetCharacterLocation           endpointID = "GetCharacterLocation"
+	GetCharacterOnline             endpointID = "GetCharacterOnline"
+	GetCharacterShip               endpointID = "GetCharacterShip"
+	GetCharacterWalletBalance      endpointID = "GetCharacterWalletBalance"
+	GetCharacterWalletTransactions endpointID = "GetCharacterWalletTransactions"
+	GetCharacterWalletJournal      endpointID = "GetCharacterWalletJournal"
+	GetCorporation                 endpointID = "GetCorporation"
+	GetCorporationAllianceHistory  endpointID = "GetCorporationAllianceHistory"
+	GetAncestries                  endpointID = "GetAncestries"
+	GetAsteroidBelt                endpointID = "GetAsteroidBelt"
+	GetBloodlines                  endpointID = "GetBloodlines"
+	GetCategories                  endpointID = "GetCategories"
+	GetCategory                    endpointID = "GetCategory"
+	GetConstellation               endpointID = "GetConstellation"
+	GetFactions                    endpointID = "GetFactions"
+	GetGroup                       endpointID = "GetGroup"
+	GetMoon                        endpointID = "GetMoon"
+	GetPlanet                      endpointID = "GetPlanet"
+	GetRaces                       endpointID = "GetRaces"
+	GetRegions                     endpointID = "GetRegions"
+	GetRegion                      endpointID = "GetRegion"
+	GetSolarSystem                 endpointID = "GetSolarSystem"
+	GetStation                     endpointID = "GetStation"
+	GetStructure                   endpointID = "GetStructure"
+	GetType                        endpointID = "GetType"
+	PostUniverseNames              endpointID = "PostUniverseNames"
+)
+
+var (
+	endpoints endpointMap
+)
 
 func (s *service) buildEndpointMap() {
 
-	s.endpoints = endpointMap{
-		GetAlliance.Name:                    s.newGetAllianceEndpoint(),
-		GetCharacter.Name:                   s.newGetCharacterEndpoint(),
-		GetCharacterCorporationHistory.Name: s.newGetCharacterCorporationHistoryEndpoint(),
-		GetCharacterAttributes.Name:         s.newGetCharacterAttributesEndpoint(),
-		GetCharacterClones.Name:             s.newGetCharacterClonesEndpoint(),
-		GetCharacterContacts.Name:           s.newGetCharacterContactsEndpoint(),
-		GetCharacterContactLabels.Name:      s.newGetCharacterContactLabelsEndpoint(),
-		GetCharacterContracts.Name:          s.newGetCharacterContractsEndpoint(),
-		GetCharacterContractItems.Name:      s.newGetCharacterContractItemsEndpoint(),
-		GetCharacterContractBids.Name:       s.newGetCharacterContractBidsEndpoint(),
-		GetCharacterFittings.Name:           s.newGetCharacterFittingsEndpoint(),
-		GetCharacterImplants.Name:           s.newGetCharacterImplantsEndpoint(),
-		GetCharacterLocation.Name:           s.newGetCharacterLocationEndpoint(),
-		GetCharacterOnline.Name:             s.newGetCharacterOnlineEndpoint(),
-		GetCharacterShip.Name:               s.newGetCharacterShipEndpoint(),
-		GetCharacterSkills.Name:             s.newGetCharacterSkillsEndpoint(),
-		GetCharacterSkillQueue.Name:         s.newGetCharacterSkillQueueEndpoint(),
-		GetCorporation.Name:                 s.newGetCorporationEndpoint(),
-		GetCorporationAllianceHistory.Name:  s.newGetCorporationAllianceHistoryEndpoint(),
-		GetAncestries.Name:                  s.newGetAncestriesEndpoint(),
-		GetBloodlines.Name:                  s.newGetBloodlinesEndpoint(),
-		GetCategories.Name:                  s.newGetCategoriesEndpoint(),
-		GetCategory.Name:                    s.newGetCategoryEndpoint(),
-		GetConstellation.Name:               s.newGetConstellationEndpoint(),
-		GetFactions.Name:                    s.newGetFactionsEndpoint(),
-		GetGroup.Name:                       s.newGetGroupEndpoint(),
-		GetRaces.Name:                       s.newGetRacesEndpoint(),
-		GetRegions.Name:                     s.newGetRegionsEndpoint(),
-		GetRegion.Name:                      s.newGetRegionEndpoint(),
-		GetSolarSystem.Name:                 s.newGetSolarSystemEndpoint(),
-		GetStation.Name:                     s.newGetStationEndpoint(),
-		GetStructure.Name:                   s.newGetStructureEndpoint(),
-		GetType.Name:                        s.newGetTypeEndpoint(),
+	endpoints = endpointMap{
+		GetAlliance: &endpoint{
+			Path:     "/v3/alliances/%d/",
+			KeyFunc:  allianceKeyFunc,
+			PathFunc: alliancePathFunc,
+		},
+		GetCharacter: &endpoint{
+			Path:     "/v4/characters/%d/",
+			KeyFunc:  characterKeyFunc,
+			PathFunc: characterPathFunc,
+		},
+		GetCharacterCorporationHistory: &endpoint{
+			Path:     "/v1/characters/%d/corporationhistory/",
+			PathFunc: characterCorporationHistoryPathFunc,
+			KeyFunc:  characterCorporationHistoryKeyFunc,
+		},
+		GetCharacterAttributes: &endpoint{
+			Path:     "/v1/characters/%d/attributes/",
+			KeyFunc:  characterAttributesKeyFunc,
+			PathFunc: characterAttributesPathFunc,
+		},
+		GetCharacterClones: &endpoint{
+			Path:     "/v4/characters/%d/clones/",
+			KeyFunc:  characterClonesKeyFunc,
+			PathFunc: characterClonesPathFunc,
+		},
+		GetCharacterContacts: &endpoint{
+			Path:     "/v2/characters/%d/contacts/",
+			KeyFunc:  characterContactsKeyFunc,
+			PathFunc: characterContactsPathFunc,
+		},
+		GetCharacterContactLabels: &endpoint{
+			Path:     "/v1/characters/%d/contacts/labels/",
+			KeyFunc:  characterContactLabelsKeyFunc,
+			PathFunc: characterContactLabelsPathFunc,
+		},
+		GetCharacterContracts: &endpoint{
+			Path:     "/v1/characters/%d/contracts/",
+			KeyFunc:  characterContractsKeyFunc,
+			PathFunc: characterContractsPathFunc,
+		},
+		GetCharacterContractItems: &endpoint{
+			Path:     "/v1/characters/%d/contracts/%d/items/",
+			KeyFunc:  characterContractItemsKeyFunc,
+			PathFunc: characterContractItemsPathFunc,
+		},
+		GetCharacterContractBids: &endpoint{
+			Path:     "/v1/characters/%d/contracts/%d/bids/",
+			KeyFunc:  characterContractBidsKeyFunc,
+			PathFunc: characterContractBidsPathFunc,
+		},
+		GetCharacterFittings: &endpoint{
+			Path:     "/v2/characters/%d/fittings/",
+			KeyFunc:  characterFittingsKeyFunc,
+			PathFunc: characterFittingsPathFunc,
+		},
+		GetCharacterImplants: &endpoint{
+			Path:     "/v2/characters/%d/implants/",
+			KeyFunc:  characterImplantsKeyFunc,
+			PathFunc: characterImplantsPathFunc,
+		},
+		GetCharacterLocation: &endpoint{
+			Path:     "/v2/characters/%d/location/",
+			KeyFunc:  characterLocationsKeyFunc,
+			PathFunc: characterLocationsPathFunc,
+		},
+		GetCharacterOnline: &endpoint{
+			Path:     "/v3/characters/%d/online/",
+			KeyFunc:  characterOnlinesKeyFunc,
+			PathFunc: characterOnlinesPathFunc,
+		},
+		GetCharacterShip: &endpoint{
+			Path:     "/v2/characters/%d/ship/",
+			KeyFunc:  characterShipsKeyFunc,
+			PathFunc: characterShipsPathFunc,
+		},
+		GetCharacterSkills: &endpoint{
+			Path:     "/v4/characters/%d/skills/",
+			KeyFunc:  characterSkillsKeyFunc,
+			PathFunc: characterSkillsPathFunc,
+		},
+		GetCharacterSkillQueue: &endpoint{
+			Path:     "/v2/characters/%d/skillqueue/",
+			KeyFunc:  characterSkillQueueKeyFunc,
+			PathFunc: characterSkillQueuePathFunc,
+		},
+		GetCharacterWalletBalance: &endpoint{
+			Path:     "/v1/characters/%d/wallet/",
+			PathFunc: characterWalletBalancePathFunc,
+			KeyFunc:  characterWalletBalanceKeyFunc,
+		},
+		GetCharacterWalletTransactions: &endpoint{
+			Path:     "/v1/characters/%d/wallet/transactions",
+			KeyFunc:  characterWalletTransactionsKeyFunc,
+			PathFunc: characterWalletTransactionsPathFunc,
+		},
+		GetCharacterWalletJournal: &endpoint{
+			Path:     "/v6/characters/%d/wallet/journal/",
+			KeyFunc:  characterWalletJournalKeyFunc,
+			PathFunc: characterWalletJournalPathFunc,
+		},
+
+		// Corporations
+		GetCorporation: &endpoint{
+			Path:     "/v4/corporations/%d/",
+			KeyFunc:  corporationKeyFunc,
+			PathFunc: corporationPathFunc,
+		},
+		GetCorporationAllianceHistory: &endpoint{
+			Path:     "/v2/corporations/%d/alliancehistory/",
+			KeyFunc:  corporationAllianceHistoryKeyFunc,
+			PathFunc: corporationAllianceHistoryPathFunc,
+		},
+
+		// Universe
+		GetAncestries: &endpoint{
+			Path:     "/v1/universe/ancestries/",
+			KeyFunc:  ancestriesKeyFunc,
+			PathFunc: ancestriesPathFunc,
+		},
+		GetAsteroidBelt: &endpoint{
+			Path:     "/v1/universe/asteroid_belts/%d/",
+			KeyFunc:  beltKeyFunc,
+			PathFunc: beltPathFunc,
+		},
+		GetBloodlines: &endpoint{
+			Path:     "/v1/universe/bloodlines/",
+			KeyFunc:  bloodlinesKeyFunc,
+			PathFunc: bloodlinesPathFunc,
+		},
+		GetCategories: &endpoint{
+			Path:     "/v1/universe/categories/",
+			KeyFunc:  categoriesKeyFunc,
+			PathFunc: categoriesPathFunc,
+		},
+		GetCategory: &endpoint{
+			Path:     "/v1/universe/categories/%d/",
+			KeyFunc:  categoryKeyFunc,
+			PathFunc: categoryPathFunc,
+		},
+		GetConstellation: &endpoint{
+			Path:     "/v1/universe/constellations/%d/",
+			KeyFunc:  constellationKeyFunc,
+			PathFunc: constellationPathFunc,
+		},
+		GetFactions: &endpoint{
+			Path:     "/v2/universe/factions/",
+			KeyFunc:  factionsKeyFunc,
+			PathFunc: factionsPathFunc,
+		},
+		GetGroup: &endpoint{
+			Path:     "/v1/universe/groups/%d/",
+			KeyFunc:  groupKeyFunc,
+			PathFunc: groupPathFunc,
+		},
+		GetMoon: &endpoint{
+			Path:     "/v1/universe/moons/%d/",
+			KeyFunc:  moonKeyFunc,
+			PathFunc: moonPathFunc,
+		},
+		GetPlanet: &endpoint{
+			Path:     "/v1/universe/planets/%d/",
+			KeyFunc:  planetKeyFunc,
+			PathFunc: planetPathFunc,
+		},
+		GetRaces: &endpoint{
+			Path:     "/v1/universe/races/",
+			KeyFunc:  racesKeyFunc,
+			PathFunc: racesPathFunc,
+		},
+		GetRegions: &endpoint{
+			Path:     "/v1/universe/regions/",
+			KeyFunc:  regionsKeyFunc,
+			PathFunc: regionsPathFunc,
+		},
+		GetRegion: &endpoint{
+			Path:     "/v1/universe/regions/%d/",
+			KeyFunc:  regionKeyFunc,
+			PathFunc: regionPathFunc,
+		},
+		GetSolarSystem: &endpoint{
+			Path:     "/v4/universe/systems/%d/",
+			KeyFunc:  solarSystemKeyFunc,
+			PathFunc: solarSystemPathFunc,
+		},
+		GetStation: &endpoint{
+			Path:     "/v2/universe/stations/%d/",
+			KeyFunc:  stationKeyFunc,
+			PathFunc: stationPathFunc,
+		},
+		GetStructure: &endpoint{
+			Path:     "/v2/universe/structures/%d/",
+			KeyFunc:  structureKeyFunc,
+			PathFunc: structurePathFunc,
+		},
+		GetType: &endpoint{
+			Path:     "/v3/universe/types/%d/",
+			KeyFunc:  typeKeyFunc,
+			PathFunc: typePathFunc,
+		},
+
+		// Etags are not cached on non Get endpoints, hence the lack of the KeyFunc
+		PostUniverseNames: &endpoint{
+			Path:     "/v3/universe/names/",
+			PathFunc: universeNamesPathFunc,
+		},
 	}
 
 }
@@ -287,17 +387,16 @@ func (s *service) _exec(req *http.Request, options *options) (response *http.Res
 
 	for i := 0; i < options.maxattempts; i++ {
 		response, err = s.client.Do(req)
-		if err != nil {
+		if err != nil && (!options.retryOnError || i != options.maxattempts-1) {
 			return nil, fmt.Errorf("failed to execute request: %w", err)
 		}
 
-		if response.StatusCode > http.StatusContinue && response.StatusCode < http.StatusInternalServerError && !options.retryOnError {
+		if response != nil && response.StatusCode > http.StatusContinue && response.StatusCode < http.StatusInternalServerError {
 			break
 		}
 
-		if !options.retryOnError {
-			break
-		}
+		time.Sleep(time.Second)
+
 	}
 
 	return response, err
