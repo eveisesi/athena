@@ -14,6 +14,7 @@ type (
 		contract      *athena.MemberContract
 		corporation   *athena.Corporation
 		group         *athena.Group
+		header        *MailHeader
 		item          *athena.Type
 		member        *athena.Member
 		moon          *athena.Moon
@@ -74,6 +75,19 @@ func ModWithMoon(moon *athena.Moon) modifierFunc {
 func requireMoon(mods *modifiers) {
 	if mods.moon == nil {
 		panic("expected type *athena.Moon to be provided, received nil instead")
+	}
+}
+
+func ModWithMailHeader(mail *MailHeader) modifierFunc {
+	return func(mod *modifiers) *modifiers {
+		mod.header = mail
+		return mod
+	}
+}
+
+func requireMailHeader(mods *modifiers) {
+	if mods.header == nil {
+		panic("expected type *athena.MailHeader to be provided, received nil instead")
 	}
 }
 

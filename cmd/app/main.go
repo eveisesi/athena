@@ -39,6 +39,7 @@ type repositories struct {
 	clone       athena.CloneRepository
 	etag        athena.EtagRepository
 	location    athena.MemberLocationRepository
+	mail        athena.MailRepository
 	member      athena.MemberRepository
 	migration   athena.MigrationRepository
 	skill       athena.MemberSkillRepository
@@ -96,6 +97,7 @@ func basics(command string) *app {
 		alliance:    mysqldb.NewAllianceRepository(app.db),
 		etag:        mysqldb.NewEtagRepository(app.db),
 		universe:    mysqldb.NewUniverseRepository(app.db),
+		mail:        mysqldb.NewMailRepository(app.db),
 		migration:   mysqldb.NewMigrationRepository(app.db),
 		clone:       mysqldb.NewCloneRepository(app.db),
 		skill:       mysqldb.NewSkillRepository(app.db),

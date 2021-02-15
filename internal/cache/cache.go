@@ -17,6 +17,7 @@ type Service interface {
 	esiService
 	etagService
 	locationService
+	mailService
 	memberService
 	processorService
 	skillService

@@ -13,6 +13,7 @@ import (
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/esi"
+	"github.com/eveisesi/athena/internal/glue"
 	"github.com/eveisesi/athena/internal/universe"
 	"github.com/sirupsen/logrus"
 )
@@ -224,15 +225,15 @@ func (s *service) resolveMemberWalletTransactionAttributes(ctx context.Context, 
 
 	for _, transaction := range transactions {
 
-		clientType := resolveIDTypeFromIDRange(uint64(transaction.ClientID))
-		if clientType == IDTypeUnknown {
+		clientType := glue.ResolveIDTypeFromIDRange(uint64(transaction.ClientID))
+		if clientType == glue.IDTypeUnknown {
 			if _, ok := unknowns[transaction.ClientID]; !ok {
 				unknowns[transaction.ClientID] = true
 			}
 		}
 
 		switch clientType {
-		case IDTypeCharacter:
+		case glue.IDTypeCharacter:
 			transaction.ClientType = athena.ClientTypeCharacter
 			_, err := s.character.Character(ctx, transaction.ClientID)
 			if err != nil {
@@ -242,7 +243,7 @@ func (s *service) resolveMemberWalletTransactionAttributes(ctx context.Context, 
 					"client_id":      transaction.ClientID,
 				}).Warn("failed to resolve client id to name")
 			}
-		case IDTypeCorporation:
+		case glue.IDTypeCorporation:
 			transaction.ClientType = athena.ClientTypeCorporation
 			_, err := s.corporation.Corporation(ctx, transaction.ClientID)
 			if err != nil {
@@ -253,13 +254,13 @@ func (s *service) resolveMemberWalletTransactionAttributes(ctx context.Context, 
 				}).Warn("failed to resolve client id to name")
 			}
 		default:
-			transaction.ClientType = IDTypeUnknown
+			transaction.ClientType = glue.IDTypeUnknown
 		}
 
-		locationType := resolveIDTypeFromIDRange(transaction.LocationID)
+		locationType := glue.ResolveIDTypeFromIDRange(transaction.LocationID)
 
 		switch locationType {
-		case IDTypeStation:
+		case glue.IDTypeStation:
 			transaction.LocationType = athena.LocationTypeStation
 			_, err := s.universe.Station(ctx, uint(transaction.LocationID))
 			if err != nil {
@@ -269,7 +270,7 @@ func (s *service) resolveMemberWalletTransactionAttributes(ctx context.Context, 
 					"location_id":    transaction.LocationID,
 				}).Warn("failed to resolve location id to name")
 			}
-		case IDTypeStructure:
+		case glue.IDTypeStructure:
 			transaction.LocationType = athena.LocationTypeStructure
 			_, err := s.universe.Structure(ctx, member, transaction.LocationID)
 			if err != nil {
@@ -319,7 +320,7 @@ func (s *service) resolveMemberWalletTransactionAttributes(ctx context.Context, 
 
 	for _, transaction := range transactions {
 		switch transaction.ClientType {
-		case IDTypeUnknown:
+		case glue.IDTypeUnknown:
 			if category, ok := knowns[transaction.ClientID]; ok {
 				transaction.ClientType = athena.ClientType(category)
 			}
@@ -432,36 +433,4 @@ func (s *service) resolveContextIDType(ctx context.Context, member *athena.Membe
 			entry.WithError(err).Error("failed to resolve id")
 		}
 	}
-}
-
-const (
-	IDTypeCharacter   = "character"
-	IDTypeCorporation = "corporation"
-	IDTypeAlliance    = "alliance"
-	IDTypeStation     = "station"
-	IDTypeStructure   = "structure"
-	IDTypeUnknown     = "unknown"
-)
-
-func resolveIDTypeFromIDRange(id uint64) string {
-
-	switch d := id; {
-	case d >= 60000000 && d < 64000000:
-		return IDTypeStation
-	case d >= 90000000 && d < 98000000:
-		return IDTypeCharacter
-	case d >= 98000000 && d < 99000000:
-		return IDTypeCorporation
-	case d >= 99000000 && d < 100000000:
-		return IDTypeAlliance
-	case d >= 100000000 && d < 2100000000:
-		return IDTypeUnknown
-	case d >= 2100000000 && d < 1000000000000:
-		return IDTypeCharacter
-	case d >= 1000000000000:
-		return IDTypeStructure
-	default:
-		return IDTypeUnknown
-	}
-
 }

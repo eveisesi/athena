@@ -11,6 +11,7 @@ import (
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/eveisesi/athena/internal/etag"
 	"github.com/eveisesi/athena/internal/location"
+	"github.com/eveisesi/athena/internal/mail"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/eveisesi/athena/internal/processor"
 	"github.com/eveisesi/athena/internal/skill"
@@ -43,12 +44,13 @@ func processorCommand(c *cli.Context) error {
 	location := location.NewService(basics.logger, cache, esi, universe, basics.repositories.location)
 	clone := clone.NewService(basics.logger, cache, esi, universe, basics.repositories.clone)
 	contact := contact.NewService(basics.logger, cache, esi, universe, alliance, character, corporation, basics.repositories.contact)
+	mail := mail.NewService(basics.logger, cache, esi, character, alliance, corporation, basics.repositories.mail)
 	skill := skill.NewService(basics.logger, cache, esi, etag, universe, basics.repositories.skill)
 	wallet := wallet.NewService(basics.logger, cache, esi, universe, alliance, corporation, character, basics.repositories.wallet)
 
 	processor := processor.NewService(basics.logger, cache, member)
 
-	processor.SetScopeMap(buildScopeMap(location, clone, contact, skill, wallet))
+	processor.SetScopeMap(buildScopeMap(location, clone, contact, mail, skill, wallet))
 
 	processor.Run()
 

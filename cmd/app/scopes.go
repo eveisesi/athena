@@ -5,6 +5,7 @@ import (
 	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/contact"
 	"github.com/eveisesi/athena/internal/location"
+	"github.com/eveisesi/athena/internal/mail"
 	"github.com/eveisesi/athena/internal/skill"
 	"github.com/eveisesi/athena/internal/wallet"
 )
@@ -13,6 +14,7 @@ func buildScopeMap(
 	location location.Service,
 	clone clone.Service,
 	contact contact.Service,
+	mail mail.Service,
 	skill skill.Service,
 	wallet wallet.Service,
 ) athena.ScopeMap {
@@ -87,9 +89,16 @@ func buildScopeMap(
 		// 	Name: "MemberWalletTransactions",
 		// 	Func: wallet.EmptyMembetWalletTransactions,
 		// },
+		// {
+		// 	Name: "MemberWalletJournals",
+		// 	Func: wallet.EmptyMemberWalletJournals,
+		// },
+	}
+
+	scopeMap[athena.ReadMailV1] = []athena.ScopeResolver{
 		{
-			Name: "MemberWalletJournals",
-			Func: wallet.EmptyMemberWalletJournals,
+			Name: "MemberMailHeaders",
+			Func: mail.EmptyMemberMailHeaders,
 		},
 	}
 

@@ -28,6 +28,7 @@ const (
 	ReadSkillQueueV1 Scope = "esi-skills.read_skillqueue.v1"
 	ReadSkillsV1     Scope = "esi-skills.read_skills.v1"
 	ReadWalletV1     Scope = "esi-wallet.read_character_wallet.v1"
+	ReadMailV1       Scope = "esi-mail.read_mail.v1"
 )
 
 var AllScopes = []Scope{

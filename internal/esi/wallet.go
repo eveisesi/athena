@@ -163,21 +163,20 @@ func (s *service) GetCharacterWalletTransactions(ctx context.Context, member *at
 				return nil, nil, nil, err
 			}
 
-			if len(pageTransactions) == 0 {
-				goto EndOfLoop
-			}
-
 			transactions = append(transactions, pageTransactions...)
 
 		case sc >= http.StatusBadRequest:
 			return transactions, etag, res, fmt.Errorf("failed to fetch transactions for character %d, received status code of %d", member.ID, sc)
 		}
 
+		if len(pageTransactions) < 2500 {
+			break
+		}
+
 		// Grab the transaction from the last ID. Subtract 1 and set it to From ID
 		fromID = transactions[len(transactions)-1].TransactionID - 1
 		time.Sleep(time.Second)
 	}
-EndOfLoop:
 
 	return transactions, etag, nil, nil
 

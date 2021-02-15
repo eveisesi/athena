@@ -31,6 +31,7 @@ type (
 		corporationInterface
 		etagInterface
 		locationInterface
+		mailInterface
 		skillsInterface
 		walletInterface
 		universeInterface
@@ -192,16 +193,24 @@ func (s *service) buildEndpointMap() {
 			PathFunc: characterImplantsPathFunc,
 		},
 		GetCharacterMailHeaders: &endpoint{
-			Path: "/v1/characters/{character_id}/mail/",
+			Path:     "/v1/characters/%d/mail/",
+			KeyFunc:  characterMailsKeyFunc,
+			PathFunc: characterMailsPathFunc,
 		},
 		GetCharacterMailHeader: &endpoint{
-			Path: "/v1/characters/{character_id}/mail/{mail_id}/",
+			Path:     "/v1/characters/%d/mail/%d/",
+			KeyFunc:  characterMailKeyFunc,
+			PathFunc: characterMailPathFunc,
 		},
 		GetCharacterMailLists: &endpoint{
-			Path: "/v1/characters/{character_id}/mail/lists/",
+			Path:     "/v1/characters/%d/mail/lists/",
+			KeyFunc:  characterMailListsKeyFunc,
+			PathFunc: characterMailListsPathFunc,
 		},
 		GetCharacterMailLabels: &endpoint{
-			Path: "/v3/characters/{character_id}/mail/labels/",
+			Path:     "/v3/characters/%d/mail/labels/",
+			KeyFunc:  characterMailLabelsKeyFunc,
+			PathFunc: characterMailLabelsPathFunc,
 		},
 		GetCharacterLocation: &endpoint{
 			Path:     "/v2/characters/%d/location/",
