@@ -106,10 +106,6 @@ func (s *service) PostUniverseNames(ctx context.Context, ids []uint) ([]*PostUni
 
 }
 
-func universeNamesPathFunc(mods *modifiers) string {
-	return endpoints[PostUniverseNames].Path
-}
-
 func (s *service) GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error) {
 
 	endpoint := endpoints[GetAncestries]

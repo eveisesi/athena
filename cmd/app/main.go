@@ -33,6 +33,7 @@ type app struct {
 
 type repositories struct {
 	alliance    athena.AllianceRepository
+	asset       athena.MemberAssetsRepository
 	character   athena.CharacterRepository
 	contact     athena.MemberContactRepository
 	corporation athena.CorporationRepository
@@ -92,6 +93,7 @@ func basics(command string) *app {
 
 	app.repositories = repositories{
 		member:      mysqldb.NewMemberRepository(app.db),
+		asset:       mysqldb.NewMemberAssetRepository(app.db),
 		character:   mysqldb.NewCharacterRepository(app.db),
 		corporation: mysqldb.NewCorporationRepository(app.db),
 		alliance:    mysqldb.NewAllianceRepository(app.db),
@@ -185,6 +187,11 @@ func main() {
 					Name:   "add",
 					Usage:  "Will parse and create an account for the prompted access token and refresh token",
 					Action: addMemberByCLI,
+					Flags: []cli.Flag{
+						cli.BoolFlag{
+							Name: "skipQueue",
+						},
+					},
 				},
 				{
 					Name:   "refresh",

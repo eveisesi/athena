@@ -24,6 +24,7 @@ const (
 
 type (
 	Service interface {
+		assetInterface
 		allianceInterface
 		characterInterface
 		clonesInterface
@@ -83,6 +84,7 @@ const (
 	GetCharacter                   endpointID = "GetCharacter"
 	GetCharacterCorporationHistory endpointID = "GetCharacterCorporationHistory"
 	GetCharacterAttributes         endpointID = "GetCharacterAttributes"
+	GetCharacterAssets             endpointID = "GetCharacterAssets"
 	GetCharacterSkills             endpointID = "GetCharacterSkills"
 	GetCharacterSkillQueue         endpointID = "GetCharacterSkillQueue"
 	GetCharacterClones             endpointID = "GetCharacterClones"
@@ -146,6 +148,11 @@ func (s *service) buildEndpointMap() {
 			Path:     "/v1/characters/%d/corporationhistory/",
 			PathFunc: characterCorporationHistoryPathFunc,
 			KeyFunc:  characterCorporationHistoryKeyFunc,
+		},
+		GetCharacterAssets: &endpoint{
+			Path:     "/v5/characters/%d/assets/",
+			PathFunc: characterAssetsPathFunc,
+			KeyFunc:  characterAssetsKeyFunc,
 		},
 		GetCharacterAttributes: &endpoint{
 			Path:     "/v1/characters/%d/attributes/",
@@ -355,7 +362,7 @@ func (s *service) buildEndpointMap() {
 		// Etags are not cached on non Get endpoints, hence the lack of the KeyFunc
 		PostUniverseNames: &endpoint{
 			Path:     "/v3/universe/names/",
-			PathFunc: universeNamesPathFunc,
+			PathFunc: func(_ *modifiers) string { return "/v3/universe/names/" },
 		},
 	}
 

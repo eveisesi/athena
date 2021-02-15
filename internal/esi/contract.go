@@ -20,7 +20,7 @@ func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Memb
 
 	_, res, err := s.request(
 		ctx,
-		WithMethod(http.MethodGet),
+		WithMethod(http.MethodHead),
 		WithPath(path),
 		WithAuthorization(member.AccessToken),
 	)

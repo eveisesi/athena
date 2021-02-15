@@ -1,24 +1,30 @@
 package athena
 
 import (
+	"context"
 	"time"
 )
 
 type MemberAssetsRepository interface {
+	MemberAsset(ctx context.Context, memberID uint, itemID uint64) (*MemberAsset, error)
+	MemberAssets(ctx context.Context, memberID uint, operators ...*Operator) ([]*MemberAsset, error)
+	CreateMemberAssets(ctx context.Context, memberID uint, assets []*MemberAsset) ([]*MemberAsset, error)
+	UpdateMemberAssets(ctx context.Context, memberID uint, itemID uint64, asset *MemberAsset) (*MemberAsset, error)
+	DeleteMemberAssets(ctx context.Context, memberID uint, assets []*MemberAsset) (bool, error)
 }
 
 type MemberAsset struct {
-	MemberID        uint              `db:"member_id" json:"member_id"`
-	ItemID          uint64            `db:"item_id" json:"item_id"`
-	TypeID          uint              `db:"type_id" json:"type_id"`
+	MemberID        uint              `db:"member_id" json:"member_id" deep:"-"`
+	ItemID          uint64            `db:"item_id" json:"item_id" deep:"-"`
+	TypeID          uint              `db:"type_id" json:"type_id" deep:"-"`
 	LocationID      uint64            `db:"location_id" json:"location_id"`
 	LocationFlag    AssetLocationFlag `db:"location_flag" json:"location_flag"`
 	LocationType    AssetLocationType `db:"location_type" json:"location_type"`
 	Quantity        int               `db:"quantity" json:"quantity"`
 	IsBlueprintCopy bool              `db:"is_blueprint_copy" json:"is_blueprint_copy"`
 	IsSingleton     bool              `db:"is_singleton" json:"is_singleton"`
-	CreatedAt       time.Time         `db:"created_at" json:"created_at"`
-	UpdatedAt       time.Time         `db:"updated_at" json:"updated_at"`
+	CreatedAt       time.Time         `db:"created_at" json:"created_at" deep:"-"`
+	UpdatedAt       time.Time         `db:"updated_at" json:"updated_at" deep:"-"`
 }
 
 type AssetLocationFlag string

@@ -204,7 +204,13 @@ func addMemberByCLI(c *cli.Context) error {
 		return err
 	}
 
-	cache.PushIDToProcessorQueue(ctx, member.ID)
+	skipQueue := c.Bool("skipQueue")
+
+	if !skipQueue {
+		fmt.Println("Skip Queue False, push to queue")
+		cache.PushIDToProcessorQueue(ctx, member.ID)
+	}
+
 	_ = cache.SetMember(ctx, member.ID, member)
 
 	return nil

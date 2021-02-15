@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/eveisesi/athena/internal/alliance"
+	"github.com/eveisesi/athena/internal/asset"
 	"github.com/eveisesi/athena/internal/auth"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/character"
@@ -47,10 +48,11 @@ func processorCommand(c *cli.Context) error {
 	mail := mail.NewService(basics.logger, cache, esi, character, alliance, corporation, basics.repositories.mail)
 	skill := skill.NewService(basics.logger, cache, esi, etag, universe, basics.repositories.skill)
 	wallet := wallet.NewService(basics.logger, cache, esi, universe, alliance, corporation, character, basics.repositories.wallet)
+	asset := asset.NewService(basics.logger, cache, esi, universe, basics.repositories.asset)
 
 	processor := processor.NewService(basics.logger, cache, member)
 
-	processor.SetScopeMap(buildScopeMap(location, clone, contact, mail, skill, wallet))
+	processor.SetScopeMap(buildScopeMap(location, clone, contact, mail, skill, wallet, asset))
 
 	processor.Run()
 

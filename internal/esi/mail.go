@@ -351,7 +351,7 @@ func characterMailLabelsPathFunc(mods *modifiers) string {
 
 	requireMember(mods)
 
-	return buildKey(GetCharacterMailLabels.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	return fmt.Sprintf(endpoints[GetCharacterMailLabels].Path, mods.member.ID)
 
 }
 
@@ -359,6 +359,6 @@ func characterMailLabelsKeyFunc(mods *modifiers) string {
 
 	requireMember(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterMailLabels].Path, mods.member.ID)
+	return buildKey(GetCharacterMailLabels.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
 
 }

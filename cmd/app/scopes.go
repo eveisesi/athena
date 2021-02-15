@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/eveisesi/athena"
+	"github.com/eveisesi/athena/internal/asset"
 	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/contact"
 	"github.com/eveisesi/athena/internal/location"
@@ -17,6 +18,7 @@ func buildScopeMap(
 	mail mail.Service,
 	skill skill.Service,
 	wallet wallet.Service,
+	asset asset.Service,
 ) athena.ScopeMap {
 
 	scopeMap := make(athena.ScopeMap, 10)
@@ -99,6 +101,13 @@ func buildScopeMap(
 		{
 			Name: "MemberMailHeaders",
 			Func: mail.EmptyMemberMailHeaders,
+		},
+	}
+
+	scopeMap[athena.ReadAssetsV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberAssets",
+			Func: asset.EmptyMemberAssets,
 		},
 	}
 

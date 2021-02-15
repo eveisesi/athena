@@ -22,7 +22,7 @@ func NewMemberAssetRepository(db *sql.DB) athena.MemberAssetsRepository {
 	}
 }
 
-func (r *memberAssetsRepository) MemberAsset(ctx context.Context, memberID, itemID uint) (*athena.MemberAsset, error) {
+func (r *memberAssetsRepository) MemberAsset(ctx context.Context, memberID uint, itemID uint64) (*athena.MemberAsset, error) {
 
 	query, args, err := sq.Select(
 		"member_id", "item_id", "type_id",
@@ -91,7 +91,7 @@ func (r *memberAssetsRepository) CreateMemberAssets(ctx context.Context, memberI
 
 }
 
-func (r *memberAssetsRepository) UpdateMemberAssets(ctx context.Context, memberID, itemID uint, asset *athena.MemberAsset) (*athena.MemberAsset, error) {
+func (r *memberAssetsRepository) UpdateMemberAssets(ctx context.Context, memberID uint, itemID uint64, asset *athena.MemberAsset) (*athena.MemberAsset, error) {
 
 	query, args, err := sq.Update(r.table).
 		Set("type_id", asset.TypeID).
