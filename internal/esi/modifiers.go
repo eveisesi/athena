@@ -13,12 +13,14 @@ type (
 		constellation *athena.Constellation
 		contract      *athena.MemberContract
 		corporation   *athena.Corporation
+		from          uint64
 		group         *athena.Group
 		header        *MailHeader
 		item          *athena.Type
+		lastMailID    uint64
 		member        *athena.Member
 		moon          *athena.Moon
-		page          *int
+		page          uint
 		planet        *athena.Planet
 		region        *athena.Region
 		station       *athena.Station
@@ -45,10 +47,30 @@ func (s *service) modifiers(modFuncs ...modifierFunc) *modifiers {
 
 }
 
-func ModWithPage(page *int) modifierFunc {
-	return func(mod *modifiers) *modifiers {
-		mod.page = page
-		return mod
+func ModWithPage(page uint) modifierFunc {
+	return func(mods *modifiers) *modifiers {
+		mods.page = page
+		return mods
+	}
+}
+
+func requirePage(mods *modifiers) {
+	if mods.page == 0 {
+		panic("page modifier should be greater than zero for this request")
+	}
+}
+
+func ModWithFromID(from uint64) modifierFunc {
+	return func(mods *modifiers) *modifiers {
+		mods.from = from
+		return mods
+	}
+}
+
+func ModWithLastMailID(lastMailID uint64) modifierFunc {
+	return func(mods *modifiers) *modifiers {
+		mods.lastMailID = lastMailID
+		return mods
 	}
 }
 

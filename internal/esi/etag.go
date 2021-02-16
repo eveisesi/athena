@@ -15,10 +15,7 @@ type etagInterface interface {
 func (s *service) Etag(ctx context.Context, endpoint endpointID, modifierFunc ...modifierFunc) (*athena.Etag, error) {
 
 	mods := s.modifiers(modifierFunc...)
-
-	if mods.page != nil {
-		mods.page = nil
-	}
+	mods.page = 0
 
 	e := endpoints[endpoint]
 

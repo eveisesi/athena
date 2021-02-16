@@ -14,15 +14,15 @@ type assetInterface interface {
 	GetCharacterAssets(ctx context.Context, member *athena.Member, assets []*athena.MemberAsset) ([]*athena.MemberAsset, *http.Response, error)
 }
 
-func (s *service) GetCharacterAssets(ctx context.Context, member *athena.Member, assets []*athena.MemberAsset) ([]*athena.MemberAsset, *http.Response, error) {
+func (s *service) HeadCharacterAssets(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterAssets]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithMember(member), ModWithPage(page))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch etag object: %w", err)
+		return nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -31,7 +31,7 @@ func (s *service) GetCharacterAssets(ctx context.Context, member *athena.Member,
 		ctx,
 		WithMethod(http.MethodHead),
 		WithPath(path),
-		WithEtag(etag),
+		WithPage(page),
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
@@ -39,61 +39,67 @@ func (s *service) GetCharacterAssets(ctx context.Context, member *athena.Member,
 	}
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return assets, res, fmt.Errorf("failed to fetch assets for character %d, received status code of %d", member.ID, res.StatusCode)
-	} else if res.StatusCode == http.StatusNotModified {
+		return etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, res.StatusCode)
+	}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+	if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
-		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
 		}
-
-		return assets, res, nil
-
 	}
 
-	pages := s.retrieveXPagesFromHeader(res.Header)
-	if pages == 0 {
-		return nil, nil, fmt.Errorf("received 0 for X-Pages on request %s, expected number greater than 0", path)
+	return etag, res, nil
+
+}
+
+func (s *service) GetCharacterAssets(ctx context.Context, member *athena.Member, page uint) ([]*athena.MemberAsset, *athena.Etag, *http.Response, error) {
+
+	endpoint := endpoints[GetCharacterAssets]
+
+	mods := s.modifiers(ModWithMember(member), ModWithPage(page))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
 
-	for i := 1; i <= pages; i++ {
+	path := endpoint.PathFunc(mods)
 
-		pageAssets := make([]*athena.MemberAsset, 0, 1000)
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithPage(page),
+		WithAuthorization(member.AccessToken),
+	)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-		mods := s.modifiers(ModWithMember(member), ModWithPage(&i))
+	assets := make([]*athena.MemberAsset, 0, 1000) // ESI Specification states a max of 1000 items can be returned per page
 
-		path := endpoint.PathFunc(mods)
+	if res.StatusCode >= http.StatusBadRequest {
+		return assets, etag, res, fmt.Errorf("failed to fetch assets for character %d, received status code of %d", member.ID, res.StatusCode)
+	} else if res.StatusCode == http.StatusNotModified {
 
-		b, res, err := s.request(
-			ctx,
-			WithMethod(http.MethodGet),
-			WithPath(path),
-			WithPage(i),
-			WithAuthorization(member.AccessToken),
-		)
+		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
 		}
 
-		switch sc := res.StatusCode; {
-		case sc == http.StatusOK:
-			err = json.Unmarshal(b, &pageAssets)
-			if err != nil {
-				err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-				return nil, nil, err
-			}
-
-			assets = append(assets, pageAssets...)
-
-		case sc >= http.StatusBadRequest:
-			return assets, res, fmt.Errorf("failed to fetch assets for character %d, received status code of %d", member.ID, sc)
-		}
+		return assets, etag, res, nil
 
 	}
 
-	return assets, res, nil
+	err = json.Unmarshal(b, &assets)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+	}
+
+	return assets, etag, res, nil
 
 }
 

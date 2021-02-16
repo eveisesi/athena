@@ -101,8 +101,8 @@ func WithEtag(etag *athena.Etag) OptionFunc {
 
 }
 
-func WithPage(i int) OptionFunc {
-	return WithQuery("page", strconv.Itoa(i))
+func WithPage(i uint) OptionFunc {
+	return WithQuery("page", strconv.FormatUint(uint64(i), 10))
 }
 
 func WithAuthorization(token null.String) OptionFunc {

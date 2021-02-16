@@ -193,6 +193,12 @@ func (s *service) FetchMemberWalletTransaction(ctx context.Context, member *athe
 		"method":    "FetchMemberWalletTransaction",
 	})
 
+	etag, res, err := s.esi.HeadCharacterWalletTransactions(ctx, member, 1)
+	if err != nil {
+		entry.WithError(err).Error("failed to exec head request for member wallet transactions from ESI")
+		return nil, fmt.Errorf("failed to exec head request for member wallet transactions from ESI")
+	}
+
 	transactions, etag, _, err := s.esi.GetCharacterWalletTransactions(ctx, member, make([]*athena.MemberWalletTransaction, 0))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member wallet transactions from ESI")

@@ -10,11 +10,20 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Member, contracts []*athena.MemberContract) ([]*athena.MemberContract, *http.Response, error) {
+type contractInterface interface {
+	HeadCharacterContracts(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error)
+}
+
+func (s *service) HeadCharacterContracts(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterContracts]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithMember(member), ModWithPage(page))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
 
 	path := endpoint.PathFunc(mods)
 
@@ -22,6 +31,7 @@ func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Memb
 		ctx,
 		WithMethod(http.MethodHead),
 		WithPath(path),
+		WithPage(page),
 		WithAuthorization(member.AccessToken),
 	)
 	if err != nil {
@@ -29,55 +39,10 @@ func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Memb
 	}
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return contracts, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, res.StatusCode)
+		return etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, res.StatusCode)
 	}
 
-	pages := s.retrieveXPagesFromHeader(res.Header)
-	if pages == 0 {
-		return nil, nil, fmt.Errorf("received 0 for X-Pages on request %s, expected number greater than 0", path)
-	}
-
-	for i := 1; i <= pages; i++ {
-
-		pageContracts := make([]*athena.MemberContract, 0)
-
-		mods := s.modifiers(ModWithMember(member), ModWithPage(&i))
-
-		etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
-		if err != nil {
-			return nil, nil, err
-		}
-
-		path := endpoint.PathFunc(mods)
-
-		b, res, err := s.request(
-			ctx,
-			WithMethod(http.MethodGet),
-			WithPath(path),
-			WithEtag(etag),
-			WithPage(i),
-			WithAuthorization(member.AccessToken),
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		switch sc := res.StatusCode; {
-		case sc == http.StatusOK:
-			err = json.Unmarshal(b, &pageContracts)
-			if err != nil {
-				err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-				return nil, nil, err
-			}
-
-			contracts = append(contracts, pageContracts...)
-
-			etag.Etag = s.retrieveEtagHeader(res.Header)
-
-		case sc >= http.StatusBadRequest:
-			return contracts, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, sc)
-		}
-
+	if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
@@ -85,21 +50,67 @@ func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Memb
 		}
 	}
 
-	return contracts, res, nil
+	return etag, res, nil
+
+}
+
+func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Member, page uint) ([]*athena.MemberContract, *athena.Etag, *http.Response, error) {
+
+	endpoint := endpoints[GetCharacterContracts]
+
+	contracts := make([]*athena.MemberContract, 0)
+
+	mods := s.modifiers(ModWithMember(member), ModWithPage(page))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	b, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag),
+		WithPage(page),
+		WithAuthorization(member.AccessToken),
+	)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	switch sc := res.StatusCode; {
+	case sc == http.StatusOK:
+		err = json.Unmarshal(b, &contracts)
+		if err != nil {
+			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+			return nil, nil, nil, err
+		}
+
+		etag.Etag = s.retrieveEtagHeader(res.Header)
+
+	case sc >= http.StatusBadRequest:
+		return contracts, etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, sc)
+	}
+
+	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	return contracts, etag, res, nil
 
 }
 
 func characterContractsKeyFunc(mods *modifiers) string {
 
 	requireMember(mods)
+	requirePage(mods)
 
-	param := append(make([]string, 0), GetCharacterContracts.String(), strconv.Itoa(int(mods.member.ID)))
-
-	if mods.page != nil {
-		param = append(param, strconv.Itoa(*mods.page))
-	}
-
-	return buildKey(param...)
+	return buildKey(GetCharacterContracts.String(), strconv.FormatUint(uint64(mods.member.ID), 10), strconv.FormatUint(uint64(mods.page), 10))
 
 }
 
