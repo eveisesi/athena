@@ -27,6 +27,7 @@ require (
 	github.com/lestrrat-go/pdebug/v3 v3.0.0-20210111095411-35b07dbf089b // indirect
 	github.com/lib/pq v1.8.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
+	github.com/newrelic/go-agent v3.10.0+incompatible
 	github.com/newrelic/go-agent/v3 v3.10.0
 	github.com/newrelic/go-agent/v3/integrations/logcontext/nrlogrusplugin v1.0.0
 	github.com/nxadm/tail v1.4.6 // indirect

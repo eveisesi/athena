@@ -29,7 +29,12 @@ func corporationLoader(ctx context.Context, c corporation.Service) *generated.Co
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Corporation, len(keys))
 
-			rows, err := c.Corporations(ctx, athena.NewInOperator("id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := c.Corporations(ctx, athena.NewInOperator("id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors
@@ -58,7 +63,12 @@ func corporationAllianceHistoryLoader(ctx context.Context, c corporation.Service
 			var errors = make([]error, 0, len(keys))
 			var results = make([][]*athena.CorporationAllianceHistory, len(keys))
 
-			rows, err := c.CorporationAllianceHistory(ctx, athena.NewInOperator("corporation_id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := c.CorporationAllianceHistory(ctx, athena.NewInOperator("corporation_id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors

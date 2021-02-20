@@ -36,7 +36,12 @@ func ancestryLoader(ctx context.Context, u universe.Service) *generated.Ancestry
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Ancestry, len(keys))
 
-			rows, err := u.Ancestries(ctx, athena.NewInOperator("id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := u.Ancestries(ctx, athena.NewInOperator("id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors
@@ -64,7 +69,12 @@ func bloodlineLoader(ctx context.Context, u universe.Service) *generated.Bloodli
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Bloodline, len(keys))
 
-			rows, err := u.Bloodlines(ctx, athena.NewInOperator("id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := u.Bloodlines(ctx, athena.NewInOperator("id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors
@@ -92,7 +102,12 @@ func raceLoader(ctx context.Context, u universe.Service) *generated.RaceLoader {
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Race, len(keys))
 
-			rows, err := u.Races(ctx, athena.NewInOperator("id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := u.Races(ctx, athena.NewInOperator("id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors
@@ -120,7 +135,12 @@ func categoryLoader(ctx context.Context, u universe.Service) *generated.Category
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Category, len(keys))
 
-			rows, err := u.Categories(ctx, athena.NewInOperator("id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := u.Categories(ctx, athena.NewInOperator("id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors
@@ -148,7 +168,12 @@ func groupLoader(ctx context.Context, u universe.Service) *generated.GroupLoader
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Group, len(keys))
 
-			rows, err := u.Groups(ctx, athena.NewInOperator("id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := u.Groups(ctx, athena.NewInOperator("id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors
@@ -176,7 +201,12 @@ func typeLoader(ctx context.Context, u universe.Service) *generated.TypeLoader {
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Type, len(keys))
 
-			rows, err := u.Types(ctx, athena.NewInOperator("id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := u.Types(ctx, athena.NewInOperator("id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors

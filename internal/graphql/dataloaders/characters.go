@@ -28,7 +28,12 @@ func characterLoader(ctx context.Context, c character.Service) *generated.Charac
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Character, len(keys))
 
-			rows, err := c.Characters(ctx, athena.NewInOperator("id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := c.Characters(ctx, athena.NewInOperator("id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors
@@ -56,7 +61,12 @@ func characterCorporationHistoryLoader(ctx context.Context, c character.Service)
 			var errors = make([]error, 0, len(keys))
 			var results = make([][]*athena.CharacterCorporationHistory, len(keys))
 
-			rows, err := c.CharacterCorporationHistory(ctx, athena.NewInOperator("character_id", keys))
+			k := make([]interface{}, 0, len(keys))
+			for _, key := range keys {
+				k = append(k, key)
+			}
+
+			rows, err := c.CharacterCorporationHistory(ctx, athena.NewInOperator("character_id", k...))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors

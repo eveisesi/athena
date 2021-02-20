@@ -12,10 +12,10 @@ type Character @goModel(model: "github.com/eveisesi/athena.Character") {
     bloodlineID: Uint!
     raceID: Uint!
 
-    # race: Race!
-    # bloodline: Bloodline!
-    # ancestry: Ancestry
+    race: Race!
+    bloodline: Bloodline!
+    ancestry: Ancestry
 
-    # corporation: Corporation!
-    # alliance: Alliance
+    corporation: Corporation!
+    alliance: Alliance
 }

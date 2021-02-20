@@ -41,6 +41,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	AuthAttempt() AuthAttemptResolver
+	Character() CharacterResolver
 	Member() MemberResolver
 	MemberScope() MemberScopeResolver
 	Query() QueryResolver
@@ -96,15 +97,20 @@ type ComplexityRoot struct {
 	}
 
 	Character struct {
+		Alliance       func(childComplexity int) int
 		AllianceID     func(childComplexity int) int
+		Ancestry       func(childComplexity int) int
 		AncestryID     func(childComplexity int) int
 		Birthday       func(childComplexity int) int
+		Bloodline      func(childComplexity int) int
 		BloodlineID    func(childComplexity int) int
+		Corporation    func(childComplexity int) int
 		CorporationID  func(childComplexity int) int
 		FactionID      func(childComplexity int) int
 		Gender         func(childComplexity int) int
 		ID             func(childComplexity int) int
 		Name           func(childComplexity int) int
+		Race           func(childComplexity int) int
 		RaceID         func(childComplexity int) int
 		SecurityStatus func(childComplexity int) int
 		Title          func(childComplexity int) int
@@ -229,6 +235,13 @@ type AuthAttemptResolver interface {
 	Status(ctx context.Context, obj *athena.AuthAttempt) (string, error)
 
 	URL(ctx context.Context, obj *athena.AuthAttempt, scopes []string) (string, error)
+}
+type CharacterResolver interface {
+	Race(ctx context.Context, obj *athena.Character) (*athena.Race, error)
+	Bloodline(ctx context.Context, obj *athena.Character) (*athena.Bloodline, error)
+	Ancestry(ctx context.Context, obj *athena.Character) (*athena.Ancestry, error)
+	Corporation(ctx context.Context, obj *athena.Character) (*athena.Corporation, error)
+	Alliance(ctx context.Context, obj *athena.Character) (*athena.Alliance, error)
 }
 type MemberResolver interface {
 	Scopes(ctx context.Context, obj *athena.Member) ([]*athena.MemberScope, error)
@@ -470,12 +483,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Category.Published(childComplexity), true
 
+	case "Character.alliance":
+		if e.complexity.Character.Alliance == nil {
+			break
+		}
+
+		return e.complexity.Character.Alliance(childComplexity), true
+
 	case "Character.allianceID":
 		if e.complexity.Character.AllianceID == nil {
 			break
 		}
 
 		return e.complexity.Character.AllianceID(childComplexity), true
+
+	case "Character.ancestry":
+		if e.complexity.Character.Ancestry == nil {
+			break
+		}
+
+		return e.complexity.Character.Ancestry(childComplexity), true
 
 	case "Character.ancestryID":
 		if e.complexity.Character.AncestryID == nil {
@@ -491,12 +518,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Character.Birthday(childComplexity), true
 
+	case "Character.bloodline":
+		if e.complexity.Character.Bloodline == nil {
+			break
+		}
+
+		return e.complexity.Character.Bloodline(childComplexity), true
+
 	case "Character.bloodlineID":
 		if e.complexity.Character.BloodlineID == nil {
 			break
 		}
 
 		return e.complexity.Character.BloodlineID(childComplexity), true
+
+	case "Character.corporation":
+		if e.complexity.Character.Corporation == nil {
+			break
+		}
+
+		return e.complexity.Character.Corporation(childComplexity), true
 
 	case "Character.corporationID":
 		if e.complexity.Character.CorporationID == nil {
@@ -532,6 +573,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Character.Name(childComplexity), true
+
+	case "Character.race":
+		if e.complexity.Character.Race == nil {
+			break
+		}
+
+		return e.complexity.Character.Race(childComplexity), true
 
 	case "Character.raceID":
 		if e.complexity.Character.RaceID == nil {
@@ -1184,12 +1232,12 @@ var sources = []*ast.Source{
     bloodlineID: Uint!
     raceID: Uint!
 
-    # race: Race!
-    # bloodline: Bloodline!
-    # ancestry: Ancestry
+    race: Race!
+    bloodline: Bloodline!
+    ancestry: Ancestry
 
-    # corporation: Corporation!
-    # alliance: Alliance
+    corporation: Corporation!
+    alliance: Alliance
 }
 `, BuiltIn: false},
 	{Name: "internal/graphql/schema/corporation.graphqls", Input: `type Corporation @goModel(model: "github.com/eveisesi/athena.Corporation") {
@@ -2853,6 +2901,175 @@ func (ec *executionContext) _Character_raceID(ctx context.Context, field graphql
 	res := resTmp.(uint)
 	fc.Result = res
 	return ec.marshalNUint2uint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Character_race(ctx context.Context, field graphql.CollectedField, obj *athena.Character) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Character",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Character().Race(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*athena.Race)
+	fc.Result = res
+	return ec.marshalNRace2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐRace(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Character_bloodline(ctx context.Context, field graphql.CollectedField, obj *athena.Character) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Character",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Character().Bloodline(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*athena.Bloodline)
+	fc.Result = res
+	return ec.marshalNBloodline2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐBloodline(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Character_ancestry(ctx context.Context, field graphql.CollectedField, obj *athena.Character) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Character",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Character().Ancestry(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*athena.Ancestry)
+	fc.Result = res
+	return ec.marshalOAncestry2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐAncestry(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Character_corporation(ctx context.Context, field graphql.CollectedField, obj *athena.Character) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Character",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Character().Corporation(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*athena.Corporation)
+	fc.Result = res
+	return ec.marshalNCorporation2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐCorporation(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Character_alliance(ctx context.Context, field graphql.CollectedField, obj *athena.Character) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Character",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Character().Alliance(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*athena.Alliance)
+	fc.Result = res
+	return ec.marshalOAlliance2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐAlliance(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Constellation_id(ctx context.Context, field graphql.CollectedField, obj *athena.Constellation) (ret graphql.Marshaler) {
@@ -6863,17 +7080,17 @@ func (ec *executionContext) _Character(ctx context.Context, sel ast.SelectionSet
 		case "id":
 			out.Values[i] = ec._Character_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._Character_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "corporationID":
 			out.Values[i] = ec._Character_corporationID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "allianceID":
 			out.Values[i] = ec._Character_allianceID(ctx, field, obj)
@@ -6884,12 +7101,12 @@ func (ec *executionContext) _Character(ctx context.Context, sel ast.SelectionSet
 		case "gender":
 			out.Values[i] = ec._Character_gender(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "birthday":
 			out.Values[i] = ec._Character_birthday(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "title":
 			out.Values[i] = ec._Character_title(ctx, field, obj)
@@ -6898,13 +7115,77 @@ func (ec *executionContext) _Character(ctx context.Context, sel ast.SelectionSet
 		case "bloodlineID":
 			out.Values[i] = ec._Character_bloodlineID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "raceID":
 			out.Values[i] = ec._Character_raceID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "race":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Character_race(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "bloodline":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Character_bloodline(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "ancestry":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Character_ancestry(ctx, field, obj)
+				return res
+			})
+		case "corporation":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Character_corporation(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "alliance":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Character_alliance(ctx, field, obj)
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7813,6 +8094,20 @@ func (ec *executionContext) marshalNAuthAttempt2ᚖgithubᚗcomᚋeveisesiᚋath
 	return ec._AuthAttempt(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNBloodline2githubᚗcomᚋeveisesiᚋathenaᚐBloodline(ctx context.Context, sel ast.SelectionSet, v athena.Bloodline) graphql.Marshaler {
+	return ec._Bloodline(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNBloodline2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐBloodline(ctx context.Context, sel ast.SelectionSet, v *athena.Bloodline) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Bloodline(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -7826,6 +8121,20 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNCorporation2githubᚗcomᚋeveisesiᚋathenaᚐCorporation(ctx context.Context, sel ast.SelectionSet, v athena.Corporation) graphql.Marshaler {
+	return ec._Corporation(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCorporation2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐCorporation(ctx context.Context, sel ast.SelectionSet, v *athena.Corporation) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Corporation(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNFloat2float32(ctx context.Context, v interface{}) (float32, error) {
@@ -7893,6 +8202,20 @@ func (ec *executionContext) marshalNMemberScope2ᚕᚖgithubᚗcomᚋeveisesiᚋ
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalNRace2githubᚗcomᚋeveisesiᚋathenaᚐRace(ctx context.Context, sel ast.SelectionSet, v athena.Race) graphql.Marshaler {
+	return ec._Race(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRace2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐRace(ctx context.Context, sel ast.SelectionSet, v *athena.Race) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Race(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -8182,6 +8505,20 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalOAlliance2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐAlliance(ctx context.Context, sel ast.SelectionSet, v *athena.Alliance) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Alliance(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOAncestry2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐAncestry(ctx context.Context, sel ast.SelectionSet, v *athena.Ancestry) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Ancestry(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
