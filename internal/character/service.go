@@ -15,9 +15,12 @@ import (
 )
 
 type Service interface {
-	Character(ctx context.Context, id uint) (*athena.Character, error)
+	FetchCharacter(ctx context.Context, characterID uint) (*athena.Etag, error)
+	Character(ctx context.Context, characterID uint) (*athena.Character, error)
 	Characters(ctx context.Context, operators ...*athena.Operator) ([]*athena.Character, error)
-	// CharacterCorporationHistory(ctx context.Context, operators []*athena.Operator) ([]*athena.CharacterCorporationHistory, error)
+
+	FetchCharacterCorporationHistory(ctx context.Context, characterID uint) (*athena.Etag, error)
+	CharacterCorporationHistory(ctx context.Context, operators ...*athena.Operator) ([]*athena.CharacterCorporationHistory, error)
 }
 
 type service struct {
@@ -63,14 +66,15 @@ func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena
 		"method":    "FetchCharacter",
 	})
 
+	ptag := etag.Etag
 	character, etag, _, err := s.esi.GetCharacter(ctx, characterID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch character from ESI")
 		return nil, fmt.Errorf("failed to fetch character from ESI")
 	}
 
-	if character == nil {
-		return etag, err
+	if etag.Etag == ptag {
+		return etag, nil
 	}
 
 	existing, err := s.character.Character(ctx, characterID)
@@ -79,13 +83,7 @@ func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena
 		return nil, fmt.Errorf("failed to fetch character from DB")
 	}
 
-	exists := true
-
-	if existing == nil || errors.Is(err, sql.ErrNoRows) {
-		exists = false
-	}
-
-	switch exists {
+	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
 	case true:
 		character, err = s.character.UpdateCharacter(ctx, characterID, character)
 		if err != nil {
@@ -100,13 +98,58 @@ func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena
 		}
 	}
 
-	err = s.cache.SetCharacter(ctx, character, cache.ExpiryHours(1))
+	err = s.cache.SetCharacter(ctx, characterID, character)
 	if err != nil {
-		entry.WithError(err).Error("failed to cache character in Redis")
-		return nil, fmt.Errorf("failed to cache character in Redis")
+		entry.WithError(err).Error("failed to cache character")
 	}
 
 	return etag, nil
+
+}
+
+func (s *service) FetchCharacterCorporationHistory(ctx context.Context, characterID uint) (*athena.Etag, error) {
+
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterCorporationHistory, esi.ModWithCharacterID(characterID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
+	}
+
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
+		return etag, nil
+	}
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"character_id": characterID,
+		"service":      serviceIdentifier,
+		"method":       "FetchCharacterCorporationHistory",
+	})
+
+	petag := etag.Etag
+	history, etag, _, err := s.esi.GetCharacterCorporationHistory(ctx, characterID)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch character from ESI")
+		return nil, fmt.Errorf("failed to fetch character from ESI")
+	}
+
+	if etag.Etag == petag {
+		return etag, nil
+	}
+
+	s.resolveHistoryAttributes(ctx, history)
+
+	existingHistory, err := s.CharacterCorporationHistory(ctx, athena.NewEqualOperator("character_id", characterID))
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch existing history for character")
+		return nil, fmt.Errorf("failed to fetch existing history for character")
+	}
+
+	_, err = s.diffAndUpdateHistory(ctx, characterID, existingHistory, history)
+	if err != nil {
+		entry.WithError(err).Error("unexpected error encountered processing character history")
+		return nil, fmt.Errorf("unexpected error encountered processing character history")
+	}
+
+	return etag, err
 
 }
 
@@ -124,19 +167,19 @@ func (s *service) Character(ctx context.Context, characterID uint) (*athena.Char
 		return nil, fmt.Errorf("failed to fetch character from cache")
 	}
 
-	if character == nil {
-		character, err = s.character.Character(ctx, characterID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch character from DB")
-			return nil, fmt.Errorf("failed to fetch character from DB")
-		}
+	if character != nil {
+		return character, nil
+	}
 
-		if character != nil {
-			err = s.cache.SetCharacter(ctx, character)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache character")
-			}
-		}
+	character, err = s.character.Character(ctx, characterID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch character from DB")
+		return nil, fmt.Errorf("failed to fetch character from DB")
+	}
+
+	err = s.cache.SetCharacter(ctx, characterID, character)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache character")
 	}
 
 	return character, err
@@ -150,261 +193,117 @@ func (s *service) Characters(ctx context.Context, operators ...*athena.Operator)
 		"method":  "Characters",
 	})
 
-	// characters, err := s.cache.Characters(ctx, operators)
-	// if err != nil {
-	// 	entry.WithError(err).Error("failed to fetch characters from cache")
-	// 	return nil, fmt.Errorf("failed to fetch characters from cache")
-	// }
-
-	// if len(characters) > 0 {
-	// 	return characters, nil
-	// }
-
-	characters, err := s.character.Characters(ctx, operators...)
+	characters, err := s.cache.Characters(ctx, operators...)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch characters from cache")
 		return nil, fmt.Errorf("failed to fetch characters from cache")
 	}
 
-	// err = s.cache.SetCharacters(ctx, operators, characters, cache.ExpiryMinutes(5))
-	// if err != nil {
-	// 	entry.WithError(err).Error("failed to cache characters in Redis")
-	// 	return nil, fmt.Errorf("failed to cache characters in Redis")
-	// }
+	if len(characters) > 0 {
+		return characters, nil
+	}
+
+	characters, err = s.character.Characters(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch characters from db")
+		return nil, fmt.Errorf("failed to fetch characters from db")
+	}
+
+	err = s.cache.SetCharacters(ctx, characters, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache characters")
+	}
 
 	return characters, nil
 
 }
 
-// func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena.Etag, error) {
+func (s *service) CharacterCorporationHistory(ctx context.Context, operators ...*athena.Operator) ([]*athena.CharacterCorporationHistory, error) {
 
-// 	etag, err := s.esi.Etag(ctx, esi.GetCharacter, esi.ModWithCharacter(&athena.Character{ID: characterID}))
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
-// 	}
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Characters",
+	})
 
-// }
+	history, err := s.cache.CharacterCorporationHistory(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch character corporation history from cache")
+		return nil, fmt.Errorf("failed to fetch character corporation history from cache")
+	}
 
-// func (s *service) Character(ctx context.Context, id uint) (*athena.Character, error) {
+	if len(history) > 0 {
+		return history, nil
+	}
 
-// 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-// 		"character_id": id,
-// 		"service":      serviceIdentifier,
-// 		"method":       "Character",
-// 	})
+	history, err = s.character.CharacterCorporationHistory(ctx, operators...)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch character corporation from db")
+		return nil, fmt.Errorf("failed to fetch character corporation from db")
+	}
 
-// 	etag, err := s.esi.Etag(ctx, esi.GetCharacter, esi.ModWithCharacter(&athena.Character{ID: id}))
-// 	if err != nil {
-// 		entry.WithError(err).Error("failed to fetch etag object")
-// 		return nil, fmt.Errorf("failed to fetch etag object")
-// 	}
+	if len(history) == 0 {
+		return nil, nil
+	}
 
-// 	exists := true
-// 	cached := true
+	err = s.cache.SetCharacterCorporationHistory(ctx, history, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache character corporation history")
+	}
 
-// 	character, err := s.cache.Character(ctx, id)
-// 	if err != nil {
-// 		entry.WithError(err).Error("failed to fetch character from cache")
-// 		return nil, fmt.Errorf("failed to fetch character from cache")
-// 	}
+	return history, nil
 
-// 	if character == nil {
-// 		cached = false
-// 		character, err = s.character.Character(ctx, id)
-// 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-// 			entry.WithError(err).Error("failed to fetch character from DB")
-// 			return nil, fmt.Errorf("failed to fetch character from DB")
-// 		}
+}
 
-// 		if character == nil || errors.Is(err, sql.ErrNoRows) {
-// 			exists = false
-// 			character = &athena.Character{ID: id}
-// 			err = s.esi.ResetEtag(ctx, etag)
-// 			if err != nil {
-// 				entry.WithError(err).Error("failed to reset etag")
-// 				return nil, fmt.Errorf("failed to reset etag")
-// 			}
-// 		}
+func (s *service) resolveHistoryAttributes(ctx context.Context, history []*athena.CharacterCorporationHistory) {
 
-// 	}
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "resolveHistoryAttributes",
+	})
 
-// 	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
+	for _, record := range history {
+		_, err := s.corporation.Corporation(ctx, record.CorporationID)
+		if err != nil {
+			entry.WithError(err).WithFields(logrus.Fields{
+				"record_id":      record.RecordID,
+				"corporation_id": record.CorporationID,
+			}).Error("failed to resolve corporation record in character history")
+		}
+	}
 
-// 		if !cached {
-// 			err = s.cache.SetCharacter(ctx, character)
-// 			if err != nil {
-// 				entry.WithError(err).Error("failed to cache character")
-// 			}
-// 		}
+}
 
-// 		return character, nil
+func (s *service) diffAndUpdateHistory(ctx context.Context, characterID uint, old []*athena.CharacterCorporationHistory, new []*athena.CharacterCorporationHistory) ([]*athena.CharacterCorporationHistory, error) {
 
-// 	}
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"character_id": characterID,
+		"service":      serviceIdentifier,
+		"method":       "diffAndUpdateHistory",
+	})
 
-// 	character, _, _, err = s.esi.GetCharacter(ctx, character)
-// 	if err != nil {
-// 		entry.WithError(err).Error("Failed to fetch character from ESI")
-// 		return nil, fmt.Errorf("Failed to fetch character from ESI")
-// 	}
+	recordsToCreate := make([]*athena.CharacterCorporationHistory, 0)
 
-// 	// _, _ = s.CharacterCorporationHistory(ctx, character)
+	oldRecordMap := make(map[uint64]*athena.CharacterCorporationHistory)
+	for _, record := range old {
+		oldRecordMap[record.RecordID] = record
+	}
 
-// 	switch exists {
-// 	case true:
-// 		character, err = s.character.UpdateCharacter(ctx, character.ID, character)
-// 		if err != nil {
-// 			entry.WithError(err).Error("Failed to update character in database")
-// 			return nil, err
-// 		}
-// 	case false:
-// 		character, err = s.character.CreateCharacter(ctx, character)
-// 		if err != nil {
-// 			entry.WithError(err).Error("Failed to create character in database")
-// 			return nil, err
-// 		}
+	for _, record := range new {
+		if _, ok := oldRecordMap[record.RecordID]; !ok {
+			recordsToCreate = append(recordsToCreate, record)
+		}
+	}
 
-// 	}
+	var final = make([]*athena.CharacterCorporationHistory, 0)
+	if len(recordsToCreate) > 0 {
+		createdRecords, err := s.character.CreateCharacterCorporationHistory(ctx, characterID, recordsToCreate)
+		if err != nil {
+			entry.WithError(err).Error("failed to create character corporation history records in db")
+		}
 
-// 	err = s.cache.SetCharacter(ctx, character)
-// 	if err != nil {
-// 		entry.WithError(err).Error("failed to cache character")
-// 	}
+		final = append(final, createdRecords...)
+	}
 
-// 	return character, err
+	return final, nil
 
-// }
-
-// func (s *service) Characters(ctx context.Context, operators []*athena.Operator) ([]*athena.Character, error) {
-
-// 	characters, err := s.character.Characters(ctx, operators...)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return characters, nil
-
-// }
-
-// func (s *service) CharacterCorporationHistory(ctx context.Context, operators []*athena.Operator) ([]*athena.CharacterCorporationHistory, error) {
-
-// 	// entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-// 	// 	"service": serviceIdentifier,
-// 	// 	"method":  "CharacterCorporationHistory",
-// 	// })
-
-// 	// etag, err := s.esi.Etag(ctx, esi.GetCharacterCorporationHistory, esi.ModWithCharacter(character))
-// 	// if err != nil {
-// 	// 	entry.WithError(err).Error("failed to fetch etag object")
-// 	// 	return nil, fmt.Errorf("failed to fetch etag object")
-// 	// }
-
-// 	// exists := true
-// 	// cached := true
-
-// 	// history, err := s.cache.CharacterCorporationHistory(ctx, character.ID)
-// 	// if err != nil {
-// 	// 	entry.WithError(err).Error("failed to cache character")
-// 	// 	return nil, fmt.Errorf("failed to cache character")
-// 	// }
-
-// 	// if history == nil {
-// 	// 	cached = false
-// 	// 	history, err = s.character.CharacterCorporationHistory(ctx, athena.NewEqualOperator("character_id", character.ID))
-// 	// 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-// 	// 		entry.WithError(err).Error("failed to fetch character from DB")
-// 	// 		return nil, fmt.Errorf("failed to fetch character from DB")
-// 	// 	}
-
-// 	// 	if history == nil || errors.Is(err, sql.ErrNoRows) {
-// 	// 		exists = false
-// 	// 		history = make([]*athena.CharacterCorporationHistory, 0)
-// 	// 	}
-// 	// }
-
-// 	// if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
-
-// 	// 	if !cached {
-// 	// 		err = s.cache.SetCharacterCorporationHistory(ctx, character.ID, history)
-// 	// 		if err != nil {
-// 	// 			entry.WithError(err).Error("failed to cache corporation history")
-// 	// 		}
-// 	// 	}
-
-// 	// 	return history, nil
-// 	// }
-
-// 	// newHistory, _, _, err := s.esi.GetCharacterCorporationHistory(ctx, character, make([]*athena.CharacterCorporationHistory, 0))
-// 	// if err != nil {
-// 	// 	entry.WithError(err).Error("Failed to fetch corporation history from ESI")
-// 	// 	return nil, fmt.Errorf("Failed to fetch corporation history from ESI")
-// 	// }
-
-// 	// if len(newHistory) > 0 {
-// 	// 	s.resolveHistoryAttributes(ctx, newHistory)
-// 	// 	history, err := s.diffAndUpdateHistory(ctx, character, history, newHistory)
-// 	// 	if err != nil {
-// 	// 		return nil, fmt.Errorf("failed to diff and update corporation history")
-// 	// 	}
-
-// 	// 	err = s.cache.SetCharacterCorporationHistory(ctx, character.ID, history)
-// 	// 	if err != nil {
-// 	// 		entry.WithError(err).Error("failed to cache corporation history")
-// 	// 	}
-// 	// }
-
-// 	return nil, nil
-// }
-
-// func (s *service) resolveHistoryAttributes(ctx context.Context, history []*athena.CharacterCorporationHistory) {
-
-// 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-// 		"service": serviceIdentifier,
-// 		"method":  "resolveHistoryAttributes",
-// 	})
-
-// 	for _, record := range history {
-// 		_, err := s.corporation.Corporation(ctx, record.CorporationID)
-// 		if err != nil {
-// 			entry.WithError(err).WithFields(logrus.Fields{
-// 				"record_id":      record.RecordID,
-// 				"corporation_id": record.CorporationID,
-// 			}).Error("failed to resolve corporation record in character history")
-// 		}
-// 	}
-
-// }
-
-// func (s *service) diffAndUpdateHistory(ctx context.Context, character *athena.Character, old []*athena.CharacterCorporationHistory, new []*athena.CharacterCorporationHistory) ([]*athena.CharacterCorporationHistory, error) {
-
-// 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-// 		"character_id": character.ID,
-// 		"service":      serviceIdentifier,
-// 		"method":       "diffAndUpdateHistory",
-// 	})
-
-// 	recordsToCreate := make([]*athena.CharacterCorporationHistory, 0)
-
-// 	oldRecordMap := make(map[uint]*athena.CharacterCorporationHistory)
-// 	for _, record := range old {
-// 		oldRecordMap[record.RecordID] = record
-// 	}
-
-// 	for _, record := range new {
-// 		if _, ok := oldRecordMap[record.RecordID]; !ok {
-// 			recordsToCreate = append(recordsToCreate, record)
-// 		}
-// 	}
-
-// 	var final = make([]*athena.CharacterCorporationHistory, 0)
-// 	if len(recordsToCreate) > 0 {
-// 		createdRecords, err := s.character.CreateCharacterCorporationHistory(ctx, character.ID, recordsToCreate)
-// 		if err != nil {
-// 			entry.WithError(err).Error("failed to create character corporation history records in db")
-// 		}
-
-// 		final = append(final, createdRecords...)
-// 	}
-
-// 	return final, nil
-
-// }
+}

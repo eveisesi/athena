@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -12,22 +13,22 @@ import (
 
 type mailService interface {
 	MailHeader(ctx context.Context, mailID uint) (*athena.MailHeader, error)
-	SetMailHeader(ctx context.Context, header *athena.MailHeader, optionFuncs ...OptionFunc) error
+	SetMailHeader(ctx context.Context, header *athena.MailHeader) error
 
 	MailHeaderRecipients(ctx context.Context, mailID uint) ([]*athena.MailRecipient, error)
-	SetMailHeaderRecipients(ctx context.Context, mailID uint, recipients []*athena.MailRecipient, optionFuncs ...OptionFunc) error
+	SetMailHeaderRecipients(ctx context.Context, mailID uint, recipients []*athena.MailRecipient) error
 
 	MemberMailHeaders(ctx context.Context, memberID, page uint) ([]*athena.MemberMailHeader, error)
-	SetMemberMailHeaders(ctx context.Context, memberID, page uint, headers []*athena.MemberMailHeader, optionFuncs ...OptionFunc) error
+	SetMemberMailHeaders(ctx context.Context, memberID, page uint, headers []*athena.MemberMailHeader) error
 
 	MemberMailLabels(ctx context.Context, memberID uint) (*athena.MemberMailLabels, error)
-	SetMemberMailLabels(ctx context.Context, memberID uint, labels *athena.MemberMailLabels, optionFuncs ...OptionFunc) error
+	SetMemberMailLabels(ctx context.Context, memberID uint, labels *athena.MemberMailLabels) error
 
 	MemberMailingLists(ctx context.Context, memberID uint) ([]*athena.MemberMailingList, error)
-	SetMemberMailingLists(ctx context.Context, memberID uint, listID []*athena.MemberMailingList, optionFuncs ...OptionFunc) error
+	SetMemberMailingLists(ctx context.Context, memberID uint, listID []*athena.MemberMailingList) error
 
 	MailingList(ctx context.Context, mailingListID uint) (*athena.MailingList, error)
-	SetMailingList(ctx context.Context, list *athena.MailingList, optionFuncs ...OptionFunc) error
+	SetMailingList(ctx context.Context, list *athena.MailingList) error
 }
 
 const (
@@ -61,9 +62,7 @@ func (s *service) MailHeader(ctx context.Context, mailID uint) (*athena.MailHead
 
 }
 
-func (s *service) SetMailHeader(ctx context.Context, header *athena.MailHeader, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMailHeader(ctx context.Context, header *athena.MailHeader) error {
 
 	data, err := json.Marshal(header)
 	if err != nil {
@@ -71,7 +70,7 @@ func (s *service) SetMailHeader(ctx context.Context, header *athena.MailHeader, 
 	}
 
 	key := fmt.Sprintf(keyMailHeader, header.MailID)
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache for key %s: %w", key, err)
 	}
@@ -103,9 +102,7 @@ func (s *service) MailHeaderRecipients(ctx context.Context, mailID uint) ([]*ath
 
 }
 
-func (s *service) SetMailHeaderRecipients(ctx context.Context, mailID uint, recipients []*athena.MailRecipient, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMailHeaderRecipients(ctx context.Context, mailID uint, recipients []*athena.MailRecipient) error {
 
 	data, err := json.Marshal(recipients)
 	if err != nil {
@@ -113,7 +110,7 @@ func (s *service) SetMailHeaderRecipients(ctx context.Context, mailID uint, reci
 	}
 
 	key := fmt.Sprintf(keyMailRecipients, mailID)
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
@@ -150,9 +147,7 @@ func (s *service) MemberMailHeaders(ctx context.Context, memberID, page uint) ([
 
 }
 
-func (s *service) SetMemberMailHeaders(ctx context.Context, memberID, page uint, headers []*athena.MemberMailHeader, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberMailHeaders(ctx context.Context, memberID, page uint, headers []*athena.MemberMailHeader) error {
 
 	members := make([]string, 0, len(headers))
 	for _, header := range headers {
@@ -171,7 +166,7 @@ func (s *service) SetMemberMailHeaders(ctx context.Context, memberID, page uint,
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
-	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to set expiry on key %s: %w", key, err)
 	}
@@ -202,9 +197,7 @@ func (s *service) MemberMailLabels(ctx context.Context, memberID uint) (*athena.
 
 }
 
-func (s *service) SetMemberMailLabels(ctx context.Context, memberID uint, labels *athena.MemberMailLabels, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberMailLabels(ctx context.Context, memberID uint, labels *athena.MemberMailLabels) error {
 
 	data, err := json.Marshal(labels)
 	if err != nil {
@@ -212,7 +205,7 @@ func (s *service) SetMemberMailLabels(ctx context.Context, memberID uint, labels
 	}
 
 	key := fmt.Sprintf(keyMemberMailLabels, memberID)
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
@@ -243,9 +236,7 @@ func (s *service) MailingList(ctx context.Context, mailingListID uint) (*athena.
 
 }
 
-func (s *service) SetMailingList(ctx context.Context, list *athena.MailingList, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMailingList(ctx context.Context, list *athena.MailingList) error {
 
 	data, err := json.Marshal(list)
 	if err != nil {
@@ -253,7 +244,7 @@ func (s *service) SetMailingList(ctx context.Context, list *athena.MailingList, 
 	}
 
 	key := fmt.Sprintf(keyMailingList, list.MailingListID)
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache for key %s: %w", key, err)
 	}
@@ -284,9 +275,7 @@ func (s *service) MemberMailingLists(ctx context.Context, memberID uint) ([]*ath
 
 }
 
-func (s *service) SetMemberMailingLists(ctx context.Context, memberID uint, lists []*athena.MemberMailingList, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberMailingLists(ctx context.Context, memberID uint, lists []*athena.MemberMailingList) error {
 
 	data, err := json.Marshal(lists)
 	if err != nil {
@@ -294,7 +283,7 @@ func (s *service) SetMemberMailingLists(ctx context.Context, memberID uint, list
 	}
 
 	key := fmt.Sprintf(keyMemberMailingLists, memberID)
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache for key %s: %w", key, err)
 	}

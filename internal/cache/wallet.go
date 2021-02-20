@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -12,13 +13,13 @@ import (
 
 type walletService interface {
 	MemberWalletBalance(ctx context.Context, member *athena.Member) (*athena.MemberWalletBalance, error)
-	SetMemberWalletBalance(ctx context.Context, member *athena.Member, balance *athena.MemberWalletBalance, optionFuncs ...OptionFunc) error
+	SetMemberWalletBalance(ctx context.Context, member *athena.Member, balance *athena.MemberWalletBalance) error
 
 	MemberWalletTransactions(ctx context.Context, member *athena.Member) ([]*athena.MemberWalletTransaction, error)
-	SetMemberWalletTransactions(ctx context.Context, member *athena.Member, transactions []*athena.MemberWalletTransaction, optionFuncs ...OptionFunc) error
+	SetMemberWalletTransactions(ctx context.Context, member *athena.Member, transactions []*athena.MemberWalletTransaction) error
 
 	MemberWalletJournal(ctx context.Context, member *athena.Member) ([]*athena.MemberWalletJournal, error)
-	SetMemberWalletJournal(ctx context.Context, member *athena.Member, entries []*athena.MemberWalletJournal, optionFuncs ...OptionFunc) error
+	SetMemberWalletJournal(ctx context.Context, member *athena.Member, entries []*athena.MemberWalletJournal) error
 }
 
 const (
@@ -56,9 +57,7 @@ func (s *service) MemberWalletBalance(ctx context.Context, member *athena.Member
 
 }
 
-func (s *service) SetMemberWalletBalance(ctx context.Context, member *athena.Member, balance *athena.MemberWalletBalance, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberWalletBalance(ctx context.Context, member *athena.Member, balance *athena.MemberWalletBalance) error {
 
 	data, err := json.Marshal(balance)
 	if err != nil {
@@ -67,7 +66,7 @@ func (s *service) SetMemberWalletBalance(ctx context.Context, member *athena.Mem
 
 	key := fmt.Sprintf(keyMemberWalletBalance, member.ID)
 
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -107,9 +106,8 @@ func (s *service) MemberWalletTransactions(ctx context.Context, member *athena.M
 
 }
 
-func (s *service) SetMemberWalletTransactions(ctx context.Context, member *athena.Member, transactions []*athena.MemberWalletTransaction, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberWalletTransactions(ctx context.Context, member *athena.Member, transactions []*athena.MemberWalletTransaction) error {
 
-	options := applyOptionFuncs(nil, optionFuncs)
 	chunks := chunkTransactions(transactions, limitMemberWalletTransactions)
 
 	indexKey := fmt.Sprintf(keyMemberWalletTransactionIndexes, member.ID)
@@ -133,7 +131,7 @@ func (s *service) SetMemberWalletTransactions(ctx context.Context, member *athen
 			return fmt.Errorf("[Cache Layer] Failed to cache transactions for member %d: %w", member.ID, err)
 		}
 
-		_, err = s.client.Expire(ctx, key, options.expiry).Result()
+		_, err = s.client.Expire(ctx, key, time.Hour).Result()
 		if err != nil {
 			return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 		}
@@ -179,9 +177,8 @@ func (s *service) MemberWalletJournal(ctx context.Context, member *athena.Member
 
 }
 
-func (s *service) SetMemberWalletJournal(ctx context.Context, member *athena.Member, entries []*athena.MemberWalletJournal, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberWalletJournal(ctx context.Context, member *athena.Member, entries []*athena.MemberWalletJournal) error {
 
-	options := applyOptionFuncs(nil, optionFuncs)
 	chunks := chunkJournals(entries, limitMemberWalletJournals)
 
 	indexKey := fmt.Sprintf(keyMemberWalletJournalIndexes, member.ID)
@@ -205,7 +202,7 @@ func (s *service) SetMemberWalletJournal(ctx context.Context, member *athena.Mem
 			return fmt.Errorf("[Cache Layer] Failed to cache entrys for member %d: %w", member.ID, err)
 		}
 
-		_, err = s.client.Expire(ctx, key, options.expiry).Result()
+		_, err = s.client.Expire(ctx, key, time.Hour).Result()
 		if err != nil {
 			return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 		}

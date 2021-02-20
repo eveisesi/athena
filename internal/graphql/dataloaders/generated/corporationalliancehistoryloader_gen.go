@@ -12,7 +12,7 @@ import (
 // CorporationAllianceHistoryLoaderConfig captures the config to create a new CorporationAllianceHistoryLoader
 type CorporationAllianceHistoryLoaderConfig struct {
 	// Fetch is a method that provides the data for the loader
-	Fetch func(keys []uint) ([]*athena.CorporationAllianceHistory, []error)
+	Fetch func(keys []uint) ([][]*athena.CorporationAllianceHistory, []error)
 
 	// Wait is how long wait before sending a batch
 	Wait time.Duration
@@ -33,7 +33,7 @@ func NewCorporationAllianceHistoryLoader(config CorporationAllianceHistoryLoader
 // CorporationAllianceHistoryLoader batches and caches requests
 type CorporationAllianceHistoryLoader struct {
 	// this method provides the data for the loader
-	fetch func(keys []uint) ([]*athena.CorporationAllianceHistory, []error)
+	fetch func(keys []uint) ([][]*athena.CorporationAllianceHistory, []error)
 
 	// how long to done before sending a batch
 	wait time.Duration
@@ -44,7 +44,7 @@ type CorporationAllianceHistoryLoader struct {
 	// INTERNAL
 
 	// lazily created cache
-	cache map[uint]*athena.CorporationAllianceHistory
+	cache map[uint][]*athena.CorporationAllianceHistory
 
 	// the current batch. keys will continue to be collected until timeout is hit,
 	// then everything will be sent to the fetch method and out to the listeners
@@ -56,25 +56,25 @@ type CorporationAllianceHistoryLoader struct {
 
 type corporationAllianceHistoryLoaderBatch struct {
 	keys    []uint
-	data    []*athena.CorporationAllianceHistory
+	data    [][]*athena.CorporationAllianceHistory
 	error   []error
 	closing bool
 	done    chan struct{}
 }
 
 // Load a CorporationAllianceHistory by key, batching and caching will be applied automatically
-func (l *CorporationAllianceHistoryLoader) Load(key uint) (*athena.CorporationAllianceHistory, error) {
+func (l *CorporationAllianceHistoryLoader) Load(key uint) ([]*athena.CorporationAllianceHistory, error) {
 	return l.LoadThunk(key)()
 }
 
 // LoadThunk returns a function that when called will block waiting for a CorporationAllianceHistory.
 // This method should be used if you want one goroutine to make requests to many
 // different data loaders without blocking until the thunk is called.
-func (l *CorporationAllianceHistoryLoader) LoadThunk(key uint) func() (*athena.CorporationAllianceHistory, error) {
+func (l *CorporationAllianceHistoryLoader) LoadThunk(key uint) func() ([]*athena.CorporationAllianceHistory, error) {
 	l.mu.Lock()
 	if it, ok := l.cache[key]; ok {
 		l.mu.Unlock()
-		return func() (*athena.CorporationAllianceHistory, error) {
+		return func() ([]*athena.CorporationAllianceHistory, error) {
 			return it, nil
 		}
 	}
@@ -85,10 +85,10 @@ func (l *CorporationAllianceHistoryLoader) LoadThunk(key uint) func() (*athena.C
 	pos := batch.keyIndex(l, key)
 	l.mu.Unlock()
 
-	return func() (*athena.CorporationAllianceHistory, error) {
+	return func() ([]*athena.CorporationAllianceHistory, error) {
 		<-batch.done
 
-		var data *athena.CorporationAllianceHistory
+		var data []*athena.CorporationAllianceHistory
 		if pos < len(batch.data) {
 			data = batch.data[pos]
 		}
@@ -113,14 +113,14 @@ func (l *CorporationAllianceHistoryLoader) LoadThunk(key uint) func() (*athena.C
 
 // LoadAll fetches many keys at once. It will be broken into appropriate sized
 // sub batches depending on how the loader is configured
-func (l *CorporationAllianceHistoryLoader) LoadAll(keys []uint) ([]*athena.CorporationAllianceHistory, []error) {
-	results := make([]func() (*athena.CorporationAllianceHistory, error), len(keys))
+func (l *CorporationAllianceHistoryLoader) LoadAll(keys []uint) ([][]*athena.CorporationAllianceHistory, []error) {
+	results := make([]func() ([]*athena.CorporationAllianceHistory, error), len(keys))
 
 	for i, key := range keys {
 		results[i] = l.LoadThunk(key)
 	}
 
-	corporationAllianceHistorys := make([]*athena.CorporationAllianceHistory, len(keys))
+	corporationAllianceHistorys := make([][]*athena.CorporationAllianceHistory, len(keys))
 	errors := make([]error, len(keys))
 	for i, thunk := range results {
 		corporationAllianceHistorys[i], errors[i] = thunk()
@@ -131,13 +131,13 @@ func (l *CorporationAllianceHistoryLoader) LoadAll(keys []uint) ([]*athena.Corpo
 // LoadAllThunk returns a function that when called will block waiting for a CorporationAllianceHistorys.
 // This method should be used if you want one goroutine to make requests to many
 // different data loaders without blocking until the thunk is called.
-func (l *CorporationAllianceHistoryLoader) LoadAllThunk(keys []uint) func() ([]*athena.CorporationAllianceHistory, []error) {
-	results := make([]func() (*athena.CorporationAllianceHistory, error), len(keys))
+func (l *CorporationAllianceHistoryLoader) LoadAllThunk(keys []uint) func() ([][]*athena.CorporationAllianceHistory, []error) {
+	results := make([]func() ([]*athena.CorporationAllianceHistory, error), len(keys))
 	for i, key := range keys {
 		results[i] = l.LoadThunk(key)
 	}
-	return func() ([]*athena.CorporationAllianceHistory, []error) {
-		corporationAllianceHistorys := make([]*athena.CorporationAllianceHistory, len(keys))
+	return func() ([][]*athena.CorporationAllianceHistory, []error) {
+		corporationAllianceHistorys := make([][]*athena.CorporationAllianceHistory, len(keys))
 		errors := make([]error, len(keys))
 		for i, thunk := range results {
 			corporationAllianceHistorys[i], errors[i] = thunk()
@@ -149,14 +149,15 @@ func (l *CorporationAllianceHistoryLoader) LoadAllThunk(keys []uint) func() ([]*
 // Prime the cache with the provided key and value. If the key already exists, no change is made
 // and false is returned.
 // (To forcefully prime the cache, clear the key first with loader.clear(key).prime(key, value).)
-func (l *CorporationAllianceHistoryLoader) Prime(key uint, value *athena.CorporationAllianceHistory) bool {
+func (l *CorporationAllianceHistoryLoader) Prime(key uint, value []*athena.CorporationAllianceHistory) bool {
 	l.mu.Lock()
 	var found bool
 	if _, found = l.cache[key]; !found {
 		// make a copy when writing to the cache, its easy to pass a pointer in from a loop var
 		// and end up with the whole cache pointing to the same value.
-		cpy := *value
-		l.unsafeSet(key, &cpy)
+		cpy := make([]*athena.CorporationAllianceHistory, len(value))
+		copy(cpy, value)
+		l.unsafeSet(key, cpy)
 	}
 	l.mu.Unlock()
 	return !found
@@ -169,9 +170,9 @@ func (l *CorporationAllianceHistoryLoader) Clear(key uint) {
 	l.mu.Unlock()
 }
 
-func (l *CorporationAllianceHistoryLoader) unsafeSet(key uint, value *athena.CorporationAllianceHistory) {
+func (l *CorporationAllianceHistoryLoader) unsafeSet(key uint, value []*athena.CorporationAllianceHistory) {
 	if l.cache == nil {
-		l.cache = map[uint]*athena.CorporationAllianceHistory{}
+		l.cache = map[uint][]*athena.CorporationAllianceHistory{}
 	}
 	l.cache[key] = value
 }

@@ -5,25 +5,20 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"math"
-	"sync"
-	"time"
 
 	"github.com/eveisesi/athena"
-	"github.com/eveisesi/athena/internal"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/sirupsen/logrus"
-	"github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/decor"
 )
 
 type Service interface {
 	InitializeUniverse(options ...OptionFunc) error
 
 	Ancestry(ctx context.Context, id uint) (*athena.Ancestry, error)
+	Ancestries(ctx context.Context, operators ...*athena.Operator) ([]*athena.Ancestry, error)
 	Bloodline(ctx context.Context, id uint) (*athena.Bloodline, error)
+	Bloodlines(ctx context.Context, operators ...*athena.Operator) ([]*athena.Bloodline, error)
 	Category(ctx context.Context, id uint) (*athena.Category, error)
 	Categories(ctx context.Context, operators ...*athena.Operator) ([]*athena.Category, error)
 	Constellation(ctx context.Context, id uint) (*athena.Constellation, error)
@@ -32,15 +27,16 @@ type Service interface {
 	Factions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Faction, error)
 	Group(ctx context.Context, id uint) (*athena.Group, error)
 	Groups(ctx context.Context, operators ...*athena.Operator) ([]*athena.Group, error)
-	Planet(ctx context.Context, id uint) (*athena.Planet, error)
-	Planets(ctx context.Context, operators ...*athena.Operator) ([]*athena.Planet, error)
 	Race(ctx context.Context, id uint) (*athena.Race, error)
+	Races(ctx context.Context, operators ...*athena.Operator) ([]*athena.Race, error)
 	Region(ctx context.Context, id uint) (*athena.Region, error)
 	Regions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Region, error)
 	SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem, error)
 	SolarSystems(ctx context.Context, operators ...*athena.Operator) ([]*athena.SolarSystem, error)
 	Station(ctx context.Context, id uint) (*athena.Station, error)
+	Stations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Station, error)
 	Structure(ctx context.Context, member *athena.Member, id uint64) (*athena.Structure, error)
+	Structures(ctx context.Context, operators ...*athena.Operator) ([]*athena.Structure, error)
 	Type(ctx context.Context, id uint) (*athena.Type, error)
 	Types(ctx context.Context, operators ...*athena.Operator) ([]*athena.Type, error)
 }
@@ -54,6 +50,10 @@ type service struct {
 	universe athena.UniverseRepository
 }
 
+const (
+	serviceIdentifier = "Universe Service"
+)
+
 func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, universe athena.UniverseRepository) Service {
 
 	logger.SetFormatter(&logrus.TextFormatter{})
@@ -63,464 +63,6 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, uni
 		cache:    cache,
 		esi:      esi,
 		universe: universe,
-	}
-
-}
-
-func (s *service) InitializeUniverse(options ...OptionFunc) error {
-
-	o := s.options(options...)
-
-	var wg = &sync.WaitGroup{}
-	var ctx = context.Background()
-	var bar = &mpb.Bar{}
-	pOpts := make([]mpb.ProgressOption, 0)
-	pOpts = append(pOpts, mpb.WithWaitGroup(wg))
-	if o.disableProgress {
-		pOpts = append(pOpts, mpb.WithOutput(ioutil.Discard))
-	}
-	p := mpb.New(pOpts...)
-
-	if o.chr {
-		races, _, _, err := s.esi.GetRaces(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to fetch races from ESI: %w", err)
-		}
-
-		name := "Races"
-		bar = p.AddBar(int64(len(races)),
-			mpb.PrependDecorators(
-				// simple name decorator
-				decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
-				// decor.DSyncWidth bit enables column width synchronization
-				decor.CountersNoUnit("%d / %d"),
-			),
-			mpb.AppendDecorators(decor.Percentage()),
-		)
-
-		for _, race := range races {
-			entry := s.logger.WithField("race_id", race.ID)
-			_, err = s.universe.CreateRace(ctx, race)
-			if err != nil {
-				entry.WithError(err).Error("failed to insert race into db")
-				continue
-			}
-
-			err = s.cache.SetRace(ctx, race, cache.ExpiryHours(0))
-			if err != nil {
-				entry.WithError(err).Error("failed to cache race")
-			}
-
-			bar.Increment()
-			time.Sleep(time.Millisecond * 500)
-		}
-
-		bloodlines, _, _, err := s.esi.GetBloodlines(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to fetch bloodlines from ESI: %w", err)
-		}
-
-		name = "Bloodlines"
-		bar = p.AddBar(int64(len(bloodlines)),
-			mpb.PrependDecorators(
-				// simple name decorator
-				decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
-				// decor.DSyncWidth bit enables column width synchronization
-				decor.CountersNoUnit("%d / %d"),
-			),
-			mpb.AppendDecorators(decor.Percentage()),
-		)
-
-		for _, bloodline := range bloodlines {
-			entry := s.logger.WithField("bloodline_id", bloodline.ID)
-			_, err = s.universe.CreateBloodline(ctx, bloodline)
-			if err != nil {
-				entry.WithError(err).Error("failed to create bloodline in DB")
-				continue
-			}
-
-			err = s.cache.SetBloodline(ctx, bloodline, cache.ExpiryHours(0))
-			if err != nil {
-				s.logger.WithError(err).WithField("bloodline_id", bloodline.ID).Error("failed to cache bloodline")
-			}
-
-			bar.Increment()
-
-			time.Sleep(time.Millisecond * 50)
-		}
-
-		ancestries, _, _, err := s.esi.GetAncestries(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to fetch ancestries from ESI: %w", err)
-		}
-
-		name = "Ancestries"
-		bar = p.AddBar(int64(len(ancestries)),
-			mpb.PrependDecorators(
-				// simple name decorator
-				decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
-				// decor.DSyncWidth bit enables column width synchronization
-				decor.CountersNoUnit("%d / %d"),
-			),
-			mpb.AppendDecorators(decor.Percentage()),
-		)
-
-		for _, ancestry := range ancestries {
-			entry := s.logger.WithField("ancestry_id", ancestry.ID)
-			_, err = s.universe.CreateAncestry(ctx, ancestry)
-			if err != nil {
-				entry.WithError(err).Error("failed to create ancestry in DB")
-				continue
-			}
-
-			err = s.cache.SetAncestry(ctx, ancestry, cache.ExpiryHours(0))
-			if err != nil {
-				entry.WithError(err).Error("failed to cache ancestry")
-			}
-
-			bar.Increment()
-			time.Sleep(time.Millisecond * 50)
-		}
-
-		factions, _, _, err := s.esi.GetFactions(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to fetch factions from ESI: %w", err)
-		}
-
-		name = "Factions"
-		bar = p.AddBar(int64(len(factions)),
-			mpb.PrependDecorators(
-				// simple name decorator
-				decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
-				// decor.DSyncWidth bit enables column width synchronization
-				decor.CountersNoUnit("%d / %d"),
-			),
-			mpb.AppendDecorators(decor.Percentage()),
-		)
-
-		for _, faction := range factions {
-			entry := s.logger.WithField("faction_id", faction.ID)
-			_, err = s.universe.CreateFaction(ctx, faction)
-			if err != nil {
-				entry.WithError(err).Error("failed to create faction in DB")
-				continue
-			}
-
-			err = s.cache.SetFaction(ctx, faction, cache.ExpiryHours(0))
-			if err != nil {
-				entry.WithError(err).Error("failed to cache faction")
-			}
-
-			bar.Increment()
-
-			time.Sleep(time.Millisecond * 50)
-		}
-
-	}
-
-	if o.inv {
-		categoryIDs, _, _, err := s.esi.GetCategories(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to fetch category IDs from ESI: %w", err)
-		}
-
-		categoriesName := "Categories"
-		categoriesBar := p.AddBar(int64(len(categoryIDs)),
-			mpb.PrependDecorators(
-				// simple name decorator
-				decor.Name(categoriesName, decor.WC{W: len(categoriesName) + 1, C: decor.DidentRight}),
-				// decor.DSyncWidth bit enables column width synchronization
-				decor.CountersNoUnit("%d / %d"),
-			),
-			mpb.AppendDecorators(decor.Percentage()),
-		)
-
-		for _, categoryID := range categoryIDs {
-			categoryEntry := s.logger.WithField("category_id", categoryID)
-
-			category, _, _, err := s.esi.GetCategory(ctx, categoryID)
-			if err != nil {
-				categoryEntry.WithError(err).Error("failed to fetch category from ESI")
-				continue
-			}
-
-			_, err = s.universe.CreateCategory(ctx, category)
-			if err != nil {
-				categoryEntry.WithError(err).Error("failed to create category in DB")
-				continue
-			}
-
-			groupsName := fmt.Sprintf("Groups of Category %d", categoryID)
-			groupsBar := p.AddBar(int64(len(category.Groups)), mpb.BarRemoveOnComplete(),
-				mpb.PrependDecorators(
-					// simple name decorator
-					decor.Name(groupsName, decor.WC{W: len(groupsName) + 1, C: decor.DidentRight}),
-					// decor.DSyncWidth bit enables column width synchronization
-					decor.CountersNoUnit("%d / %d"),
-				),
-				mpb.AppendDecorators(decor.Percentage()),
-			)
-
-			buffQ := make(chan uint, 20)
-
-			for w := 1; w <= 10; w++ {
-				go s.groupWorker(w, buffQ, wg, p, groupsBar, categoryEntry)
-			}
-
-			for j := 0; j < len(category.Groups); j++ {
-				wg.Add(1)
-				buffQ <- category.Groups[j]
-			}
-
-			close(buffQ)
-
-			wg.Wait()
-
-			groupsBar.SetTotal(int64(len(category.Groups)), true)
-
-			category.Groups = nil
-
-			err = s.cache.SetCategory(ctx, category, cache.ExpiryHours(0))
-			if err != nil {
-				categoryEntry.WithError(err).Error("failed to cache category")
-			}
-
-			categoriesBar.Increment()
-
-		}
-
-		categoriesBar.SetTotal(int64(len(categoryIDs)), true)
-	}
-
-	if o.loc {
-		regionIDs, _, _, err := s.esi.GetRegions(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to fetch region id for ESI: %w", err)
-		}
-
-		regionsName := "Regions"
-		regionsBar := p.AddBar(int64(len(regionIDs)),
-			mpb.PrependDecorators(
-				// simple name decorator
-				decor.Name(regionsName, decor.WC{W: len(regionsName) + 1, C: decor.DidentRight}),
-				// decor.DSyncWidth bit enables column width synchronization
-				decor.CountersNoUnit("%d / %d"),
-			),
-			mpb.AppendDecorators(decor.Percentage()),
-		)
-
-		for _, regionID := range regionIDs {
-
-			regionEntry := s.logger.WithField("region_id", regionID)
-
-			region, _, _, err := s.esi.GetRegion(ctx, regionID)
-			if err != nil {
-				regionEntry.WithError(err).Error("failed to fetch region from ESI")
-				continue
-			}
-
-			_, err = s.universe.CreateRegion(ctx, region)
-			if err != nil {
-				regionEntry.WithError(err).Error("failed to create region in DB")
-				continue
-			}
-
-			constellationsName := "Constellations"
-			constellationsBar := p.AddBar(int64(len(region.ConstellationIDs)), mpb.BarRemoveOnComplete(),
-				mpb.PrependDecorators(
-					// simple name decorator
-					decor.Name(constellationsName, decor.WC{W: len(constellationsName) + 1, C: decor.DidentRight}),
-					// decor.DSyncWidth bit enables column width synchronization
-					decor.CountersNoUnit("%d / %d"),
-				),
-				mpb.AppendDecorators(decor.Percentage()),
-			)
-
-			for _, constellationID := range region.ConstellationIDs {
-				wg.Add(1)
-				go func(constellationID uint) {
-					defer wg.Done()
-					defer constellationsBar.Increment()
-
-					constellationsEntry := regionEntry.WithField("constellation_id", constellationID)
-
-					constellation, _, _, err := s.esi.GetConstellation(ctx, constellationID)
-					if err != nil {
-						constellationsEntry.WithError(err).Error("failed to fetch constellation from ESI")
-						return
-					}
-
-					_, err = s.universe.CreateConstellation(ctx, constellation)
-					if err != nil {
-						constellationsEntry.WithError(err).Error("failed to create constellation in DB")
-						return
-					}
-
-					systemsName := fmt.Sprintf("Systems for Constellation %d", constellationID)
-					systemsBar := p.AddBar(int64(len(constellation.SystemIDs)), mpb.BarRemoveOnComplete(),
-						mpb.PrependDecorators(
-							// simple name decorator
-							decor.Name(systemsName, decor.WC{W: len(systemsName) + 1, C: decor.DidentRight}),
-							// decor.DSyncWidth bit enables column width synchronization
-							decor.CountersNoUnit("%d / %d"),
-						),
-						mpb.AppendDecorators(decor.Percentage()),
-					)
-
-					for _, systemID := range constellation.SystemIDs {
-						systemEntry := constellationsEntry.WithField("type_id", systemID)
-						system, _, _, err := s.esi.GetSolarSystem(ctx, systemID)
-						if err != nil {
-							systemEntry.WithError(err).Error("failed to fetch system from ESI")
-							continue
-						}
-
-						_, err = s.universe.CreateSolarSystem(ctx, system)
-						if err != nil {
-							systemEntry.WithError(err).Error("failed to create system from DB")
-							continue
-						}
-
-						err = s.cache.SetSolarSystem(ctx, system, cache.ExpiryHours(0))
-						if err != nil {
-							systemEntry.WithError(err).Error("failed to cache system")
-						}
-
-						systemsBar.Increment()
-
-					}
-
-					systemsBar.SetTotal(int64(len(constellation.SystemIDs)), true)
-
-					constellation.SystemIDs = nil
-
-					err = s.cache.SetConstellation(ctx, constellation, cache.ExpiryHours(0))
-					if err != nil {
-						constellationsEntry.WithError(err).Error("failed to cache constellation")
-						return
-					}
-				}(constellationID)
-			}
-			wg.Wait()
-			constellationsBar.SetTotal(int64(len(region.ConstellationIDs)), true)
-
-			region.ConstellationIDs = nil
-
-			err = s.cache.SetRegion(ctx, region, cache.ExpiryHours(0))
-			if err != nil {
-				regionEntry.WithError(err).Error("failed to cache region")
-			}
-
-			regionsBar.Increment()
-		}
-	}
-
-	return nil
-}
-
-func (s *service) groupWorker(wid int, buffQ chan uint, wg *sync.WaitGroup, progress *mpb.Progress, bar *mpb.Bar, logEntry *logrus.Entry) {
-
-	for groupID := range buffQ {
-		var ctx = context.Background()
-
-		groupEntry := logEntry.WithField("group_id", groupID)
-
-		group, _, _, err := s.esi.GetGroup(ctx, groupID)
-		if err != nil {
-			groupEntry.WithError(err).Error("failed to fetch group from ESI")
-			return
-		}
-
-		_, err = s.universe.CreateGroup(ctx, group)
-		if err != nil {
-			groupEntry.WithError(err).Error("failed to create group from DB")
-			return
-		}
-
-		if len(group.Types) == 0 {
-			wg.Done()
-			bar.Increment()
-			continue
-		}
-
-		typesName := fmt.Sprintf("Types for Group %d", groupID)
-		typesBar := progress.AddBar(int64(len(group.Types)), mpb.BarRemoveOnComplete(),
-			mpb.PrependDecorators(
-				// simple name decorator
-				decor.Name(typesName, decor.WC{W: len(typesName) + 1, C: decor.DidentRight}),
-				// decor.DSyncWidth bit enables column width synchronization
-				decor.CountersNoUnit("%d / %d"),
-			),
-			mpb.AppendDecorators(decor.Percentage()),
-		)
-
-		buffQQ := make(chan uint, 20)
-
-		wgi := &sync.WaitGroup{}
-		numWorkers := 5
-		for w := 0; w <= numWorkers; w++ {
-			go s.typeWorker(w, buffQQ, wgi, typesBar, groupEntry)
-		}
-
-		size := math.Ceil(float64(len(group.Types)) / float64(numWorkers))
-
-		chunks := internal.ChunkSliceUints(group.Types, int(size))
-
-		for _, chunk := range chunks {
-			for j := 0; j < len(chunk); j++ {
-				wgi.Add(1)
-				buffQQ <- chunk[j]
-			}
-		}
-
-		// for j := 0; j < len(group.Types); j++ {
-		// 	wgi.Add(1)
-		// 	buffQQ <- group.Types[j]
-		// }
-
-		close(buffQQ)
-
-		wgi.Wait()
-
-		typesBar.SetTotal(int64(len(group.Types)), true)
-
-		group.Types = nil
-
-		err = s.cache.SetGroup(ctx, group, cache.ExpiryHours(0))
-		if err != nil {
-			groupEntry.WithError(err).Error("failed to cache category")
-			return
-		}
-		wg.Done()
-		bar.Increment()
-	}
-}
-
-func (s *service) typeWorker(wid int, buffQQ chan uint, wg *sync.WaitGroup, bar *mpb.Bar, groupEntry *logrus.Entry) {
-
-	for typeID := range buffQQ {
-		var ctx = context.Background()
-
-		typeEntry := groupEntry.WithField("type_id", typeID)
-		item, _, _, err := s.esi.GetType(ctx, typeID)
-		if err != nil {
-			typeEntry.WithError(err).Error("failed to fetch type from ESI")
-			continue
-		}
-
-		_, err = s.universe.CreateType(ctx, item)
-		if err != nil {
-			typeEntry.WithError(err).Error("failed to create type from DB")
-			continue
-		}
-
-		err = s.cache.SetType(ctx, item, cache.ExpiryHours(0))
-		if err != nil {
-			typeEntry.WithError(err).Error("failed to cache type")
-		}
-
-		bar.Increment()
-		wg.Done()
 	}
 
 }
@@ -541,9 +83,42 @@ func (s *service) Ancestry(ctx context.Context, id uint) (*athena.Ancestry, erro
 		return nil, err
 	}
 
-	err = s.cache.SetAncestry(ctx, ancestry, cache.ExpiryMinutes(0))
+	err = s.cache.SetAncestry(ctx, ancestry)
 
 	return ancestry, err
+
+}
+
+func (s *service) Ancestries(ctx context.Context, operators ...*athena.Operator) ([]*athena.Ancestry, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Ancestries",
+	})
+
+	ancestries, err := s.cache.Ancestries(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch ancestries from cache")
+		return nil, fmt.Errorf("failed to fetch ancestries from cache")
+	}
+
+	if len(ancestries) > 0 {
+		return ancestries, nil
+	}
+
+	ancestries, err = s.universe.Ancestries(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch ancestries from db")
+		return nil, fmt.Errorf("failed to fetch ancestries from db")
+	}
+
+	err = s.cache.SetAncestries(ctx, ancestries, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache ancestries")
+		return nil, fmt.Errorf("failed to cache ancestries")
+	}
+
+	return ancestries, nil
 
 }
 
@@ -563,9 +138,42 @@ func (s *service) Bloodline(ctx context.Context, id uint) (*athena.Bloodline, er
 		return nil, err
 	}
 
-	err = s.cache.SetBloodline(ctx, bloodline, cache.ExpiryMinutes(0))
+	err = s.cache.SetBloodline(ctx, bloodline)
 
 	return bloodline, err
+
+}
+
+func (s *service) Bloodlines(ctx context.Context, operators ...*athena.Operator) ([]*athena.Bloodline, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Bloodlines",
+	})
+
+	bloodlines, err := s.cache.Bloodlines(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch bloodlines from cache")
+		return nil, fmt.Errorf("failed to fetch bloodlines from cache")
+	}
+
+	if len(bloodlines) > 0 {
+		return bloodlines, nil
+	}
+
+	bloodlines, err = s.universe.Bloodlines(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch bloodlines from db")
+		return nil, fmt.Errorf("failed to fetch bloodlines from db")
+	}
+
+	err = s.cache.SetBloodlines(ctx, bloodlines, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache bloodlines")
+		return nil, fmt.Errorf("failed to cache bloodlines")
+	}
+
+	return bloodlines, nil
 
 }
 
@@ -597,14 +205,43 @@ func (s *service) Category(ctx context.Context, id uint) (*athena.Category, erro
 		}
 	}
 
-	err = s.cache.SetCategory(ctx, category, cache.ExpiryMinutes(0))
+	err = s.cache.SetCategory(ctx, category)
 
 	return category, err
 
 }
 
 func (s *service) Categories(ctx context.Context, operators ...*athena.Operator) ([]*athena.Category, error) {
-	return s.universe.Categories(ctx, operators...)
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Categories",
+	})
+
+	categories, err := s.cache.Categories(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch categories from cache")
+		return nil, fmt.Errorf("failed to fetch categories from cache")
+	}
+
+	if len(categories) > 0 {
+		return categories, nil
+	}
+
+	categories, err = s.universe.Categories(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch categories from db")
+		return nil, fmt.Errorf("failed to fetch categories from db")
+	}
+
+	err = s.cache.SetCategories(ctx, categories, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache categories")
+		return nil, fmt.Errorf("failed to cache categories")
+	}
+
+	return categories, nil
+
 }
 
 func (s *service) Constellation(ctx context.Context, id uint) (*athena.Constellation, error) {
@@ -635,14 +272,43 @@ func (s *service) Constellation(ctx context.Context, id uint) (*athena.Constella
 		}
 	}
 
-	err = s.cache.SetConstellation(ctx, constellation, cache.ExpiryMinutes(60))
+	err = s.cache.SetConstellation(ctx, constellation)
 
 	return constellation, err
 
 }
 
 func (s *service) Constellations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Constellation, error) {
-	panic("universe.Constellations has not been implemented")
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Constellations",
+	})
+
+	constellations, err := s.cache.Constellations(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch constellations from cache")
+		return nil, fmt.Errorf("failed to fetch constellations from cache")
+	}
+
+	if len(constellations) > 0 {
+		return constellations, nil
+	}
+
+	constellations, err = s.universe.Constellations(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch constellations from db")
+		return nil, fmt.Errorf("failed to fetch constellations from db")
+	}
+
+	err = s.cache.SetConstellations(ctx, constellations, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache constellations")
+		return nil, fmt.Errorf("failed to cache constellations")
+	}
+
+	return constellations, nil
+
 }
 
 func (s *service) Faction(ctx context.Context, id uint) (*athena.Faction, error) {
@@ -660,13 +326,42 @@ func (s *service) Faction(ctx context.Context, id uint) (*athena.Faction, error)
 		return nil, err
 	}
 
-	err = s.cache.SetFaction(ctx, faction, cache.ExpiryMinutes(0))
+	err = s.cache.SetFaction(ctx, faction)
 
 	return faction, err
 }
 
 func (s *service) Factions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Faction, error) {
-	panic("universe.Factions has not been implemented")
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Factions",
+	})
+
+	factions, err := s.cache.Factions(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch factions from cache")
+		return nil, fmt.Errorf("failed to fetch factions from cache")
+	}
+
+	if len(factions) > 0 {
+		return factions, nil
+	}
+
+	factions, err = s.universe.Factions(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch factions from db")
+		return nil, fmt.Errorf("failed to fetch factions from db")
+	}
+
+	err = s.cache.SetFactions(ctx, factions, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache factions")
+		return nil, fmt.Errorf("failed to cache factions")
+	}
+
+	return factions, nil
+
 }
 
 func (s *service) Group(ctx context.Context, id uint) (*athena.Group, error) {
@@ -697,40 +392,43 @@ func (s *service) Group(ctx context.Context, id uint) (*athena.Group, error) {
 		}
 	}
 
-	err = s.cache.SetGroup(ctx, group, cache.ExpiryMinutes(60))
+	err = s.cache.SetGroup(ctx, group)
 
 	return group, err
 
 }
 
 func (s *service) Groups(ctx context.Context, operators ...*athena.Operator) ([]*athena.Group, error) {
-	panic("universe.Groups has not been implemented")
-}
 
-func (s *service) Planet(ctx context.Context, id uint) (*athena.Planet, error) {
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Groups",
+	})
 
-	planet, err := s.cache.Planet(ctx, id)
+	groups, err := s.cache.Groups(ctx, operators...)
 	if err != nil {
-		return nil, err
+		entry.WithError(err).Error("failed to fetch groups from cache")
+		return nil, fmt.Errorf("failed to fetch groups from cache")
 	}
 
-	if planet != nil {
-		return planet, nil
+	if len(groups) > 0 {
+		return groups, nil
 	}
 
-	planet, err = s.universe.Planet(ctx, id)
+	groups, err = s.universe.Groups(ctx, operators...)
 	if err != nil {
-		return nil, err
+		entry.WithError(err).Error("failed to fetch groups from db")
+		return nil, fmt.Errorf("failed to fetch groups from db")
 	}
 
-	err = s.cache.SetPlanet(ctx, planet)
+	err = s.cache.SetGroups(ctx, groups, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache groups")
+		return nil, fmt.Errorf("failed to cache groups")
+	}
 
-	return planet, err
+	return groups, nil
 
-}
-
-func (s *service) Planets(ctx context.Context, operators ...*athena.Operator) ([]*athena.Planet, error) {
-	panic("universe.Planets has not been implemented")
 }
 
 func (s *service) Race(ctx context.Context, id uint) (*athena.Race, error) {
@@ -749,9 +447,42 @@ func (s *service) Race(ctx context.Context, id uint) (*athena.Race, error) {
 		return nil, err
 	}
 
-	err = s.cache.SetRace(ctx, race, cache.ExpiryMinutes(0))
+	err = s.cache.SetRace(ctx, race)
 
 	return race, err
+
+}
+
+func (s *service) Races(ctx context.Context, operators ...*athena.Operator) ([]*athena.Race, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Races",
+	})
+
+	races, err := s.cache.Races(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch races from cache")
+		return nil, fmt.Errorf("failed to fetch races from cache")
+	}
+
+	if len(races) > 0 {
+		return races, nil
+	}
+
+	races, err = s.universe.Races(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch races from db")
+		return nil, fmt.Errorf("failed to fetch races from db")
+	}
+
+	err = s.cache.SetRaces(ctx, races, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache races")
+		return nil, fmt.Errorf("failed to cache races")
+	}
+
+	return races, nil
 
 }
 
@@ -783,14 +514,43 @@ func (s *service) Region(ctx context.Context, id uint) (*athena.Region, error) {
 		}
 	}
 
-	err = s.cache.SetRegion(ctx, region, cache.ExpiryMinutes(0))
+	err = s.cache.SetRegion(ctx, region)
 
 	return region, err
 
 }
 
 func (s *service) Regions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Region, error) {
-	panic("universe.Regions has not been implemented")
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Regions",
+	})
+
+	regions, err := s.cache.Regions(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch regions from cache")
+		return nil, fmt.Errorf("failed to fetch regions from cache")
+	}
+
+	if len(regions) > 0 {
+		return regions, nil
+	}
+
+	regions, err = s.universe.Regions(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch regions from db")
+		return nil, fmt.Errorf("failed to fetch regions from db")
+	}
+
+	err = s.cache.SetRegions(ctx, regions, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache regions")
+		return nil, fmt.Errorf("failed to cache regions")
+	}
+
+	return regions, nil
+
 }
 
 func (s *service) SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem, error) {
@@ -821,14 +581,43 @@ func (s *service) SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem
 		}
 	}
 
-	err = s.cache.SetSolarSystem(ctx, solarSystem, cache.ExpiryMinutes(30))
+	err = s.cache.SetSolarSystem(ctx, solarSystem)
 
 	return solarSystem, err
 
 }
 
 func (s *service) SolarSystems(ctx context.Context, operators ...*athena.Operator) ([]*athena.SolarSystem, error) {
-	panic("universe.SolarSystems has not been implemented")
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "SolarSystems",
+	})
+
+	systems, err := s.cache.SolarSystems(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch systems from cache")
+		return nil, fmt.Errorf("failed to fetch systems from cache")
+	}
+
+	if len(systems) > 0 {
+		return systems, nil
+	}
+
+	systems, err = s.universe.SolarSystems(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch systems from db")
+		return nil, fmt.Errorf("failed to fetch systems from db")
+	}
+
+	err = s.cache.SetSolarSystems(ctx, systems, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache systems")
+		return nil, fmt.Errorf("failed to cache systems")
+	}
+
+	return systems, nil
+
 }
 
 func (s *service) Station(ctx context.Context, id uint) (*athena.Station, error) {
@@ -862,6 +651,39 @@ func (s *service) Station(ctx context.Context, id uint) (*athena.Station, error)
 	err = s.cache.SetStation(ctx, station)
 
 	return station, err
+
+}
+
+func (s *service) Stations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Station, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Stations",
+	})
+
+	stations, err := s.cache.Stations(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch stations from cache")
+		return nil, fmt.Errorf("failed to fetch stations from cache")
+	}
+
+	if len(stations) > 0 {
+		return stations, nil
+	}
+
+	stations, err = s.universe.Stations(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch stations from db")
+		return nil, fmt.Errorf("failed to fetch stations from db")
+	}
+
+	err = s.cache.SetStations(ctx, stations, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache stations")
+		return nil, fmt.Errorf("failed to cache stations")
+	}
+
+	return stations, nil
 
 }
 
@@ -900,6 +722,39 @@ func (s *service) Structure(ctx context.Context, member *athena.Member, id uint6
 
 }
 
+func (s *service) Structures(ctx context.Context, operators ...*athena.Operator) ([]*athena.Structure, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Structures",
+	})
+
+	structures, err := s.cache.Structures(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch structures from cache")
+		return nil, fmt.Errorf("failed to fetch structures from cache")
+	}
+
+	if len(structures) > 0 {
+		return structures, nil
+	}
+
+	structures, err = s.universe.Structures(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch structures from db")
+		return nil, fmt.Errorf("failed to fetch structures from db")
+	}
+
+	err = s.cache.SetStructures(ctx, structures, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache structures")
+		return nil, fmt.Errorf("failed to cache structures")
+	}
+
+	return structures, nil
+
+}
+
 func (s *service) Type(ctx context.Context, id uint) (*athena.Type, error) {
 
 	item, err := s.cache.Type(ctx, id)
@@ -928,12 +783,41 @@ func (s *service) Type(ctx context.Context, id uint) (*athena.Type, error) {
 		}
 	}
 
-	err = s.cache.SetType(ctx, item, cache.ExpiryMinutes(30))
+	err = s.cache.SetType(ctx, item)
 
 	return item, err
 
 }
 
 func (s *service) Types(ctx context.Context, operators ...*athena.Operator) ([]*athena.Type, error) {
-	panic("universe.Types has not been implemented")
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "Types",
+	})
+
+	types, err := s.cache.Types(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch types from cache")
+		return nil, fmt.Errorf("failed to fetch types from cache")
+	}
+
+	if len(types) > 0 {
+		return types, nil
+	}
+
+	types, err = s.universe.Types(ctx, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch types from db")
+		return nil, fmt.Errorf("failed to fetch types from db")
+	}
+
+	err = s.cache.SetTypes(ctx, types, operators...)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache types")
+		return nil, fmt.Errorf("failed to cache types")
+	}
+
+	return types, nil
+
 }

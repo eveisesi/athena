@@ -63,10 +63,8 @@ func (s *service) UpdateEtag(ctx context.Context, etagID string, etag *athena.Et
 
 	_ = s.cache.SetEtag(
 		ctx, etag.EtagID, etag,
-		cache.WithCustomExpiry(
-			time.Since(
-				etag.CachedUntil,
-			),
+		time.Since(
+			etag.CachedUntil,
 		),
 	)
 

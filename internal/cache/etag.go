@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -11,7 +12,7 @@ import (
 
 type etagService interface {
 	Etag(ctx context.Context, etagID string) (*athena.Etag, error)
-	SetEtag(ctx context.Context, etagID string, etag *athena.Etag, optionFunc ...OptionFunc) error
+	SetEtag(ctx context.Context, etagID string, etag *athena.Etag, expires time.Duration) error
 	DeleteEtag(ctx context.Context, etagID string) error
 }
 
@@ -40,16 +41,14 @@ func (s *service) Etag(ctx context.Context, etagID string) (*athena.Etag, error)
 	return etag, nil
 
 }
-func (s *service) SetEtag(ctx context.Context, etagID string, etag *athena.Etag, optionFuncs ...OptionFunc) error {
+func (s *service) SetEtag(ctx context.Context, etagID string, etag *athena.Etag, expires time.Duration) error {
 
 	data, err := json.Marshal(etag)
 	if err != nil {
 		return fmt.Errorf("failed to marshal etag: %w", err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyEtag, etagID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyEtag, etagID), data, expires).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

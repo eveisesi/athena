@@ -2,8 +2,10 @@ package cache
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -12,17 +14,17 @@ import (
 
 type characterService interface {
 	Character(ctx context.Context, id uint) (*athena.Character, error)
-	SetCharacter(ctx context.Context, character *athena.Character, optionFuncs ...OptionFunc) error
-	CharacterCorporationHistory(ctx context.Context, id uint) ([]*athena.CharacterCorporationHistory, error)
-	SetCharacterCorporationHistory(ctx context.Context, id uint, history []*athena.CharacterCorporationHistory, optionFuncs ...OptionFunc) error
-	// Characters(ctx context.Context, operators []*athena.Operator) ([]*athena.Character, error)
-	// SetCharacters(ctx context.Context, operators []*athena.Operator, characters []*athena.Character, optionFuncs ...OptionFunc) error
+	SetCharacter(ctx context.Context, characterID uint, character *athena.Character) error
+	Characters(ctx context.Context, operators ...*athena.Operator) ([]*athena.Character, error)
+	SetCharacters(ctx context.Context, records []*athena.Character, operators ...*athena.Operator) error
+	CharacterCorporationHistory(ctx context.Context, operators ...*athena.Operator) ([]*athena.CharacterCorporationHistory, error)
+	SetCharacterCorporationHistory(ctx context.Context, records []*athena.CharacterCorporationHistory, operators ...*athena.Operator) error
 }
 
 const (
-	keyCharacter                   = "athena::character::${id}"
-	keyCharacterCorporationHistory = "athena::character::${id}::history"
-	// keyCharacters = "athena::characters::%d"
+	keyCharacter                   = "athena::character::%d"
+	keyCharacters                  = "athena::characters::%x"
+	keyCharacterCorporationHistory = "athena::characters::%x::history"
 )
 
 func (s *service) Character(ctx context.Context, id uint) (*athena.Character, error) {
@@ -49,7 +51,7 @@ func (s *service) Character(ctx context.Context, id uint) (*athena.Character, er
 
 }
 
-func (s *service) SetCharacter(ctx context.Context, character *athena.Character, optionFuncs ...OptionFunc) error {
+func (s *service) SetCharacter(ctx context.Context, characterID uint, character *athena.Character) error {
 
 	key := format.Formatm(keyCharacter, format.Values{
 		"id": character.ID,
@@ -59,9 +61,7 @@ func (s *service) SetCharacter(ctx context.Context, character *athena.Character,
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
@@ -70,11 +70,14 @@ func (s *service) SetCharacter(ctx context.Context, character *athena.Character,
 
 }
 
-func (s *service) CharacterCorporationHistory(ctx context.Context, id uint) ([]*athena.CharacterCorporationHistory, error) {
+func (s *service) Characters(ctx context.Context, operators ...*athena.Operator) ([]*athena.Character, error) {
 
-	key := format.Formatm(keyCharacterCorporationHistory, format.Values{
-		"id": id,
-	})
+	keyData, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("[Cache Layer] Failed to marshal operators for key: %w", err)
+	}
+
+	key := fmt.Sprintf(keyCharacters, sha256.Sum224(keyData))
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil {
 		return nil, fmt.Errorf(errKeyNotFound, key, err)
@@ -84,15 +87,15 @@ func (s *service) CharacterCorporationHistory(ctx context.Context, id uint) ([]*
 		return nil, nil
 	}
 
-	records := make([]*athena.CharacterCorporationHistory, len(members))
-	for i, member := range members {
-		var record = new(athena.CharacterCorporationHistory)
+	records := make([]*athena.Character, 0, len(members))
+	for _, member := range members {
+		var record = new(athena.Character)
 		err = json.Unmarshal([]byte(member), record)
 		if err != nil {
 			return nil, fmt.Errorf(errSetUnmarshalFailed, key, err)
 		}
 
-		records[i] = record
+		records = append(records, record)
 
 	}
 
@@ -100,9 +103,72 @@ func (s *service) CharacterCorporationHistory(ctx context.Context, id uint) ([]*
 
 }
 
-func (s *service) SetCharacterCorporationHistory(ctx context.Context, id uint, records []*athena.CharacterCorporationHistory, optionFuncs ...OptionFunc) error {
+func (s *service) SetCharacters(ctx context.Context, records []*athena.Character, operators ...*athena.Operator) error {
 
-	options := applyOptionFuncs(nil, optionFuncs)
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		data, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("failed to marshal characters for cache: %w", err)
+		}
+
+		members = append(members, string(data))
+	}
+
+	keyData, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators for key: %w", err)
+	}
+
+	key := fmt.Sprintf(keyCharacters, sha256.Sum224(keyData))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to cache characters %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Minute*10).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) CharacterCorporationHistory(ctx context.Context, operators ...*athena.Operator) ([]*athena.CharacterCorporationHistory, error) {
+
+	keyData, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("[Cache Layer] Failed to marshal operators for key: %w", err)
+	}
+
+	key := fmt.Sprintf(keyCharacterCorporationHistory, sha256.Sum224(keyData))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil {
+		return nil, fmt.Errorf(errKeyNotFound, key, err)
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	records := make([]*athena.CharacterCorporationHistory, 0, len(members))
+	for _, member := range members {
+		var record = new(athena.CharacterCorporationHistory)
+		err = json.Unmarshal([]byte(member), record)
+		if err != nil {
+			return nil, fmt.Errorf(errSetUnmarshalFailed, key, err)
+		}
+
+		records = append(records, record)
+
+	}
+
+	return records, nil
+
+}
+
+func (s *service) SetCharacterCorporationHistory(ctx context.Context, records []*athena.CharacterCorporationHistory, operators ...*athena.Operator) error {
 
 	members := make([]string, 0, len(records))
 	for _, record := range records {
@@ -114,15 +180,18 @@ func (s *service) SetCharacterCorporationHistory(ctx context.Context, id uint, r
 		members = append(members, string(data))
 	}
 
-	key := format.Formatm(keyCharacterCorporationHistory, format.Values{
-		"id": id,
-	})
-	_, err := s.client.SAdd(ctx, key, members).Result()
+	keyData, err := json.Marshal(operators)
 	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to cache corporation history for character %d: %w", id, err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators for key: %w", err)
 	}
 
-	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	key := fmt.Sprintf(keyCharacterCorporationHistory, sha256.Sum224(keyData))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to cache corporation history %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
@@ -130,61 +199,3 @@ func (s *service) SetCharacterCorporationHistory(ctx context.Context, id uint, r
 	return nil
 
 }
-
-// func (s *service) Characters(ctx context.Context, operators []*athena.Operator) ([]*athena.Character, error) {
-
-// 	data, err := json.Marshal(operators)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to marshal operators: %w", err)
-// 	}
-
-// 	h := sha256.New()
-// 	_, _ = h.Write(data)
-// 	bs := h.Sum(nil)
-
-// 	result, err := s.client.Get(ctx, fmt.Sprintf(keyCharacters, fmt.Sprintf("%x", bs))).Result()
-// 	if err != nil && err != redis.Nil {
-// 		return nil, err
-// 	}
-
-// 	if len(result) == 0 {
-// 		return nil, nil
-// 	}
-
-// 	var characters = make([]*athena.Character, 0)
-
-// 	err = json.Unmarshal([]byte(result), &characters)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return characters, nil
-
-// }
-
-// func (s *service) SetCharacters(ctx context.Context, operators []*athena.Operator, characters []*athena.Character, optionFuncs ...OptionFunc) error {
-
-// 	data, err := json.Marshal(operators)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to marshal operators: %w", err)
-// 	}
-
-// 	h := sha256.New()
-// 	_, _ = h.Write(data)
-// 	bs := h.Sum(nil)
-
-// 	data, err = json.Marshal(characters)
-// 	if err != nil {
-// 		return fmt.Errorf("Failed to marshal payload: %w", err)
-// 	}
-
-// 	options := applyOptionFuncs(nil, optionFuncs)
-
-// 	_, err = s.client.Set(ctx, fmt.Sprintf(keyCharacters, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
-// 	if err != nil {
-// 		return fmt.Errorf("failed to write to cache: %w", err)
-// 	}
-
-// 	return nil
-
-// }

@@ -60,13 +60,14 @@ func (s *service) FetchAlliance(ctx context.Context, allianceID uint) (*athena.E
 		"method":    "FetchAlliance",
 	})
 
+	ptag := etag.Etag
 	alliance, etag, _, err := s.esi.GetAlliance(ctx, allianceID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch alliance from ESI")
 		return nil, fmt.Errorf("failed to fetch alliance from ESI")
 	}
 
-	if alliance == nil {
+	if etag.Etag == ptag {
 		return etag, err
 	}
 
@@ -76,13 +77,7 @@ func (s *service) FetchAlliance(ctx context.Context, allianceID uint) (*athena.E
 		return nil, fmt.Errorf("failed to fetch alliance from DB")
 	}
 
-	exists := true
-
-	if existing == nil || errors.Is(err, sql.ErrNoRows) {
-		exists = false
-	}
-
-	switch exists {
+	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
 	case true:
 		alliance, err = s.alliance.UpdateAlliance(ctx, allianceID, alliance)
 		if err != nil {
@@ -97,7 +92,7 @@ func (s *service) FetchAlliance(ctx context.Context, allianceID uint) (*athena.E
 		}
 	}
 
-	err = s.cache.SetAlliance(ctx, alliance, cache.ExpiryHours(1))
+	err = s.cache.SetAlliance(ctx, allianceID, alliance)
 	if err != nil {
 		entry.WithError(err).Error("failed to cache alliance in Redis")
 		return nil, fmt.Errorf("failed to cache alliance in Redis")
@@ -121,19 +116,19 @@ func (s *service) Alliance(ctx context.Context, allianceID uint) (*athena.Allian
 		return nil, fmt.Errorf("failed to fetch alliance from cache")
 	}
 
-	if alliance == nil {
-		alliance, err = s.alliance.Alliance(ctx, allianceID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch alliance from DB")
-			return nil, fmt.Errorf("failed to fetch alliance from DB")
-		}
+	if alliance != nil {
+		return alliance, nil
+	}
 
-		if alliance != nil {
-			err = s.cache.SetAlliance(ctx, alliance)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache alliance")
-			}
-		}
+	alliance, err = s.alliance.Alliance(ctx, allianceID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch alliance from DB")
+		return nil, fmt.Errorf("failed to fetch alliance from DB")
+	}
+
+	err = s.cache.SetAlliance(ctx, alliance.ID, alliance)
+	if err != nil {
+		entry.WithError(err).Error("failed to cache alliance")
 	}
 
 	return alliance, err
@@ -147,7 +142,7 @@ func (s *service) Alliances(ctx context.Context, operators ...*athena.Operator) 
 		"method":  "Alliances",
 	})
 
-	alliances, err := s.cache.Alliances(ctx, operators)
+	alliances, err := s.cache.Alliances(ctx, operators...)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch alliances from cache")
 		return nil, fmt.Errorf("failed to fetch alliances from cache")
@@ -159,14 +154,14 @@ func (s *service) Alliances(ctx context.Context, operators ...*athena.Operator) 
 
 	alliances, err = s.alliance.Alliances(ctx, operators...)
 	if err != nil {
-		entry.WithError(err).Error("failed to fetch alliances from cache")
-		return nil, fmt.Errorf("failed to fetch alliances from cache")
+		entry.WithError(err).Error("failed to fetch alliances from db")
+		return nil, fmt.Errorf("failed to fetch alliances from db")
 	}
 
-	err = s.cache.SetAlliances(ctx, operators, alliances, cache.ExpiryMinutes(5))
+	err = s.cache.SetAlliances(ctx, alliances, operators...)
 	if err != nil {
-		entry.WithError(err).Error("failed to cache alliances in Redis")
-		return nil, fmt.Errorf("failed to cache alliances in Redis")
+		entry.WithError(err).Error("failed to cache alliances")
+		return nil, fmt.Errorf("failed to cache alliances")
 	}
 
 	return alliances, nil

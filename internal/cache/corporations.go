@@ -2,42 +2,45 @@ package cache
 
 import (
 	"context"
+	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
-	"github.com/sirkon/go-format"
 )
 
 type corporationService interface {
-	Corporation(ctx context.Context, id uint) (*athena.Corporation, error)
-	SetCorporation(ctx context.Context, corporation *athena.Corporation, optionFuncs ...OptionFunc) error
-	CorporationAllianceHistory(ctx context.Context, id uint) ([]*athena.CorporationAllianceHistory, error)
-	SetCorporationAllianceHistory(ctx context.Context, id uint, history []*athena.CorporationAllianceHistory, optionFuncs ...OptionFunc) error
-	// Corporations(ctx context.Context, operators []*athena.Operator) ([]*athena.Corporation, error)
-	// SetCorporations(ctx context.Context, operators []*athena.Operator, corporations []*athena.Corporation, optionFuncs ...OptionFunc) error
+	Corporation(ctx context.Context, corporationID uint) (*athena.Corporation, error)
+	SetCorporation(ctx context.Context, corporationID uint, corporation *athena.Corporation) error
+
+	Corporations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Corporation, error)
+	SetCorporations(ctx context.Context, corporations []*athena.Corporation, operators ...*athena.Operator) error
+
+	CorporationAllianceHistory(ctx context.Context, operators ...*athena.Operator) ([]*athena.CorporationAllianceHistory, error)
+	SetCorporationAllianceHistory(ctx context.Context, records []*athena.CorporationAllianceHistory, operators ...*athena.Operator) error
 }
 
 const (
 	keyCorporation                = "athena::corporation::%d"
-	keyCorporationAllianceHistory = "athena::corporation::%d::history"
-	// keyCorporations = "athena::corporations::%s"
+	keyCorporationAllianceHistory = "athena::corporation::%x::history"
+	keyCorporations               = "athena::corporations::%x"
 )
 
-func (s *service) Corporation(ctx context.Context, id uint) (*athena.Corporation, error) {
+func (s *service) Corporation(ctx context.Context, corporationID uint) (*athena.Corporation, error) {
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyCorporation, id)).Result()
-	if err != nil && err != redis.Nil {
+	result, err := s.client.Get(ctx, fmt.Sprintf(keyCorporation, corporationID)).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, err
 	}
 
-	if len(result) == 0 {
+	if errors.Is(err, redis.Nil) {
 		return nil, nil
 	}
 
 	var corporation = new(athena.Corporation)
-
 	err = json.Unmarshal([]byte(result), &corporation)
 	if err != nil {
 		return nil, err
@@ -47,28 +50,100 @@ func (s *service) Corporation(ctx context.Context, id uint) (*athena.Corporation
 
 }
 
-func (s *service) SetCorporation(ctx context.Context, corporation *athena.Corporation, optionFuncs ...OptionFunc) error {
+func (s *service) SetCorporation(ctx context.Context, corporationID uint, corporation *athena.Corporation) error {
 
 	data, err := json.Marshal(corporation)
 	if err != nil {
 		return fmt.Errorf("failed to marshal corporation: %w", err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporation, corporation.ID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporation, corporation.ID), data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
 
 	return nil
+
 }
 
-func (s *service) CorporationAllianceHistory(ctx context.Context, id uint) ([]*athena.CorporationAllianceHistory, error) {
+func (s *service) Corporations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Corporation, error) {
 
-	key := format.Formatm(keyCorporationAllianceHistory, format.Values{
-		"id": id,
-	})
+	keyData, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyCorporations, sha1.Sum(keyData))
+
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, err
+	}
+
+	if len(members) == 0 || errors.Is(err, redis.Nil) {
+		return nil, nil
+	}
+
+	records := make([]*athena.Corporation, 0, len(members))
+	for _, member := range members {
+		var record = new(athena.Corporation)
+		err = json.Unmarshal([]byte(member), record)
+		if err != nil {
+			return nil, fmt.Errorf(errSetUnmarshalFailed, key, err)
+		}
+		records = append(records, record)
+
+	}
+
+	return records, nil
+
+}
+
+func (s *service) SetCorporations(ctx context.Context, corporations []*athena.Corporation, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(corporations))
+	for _, corporation := range corporations {
+		data, err := json.Marshal(corporation)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal corporation: %w", err)
+		}
+
+		members = append(members, string(data))
+	}
+
+	if len(operators) == 0 {
+		return fmt.Errorf("length of operators should be greater 0")
+	}
+
+	keyData, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyCorporations, sha1.Sum(keyData))
+
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("failed to write to cache: %w", err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to set expiry on key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) CorporationAllianceHistory(ctx context.Context, operators ...*athena.Operator) ([]*athena.CorporationAllianceHistory, error) {
+
+	keyData, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("[Cache Layer] Failed to marshal operators for key: %w", err)
+	}
+
+	key := fmt.Sprintf(keyCorporationAllianceHistory, sha1.Sum(keyData))
 
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil {
@@ -79,15 +154,15 @@ func (s *service) CorporationAllianceHistory(ctx context.Context, id uint) ([]*a
 		return nil, nil
 	}
 
-	records := make([]*athena.CorporationAllianceHistory, len(members))
-	for i, member := range members {
+	records := make([]*athena.CorporationAllianceHistory, 0, len(members))
+	for _, member := range members {
 		var record = new(athena.CorporationAllianceHistory)
 		err = json.Unmarshal([]byte(member), record)
 		if err != nil {
 			return nil, fmt.Errorf(errSetUnmarshalFailed, key, err)
 		}
 
-		records[i] = record
+		records = append(records, record)
 
 	}
 
@@ -95,9 +170,7 @@ func (s *service) CorporationAllianceHistory(ctx context.Context, id uint) ([]*a
 
 }
 
-func (s *service) SetCorporationAllianceHistory(ctx context.Context, id uint, records []*athena.CorporationAllianceHistory, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetCorporationAllianceHistory(ctx context.Context, records []*athena.CorporationAllianceHistory, operators ...*athena.Operator) error {
 
 	members := make([]string, 0, len(records))
 	for _, record := range records {
@@ -109,77 +182,22 @@ func (s *service) SetCorporationAllianceHistory(ctx context.Context, id uint, re
 		members = append(members, string(data))
 	}
 
-	key := format.Formatm(keyCharacterCorporationHistory, format.Values{
-		"id": id,
-	})
-	_, err := s.client.SAdd(ctx, key, members).Result()
+	keyData, err := json.Marshal(operators)
 	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to cache alliance history for corporation %d: %w", id, err)
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators for key: %w", err)
 	}
 
-	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	key := fmt.Sprintf(keyCorporationAllianceHistory, sha1.Sum(keyData))
+	_, err = s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
-		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
+		return fmt.Errorf("[Cache Layer] Failed to cache alliance history for corporations %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
 
 }
-
-// func (s *service) Corporations(ctx context.Context, operators []*athena.Operator) ([]*athena.Corporation, error) {
-
-// 	data, err := json.Marshal(operators)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to marshal operators: %w", err)
-// 	}
-
-// 	h := sha256.New()
-// 	_, _ = h.Write(data)
-// 	bs := h.Sum(nil)
-
-// 	result, err := s.client.Get(ctx, fmt.Sprintf(keyCorporations, fmt.Sprintf("%x", bs))).Result()
-// 	if err != nil && err != redis.Nil {
-// 		return nil, err
-// 	}
-
-// 	if len(result) > 0 {
-// 		var corporations = make([]*athena.Corporation, 0)
-
-// 		err = json.Unmarshal([]byte(result), &corporations)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		return corporations, nil
-// 	}
-
-// 	return nil, nil
-
-// }
-
-// func (s *service) SetCorporations(ctx context.Context, operators []*athena.Operator, corporations []*athena.Corporation, optionFuncs ...OptionFunc) error {
-
-// 	data, err := json.Marshal(operators)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to marshal operators: %w", err)
-// 	}
-
-// 	h := sha256.New()
-// 	_, _ = h.Write(data)
-// 	bs := h.Sum(nil)
-
-// 	data, err = json.Marshal(corporations)
-// 	if err != nil {
-// 		return fmt.Errorf("Failed to marshal payload: %w", err)
-// 	}
-
-// 	options := applyOptionFuncs(nil, optionFuncs)
-
-// 	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporations, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
-// 	if err != nil {
-// 		return fmt.Errorf("failed to write to cache: %w", err)
-// 	}
-
-// 	return nil
-
-// }

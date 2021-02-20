@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -11,11 +12,11 @@ import (
 
 type locationService interface {
 	MemberLocation(ctx context.Context, memberID uint) (*athena.MemberLocation, error)
-	SetMemberLocation(ctx context.Context, memberID uint, location *athena.MemberLocation, optionFuncs ...OptionFunc) error
+	SetMemberLocation(ctx context.Context, memberID uint, location *athena.MemberLocation) error
 	MemberOnline(ctx context.Context, memberID uint) (*athena.MemberOnline, error)
-	SetMemberOnline(ctx context.Context, memberID uint, online *athena.MemberOnline, optionFuncs ...OptionFunc) error
+	SetMemberOnline(ctx context.Context, memberID uint, online *athena.MemberOnline) error
 	MemberShip(ctx context.Context, memberID uint) (*athena.MemberShip, error)
-	SetMemberShip(ctx context.Context, memberID uint, ship *athena.MemberShip, optionFuncs ...OptionFunc) error
+	SetMemberShip(ctx context.Context, memberID uint, ship *athena.MemberShip) error
 }
 
 const (
@@ -46,16 +47,14 @@ func (s *service) MemberLocation(ctx context.Context, memberID uint) (*athena.Me
 
 }
 
-func (s *service) SetMemberLocation(ctx context.Context, memberID uint, location *athena.MemberLocation, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberLocation(ctx context.Context, memberID uint, location *athena.MemberLocation) error {
 
 	data, err := json.Marshal(location)
 	if err != nil {
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberLocation, memberID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberLocation, memberID), data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -86,16 +85,14 @@ func (s *service) MemberOnline(ctx context.Context, memberID uint) (*athena.Memb
 
 }
 
-func (s *service) SetMemberOnline(ctx context.Context, memberID uint, online *athena.MemberOnline, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberOnline(ctx context.Context, memberID uint, online *athena.MemberOnline) error {
 
 	data, err := json.Marshal(online)
 	if err != nil {
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberOnline, memberID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberOnline, memberID), data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -126,16 +123,14 @@ func (s *service) MemberShip(ctx context.Context, memberID uint) (*athena.Member
 
 }
 
-func (s *service) SetMemberShip(ctx context.Context, memberID uint, ship *athena.MemberShip, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberShip(ctx context.Context, memberID uint, ship *athena.MemberShip) error {
 
 	data, err := json.Marshal(ship)
 	if err != nil {
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberShip, memberID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMemberShip, memberID), data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}

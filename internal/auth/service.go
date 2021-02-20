@@ -170,7 +170,7 @@ func (s *service) getSet() (*jwk.Set, error) {
 			return nil, fmt.Errorf("failed to read jwk response body: %w", err)
 		}
 
-		err = s.cache.SaveJSONWebKeySet(ctx, buf, cache.ExpiryHours(6))
+		err = s.cache.SaveJSONWebKeySet(ctx, buf)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save jwks to cache layer: %w", err)
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -11,9 +12,9 @@ import (
 
 type authService interface {
 	JSONWebKeySet(ctx context.Context) ([]byte, error)
-	SaveJSONWebKeySet(ctx context.Context, jwks []byte, optionFuncs ...OptionFunc) error
+	SaveJSONWebKeySet(ctx context.Context, jwks []byte) error
 	AuthAttempt(ctx context.Context, hash string) (*athena.AuthAttempt, error)
-	CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAttempt, optionFuncs ...OptionFunc) (*athena.AuthAttempt, error)
+	CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAttempt) (*athena.AuthAttempt, error)
 }
 
 const keyAuthAttempt = "athena::auth::attempt::%s"
@@ -34,11 +35,9 @@ func (s *service) JSONWebKeySet(ctx context.Context) ([]byte, error) {
 
 }
 
-func (s *service) SaveJSONWebKeySet(ctx context.Context, jwks []byte, optionFuncs ...OptionFunc) error {
+func (s *service) SaveJSONWebKeySet(ctx context.Context, jwks []byte) error {
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err := s.client.Set(ctx, keyAuthJWKS, jwks, options.expiry).Result()
+	_, err := s.client.Set(ctx, keyAuthJWKS, jwks, time.Hour*6).Result()
 
 	return err
 
@@ -66,20 +65,18 @@ func (s *service) AuthAttempt(ctx context.Context, hash string) (*athena.AuthAtt
 
 }
 
-func (s *service) CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAttempt, optionFuncs ...OptionFunc) (*athena.AuthAttempt, error) {
+func (s *service) CreateAuthAttempt(ctx context.Context, attempt *athena.AuthAttempt) (*athena.AuthAttempt, error) {
 
 	if attempt.State == "" {
 		return nil, fmt.Errorf("empty state provided")
 	}
-
-	options := applyOptionFuncs(nil, optionFuncs)
 
 	b, err := json.Marshal(attempt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to cache auth attempt: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyAuthAttempt, attempt.State), b, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyAuthAttempt, attempt.State), b, time.Minute*5).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create auth attempt: %w", err)
 	}

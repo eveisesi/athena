@@ -1,0 +1,95 @@
+type Race @goModel(model: "github.com/eveisesi/athena.Race") {
+    raceID: Uint!
+    name: String!
+}
+
+type Ancestry @goModel(model: "github.com/eveisesi/athena.Ancestry") {
+    id: Uint!
+    name: String!
+    bloodlineID: Uint!
+}
+
+type Bloodline @goModel(model: "github.com/eveisesi/athena.Bloodline") {
+    bloodlineID: Uint!
+    name: String!
+    raceID: Uint!
+    corporationID: Uint!
+    shipTypeID: Uint!
+    charisma: Uint!
+    intelligence: Uint!
+    memory: Uint!
+    perception: Uint!
+    willpower: Uint!
+}
+
+type Category @goModel(model: "github.com/eveisesi/athena.Category") {
+    id: Uint!
+    name: String!
+    published: Boolean!
+}
+
+type Group @goModel(model: "github.com/eveisesi/athena.Group") {
+    id: Uint!
+    name: String!
+    published: Boolean!
+    categoryID: Uint!
+}
+
+type Type @goModel(model: "github.com/eveisesi/athena.Type") {
+    id: Uint!
+    name: String!
+    groupID: Uint!
+    published: Boolean!
+    capacity: Float!
+    marketGroupID: Uint
+    mass: Float
+    packagedVolume: Float
+    portionSize: Uint
+    radius: Float
+    volume: Float!
+}
+
+type Region @goModel(model: "github.com/eveisesi/athena.Region") {
+    id: Uint!
+    name: String!
+}
+
+type Constellation @goModel(model: "github.com/eveisesi/athena.Constellation") {
+    id: Uint!
+    name: String!
+    regionID: Uint!
+}
+
+type SolarSystem @goModel(model: "github.com/eveisesi/athena.SolarSystem") {
+    id: Uint!
+    name: String!
+    constellationID: Uint!
+    securityStatus: Float!
+    starID: Uint
+    securityClass: String
+}
+
+type Station @goModel(model: "github.com/eveisesi/athena.Station") {
+    id: Uint!
+    name: String!
+    systemID: Uint!
+    typeID: Uint!
+    raceID: Uint
+    owner: Uint
+    maxDockableShipVolume: Float!
+    officeRentalCost: Float!
+    reprocessingEfficiency: Float!
+    reprocessingStationsTake: Float!
+}
+
+type Structure @goModel(model: "github.com/eveisesi/athena.Structure") {
+    id: Uint!
+    name: String!
+    ownerID: Uint!
+    solarSystemID: Uint!
+    typeID: Uint
+
+    # owner: Corporation
+    # system: System
+    # type: Type
+}

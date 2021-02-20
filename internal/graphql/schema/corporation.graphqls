@@ -12,7 +12,7 @@ type Corporation @goModel(model: "github.com/eveisesi/athena.Corporation") {
     taxRate: Float!
     ticker: String!
     url: String
-    warEligible: Bool!
+    warEligible: Boolean!
 
-    alliance: Alliance
+    # alliance: Alliance
 }

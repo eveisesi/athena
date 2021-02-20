@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -13,9 +14,9 @@ import (
 
 type cloneService interface {
 	MemberClones(ctx context.Context, memberID uint) (*athena.MemberClones, error)
-	SetMemberClones(ctx context.Context, memberID uint, clones *athena.MemberClones, optionFuncs ...OptionFunc) error
+	SetMemberClones(ctx context.Context, memberID uint, clones *athena.MemberClones) error
 	MemberImplants(ctx context.Context, memberID uint) ([]*athena.MemberImplant, error)
-	SetMemberImplants(ctx context.Context, memberID uint, implants []*athena.MemberImplant, optionFuncs ...OptionFunc) error
+	SetMemberImplants(ctx context.Context, memberID uint, implants []*athena.MemberImplant) error
 }
 
 const (
@@ -47,9 +48,7 @@ func (s *service) MemberClones(ctx context.Context, memberID uint) (*athena.Memb
 
 }
 
-func (s *service) SetMemberClones(ctx context.Context, memberID uint, clone *athena.MemberClones, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberClones(ctx context.Context, memberID uint, clone *athena.MemberClones) error {
 
 	data, err := json.Marshal(clone)
 	if err != nil {
@@ -59,7 +58,7 @@ func (s *service) SetMemberClones(ctx context.Context, memberID uint, clone *ath
 	key := format.Formatm(keyMemberClone, format.Values{
 		"memberID": memberID,
 	})
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -100,9 +99,7 @@ func (s *service) MemberImplants(ctx context.Context, memberID uint) ([]*athena.
 
 }
 
-func (s *service) SetMemberImplants(ctx context.Context, memberID uint, implants []*athena.MemberImplant, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberImplants(ctx context.Context, memberID uint, implants []*athena.MemberImplant) error {
 
 	members := make([]string, 0, len(implants))
 	for _, implant := range implants {
@@ -117,7 +114,7 @@ func (s *service) SetMemberImplants(ctx context.Context, memberID uint, implants
 	key := format.Formatm(keyMemberImplants, format.Values{
 		"memberID": memberID,
 	})
-	_, err := s.client.SAdd(ctx, key, members, options.expiry).Result()
+	_, err := s.client.SAdd(ctx, key, members, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache: %w", err)
 	}

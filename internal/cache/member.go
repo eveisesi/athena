@@ -2,9 +2,11 @@ package cache
 
 import (
 	"context"
-	"crypto/sha256"
+	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -12,14 +14,14 @@ import (
 
 type memberService interface {
 	Member(ctx context.Context, memberID uint) (*athena.Member, error)
-	SetMember(ctx context.Context, memberID uint, member *athena.Member, optionFuncs ...OptionFunc) error
-	Members(ctx context.Context, operators []*athena.Operator) ([]*athena.Member, error)
-	SetMembers(ctx context.Context, operators []*athena.Operator, members []*athena.Member, optionFuncs ...OptionFunc) error
+	SetMember(ctx context.Context, memberID uint, member *athena.Member) error
+	Members(ctx context.Context, operators ...*athena.Operator) ([]*athena.Member, error)
+	SetMembers(ctx context.Context, members []*athena.Member, operators ...*athena.Operator) error
 }
 
 const (
 	keyMember  = "athena::member::%d"
-	keyMembers = "athena::members::%s"
+	keyMembers = "athena::members::%x"
 )
 
 func (s *service) Member(ctx context.Context, memberID uint) (*athena.Member, error) {
@@ -43,16 +45,14 @@ func (s *service) Member(ctx context.Context, memberID uint) (*athena.Member, er
 	return nil, nil
 }
 
-func (s *service) SetMember(ctx context.Context, memberID uint, member *athena.Member, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMember(ctx context.Context, memberID uint, member *athena.Member) error {
 
 	data, err := json.Marshal(member)
 	if err != nil {
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMember, memberID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyMember, memberID), data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
@@ -61,59 +61,67 @@ func (s *service) SetMember(ctx context.Context, memberID uint, member *athena.M
 
 }
 
-func (s *service) Members(ctx context.Context, operators []*athena.Operator) ([]*athena.Member, error) {
+func (s *service) Members(ctx context.Context, operators ...*athena.Operator) ([]*athena.Member, error) {
 
-	data, err := json.Marshal(operators)
+	keyData, err := json.Marshal(operators)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal operators: %w", err)
 	}
 
-	h := sha256.New()
-	_, _ = h.Write(data)
-	bs := h.Sum(nil)
+	key := fmt.Sprintf(keyMembers, sha1.Sum(keyData))
 
-	result, err := s.client.Get(ctx, fmt.Sprintf(keyMembers, fmt.Sprintf("%x", bs))).Result()
-	if err != nil && err != redis.Nil {
+	values, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, err
 	}
 
-	if len(result) > 0 {
-		var members = make([]*athena.Member, 0)
-
-		err = json.Unmarshal([]byte(result), &members)
-		if err != nil {
-			return nil, err
-		}
-
-		return members, nil
+	if errors.Is(err, redis.Nil) {
+		return nil, nil
 	}
 
-	return nil, nil
+	var members = make([]*athena.Member, 0)
+	for _, v := range values {
+		var member = new(athena.Member)
+		err = json.Unmarshal([]byte(v), member)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal member from cache: %w", err)
+		}
+
+		members = append(members, member)
+
+	}
+
+	return members, nil
 
 }
 
 // SetMembers caches a slice of members using the slice of operators used to fetch that slice of members.
-func (s *service) SetMembers(ctx context.Context, operators []*athena.Operator, members []*athena.Member, optionFuncs ...OptionFunc) error {
+func (s *service) SetMembers(ctx context.Context, members []*athena.Member, operators ...*athena.Operator) error {
 
-	options := applyOptionFuncs(nil, optionFuncs)
+	values := make([]string, 0, len(members))
+	for _, member := range members {
+		data, err := json.Marshal(member)
+		if err != nil {
+			return fmt.Errorf("Failed to marsahl member for cache: %w", err)
+		}
 
-	data, err := json.Marshal(operators)
+		values = append(values, string(data))
+	}
+
+	keyData, err := json.Marshal(operators)
 	if err != nil {
 		return fmt.Errorf("failed to marshal operators: %w", err)
 	}
 
-	h := sha256.New()
-	_, _ = h.Write(data)
-	bs := h.Sum(nil)
-
-	data, err = json.Marshal(members)
-	if err != nil {
-		return fmt.Errorf("Failed to marshal payload: %w", err)
-	}
-
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyMembers, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
+	key := fmt.Sprintf(keyMembers, sha1.Sum(keyData))
+	_, err = s.client.SAdd(ctx, key, values).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Minute*20).Result()
+	if err != nil {
+		return fmt.Errorf("failed to set expiry for key %s: %w", key, err)
 	}
 
 	return nil

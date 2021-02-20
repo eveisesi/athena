@@ -42,8 +42,8 @@ type Character struct {
 }
 
 type CharacterCorporationHistory struct {
-	CharacterID   uint64    `db:"character_id" json:"character_id"`
-	RecordID      uint      `db:"record_id" json:"record_id"`
+	CharacterID   uint      `db:"character_id" json:"character_id"`
+	RecordID      uint64    `db:"record_id" json:"record_id"`
 	CorporationID uint      `db:"corporation_id" json:"corporation_id"`
 	IsDeleted     bool      `db:"is_deleted" json:"is_deleted"`
 	StartDate     time.Time `db:"start_date" json:"start_date"`

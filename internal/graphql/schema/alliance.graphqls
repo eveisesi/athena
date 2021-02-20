@@ -7,5 +7,5 @@ type Alliance @goModel(model: "github.com/eveisesi/athena.Alliance") {
     creatorCorporationID: Uint!
     executorCorporationID: Uint!
     factionID: Uint
-    isClosed: Bool!
+    isClosed: Boolean!
 }

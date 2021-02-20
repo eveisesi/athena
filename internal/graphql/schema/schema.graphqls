@@ -5,7 +5,6 @@ scalar Uint
 # directive @hasGrant(scope: String!) on FIELD_DEFINITION
 
 type Query {
-    # @hasGrant(scope: "esi-test.read-test.v1")
     auth: AuthAttempt!
 }
 

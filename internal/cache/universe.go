@@ -2,8 +2,10 @@ package cache
 
 import (
 	"context"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -11,53 +13,80 @@ import (
 
 type universeService interface {
 	Ancestry(ctx context.Context, id uint) (*athena.Ancestry, error)
-	SetAncestry(ctx context.Context, ancestry *athena.Ancestry, optionFuncs ...OptionFunc) error
+	SetAncestry(ctx context.Context, ancestry *athena.Ancestry) error
+	Ancestries(ctx context.Context, operators ...*athena.Operator) ([]*athena.Ancestry, error)
+	SetAncestries(ctx context.Context, ancestries []*athena.Ancestry, operators ...*athena.Operator) error
 	Bloodline(ctx context.Context, id uint) (*athena.Bloodline, error)
-	SetBloodline(ctx context.Context, bloodline *athena.Bloodline, optionFuncs ...OptionFunc) error
+	SetBloodline(ctx context.Context, bloodline *athena.Bloodline) error
+	Bloodlines(ctx context.Context, operators ...*athena.Operator) ([]*athena.Bloodline, error)
+	SetBloodlines(ctx context.Context, records []*athena.Bloodline, operators ...*athena.Operator) error
 	Race(ctx context.Context, id uint) (*athena.Race, error)
-	SetRace(ctx context.Context, race *athena.Race, optionFuncs ...OptionFunc) error
+	SetRace(ctx context.Context, race *athena.Race) error
+	Races(ctx context.Context, operators ...*athena.Operator) ([]*athena.Race, error)
+	SetRaces(ctx context.Context, records []*athena.Race, operators ...*athena.Operator) error
 	Faction(ctx context.Context, id uint) (*athena.Faction, error)
-	SetFaction(ctx context.Context, faction *athena.Faction, optionFuncs ...OptionFunc) error
+	SetFaction(ctx context.Context, faction *athena.Faction) error
+	Factions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Faction, error)
+	SetFactions(ctx context.Context, records []*athena.Faction, operators ...*athena.Operator) error
 	Region(ctx context.Context, id uint) (*athena.Region, error)
-	SetRegion(ctx context.Context, region *athena.Region, optionFuncs ...OptionFunc) error
+	SetRegion(ctx context.Context, region *athena.Region) error
+	Regions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Region, error)
+	SetRegions(ctx context.Context, records []*athena.Region, operators ...*athena.Operator) error
 	Constellation(ctx context.Context, id uint) (*athena.Constellation, error)
-	SetConstellation(ctx context.Context, constellation *athena.Constellation, optionFuncs ...OptionFunc) error
+	SetConstellation(ctx context.Context, constellation *athena.Constellation) error
+	Constellations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Constellation, error)
+	SetConstellations(ctx context.Context, records []*athena.Constellation, operators ...*athena.Operator) error
 	SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem, error)
-	SetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem, optionFuncs ...OptionFunc) error
-	AsteroidBelt(ctx context.Context, id uint) (*athena.AsteroidBelt, error)
-	SetAsteroidBelt(ctx context.Context, belt *athena.AsteroidBelt, optionFuncs ...OptionFunc) error
-	Moon(ctx context.Context, id uint) (*athena.Moon, error)
-	SetMoon(ctx context.Context, moon *athena.Moon, optionFuncs ...OptionFunc) error
-	Planet(ctx context.Context, id uint) (*athena.Planet, error)
-	SetPlanet(ctx context.Context, planet *athena.Planet, optionFuncs ...OptionFunc) error
+	SetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) error
+	SolarSystems(ctx context.Context, operators ...*athena.Operator) ([]*athena.SolarSystem, error)
+	SetSolarSystems(ctx context.Context, records []*athena.SolarSystem, operators ...*athena.Operator) error
 	Station(ctx context.Context, id uint) (*athena.Station, error)
-	SetStation(ctx context.Context, station *athena.Station, optionFuncs ...OptionFunc) error
+	SetStation(ctx context.Context, station *athena.Station) error
+	Stations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Station, error)
+	SetStations(ctx context.Context, records []*athena.Station, operators ...*athena.Operator) error
 	Structure(ctx context.Context, id uint64) (*athena.Structure, error)
-	SetStructure(ctx context.Context, structure *athena.Structure, optionFuncs ...OptionFunc) error
+	SetStructure(ctx context.Context, structure *athena.Structure) error
+	Structures(ctx context.Context, operators ...*athena.Operator) ([]*athena.Structure, error)
+	SetStructures(ctx context.Context, records []*athena.Structure, operators ...*athena.Operator) error
 	Category(ctx context.Context, id uint) (*athena.Category, error)
-	SetCategory(ctx context.Context, category *athena.Category, optionFuncs ...OptionFunc) error
+	SetCategory(ctx context.Context, category *athena.Category) error
+	Categories(ctx context.Context, operators ...*athena.Operator) ([]*athena.Category, error)
+	SetCategories(ctx context.Context, records []*athena.Category, operators ...*athena.Operator) error
 	Group(ctx context.Context, id uint) (*athena.Group, error)
-	SetGroup(ctx context.Context, group *athena.Group, optionFuncs ...OptionFunc) error
+	SetGroup(ctx context.Context, group *athena.Group) error
+	Groups(ctx context.Context, operators ...*athena.Operator) ([]*athena.Group, error)
+	SetGroups(ctx context.Context, records []*athena.Group, operators ...*athena.Operator) error
 	Type(ctx context.Context, id uint) (*athena.Type, error)
-	SetType(ctx context.Context, item *athena.Type, optionFuncs ...OptionFunc) error
+	SetType(ctx context.Context, item *athena.Type) error
+	Types(ctx context.Context, operators ...*athena.Operator) ([]*athena.Type, error)
+	SetTypes(ctx context.Context, records []*athena.Type, operators ...*athena.Operator) error
 }
 
 const (
-	keyAncestry      = "athena::ancestry::%d"
-	keyAsteroidBelt  = "athena::anstroidBelt::%d"
-	keyBloodline     = "athena::bloodline::%d"
-	keyRace          = "athena::race::%d"
-	keyFaction       = "athena::faction::%d"
-	keyCategory      = "athena::category::%d"
-	keyGroup         = "athena::group::%d"
-	keyMoon          = "athena::moon::%d"
-	keyType          = "athena::type::%d"
-	keyRegion        = "athena::region::%d"
-	keyConstellation = "athena::constellation::%d"
-	keyPlanet        = "athena::planet::%d"
-	keySolarSystem   = "athena::solar_system::%d"
-	keyStation       = "athena::station::%d"
-	keyStructure     = "athena::structure::%d"
+	keyAncestry       = "athena::ancestry::%d"
+	keyAncestries     = "athena::ancestries::%x"
+	keyBloodline      = "athena::bloodline::%d"
+	keyBloodlines     = "athena::bloodlines::%x"
+	keyRace           = "athena::race::%d"
+	keyRaces          = "athena::races::%x"
+	keyFaction        = "athena::faction::%d"
+	keyFactions       = "athena::factions::%x"
+	keyCategory       = "athena::category::%d"
+	keyCategories     = "athena::categories::%x"
+	keyGroup          = "athena::group::%d"
+	keyGroups         = "athena::groups::%x"
+	keyType           = "athena::type::%d"
+	keyTypes          = "athena::types::%x"
+	keyRegion         = "athena::region::%d"
+	keyRegions        = "athena::regions::%x"
+	keyConstellation  = "athena::constellation::%d"
+	keyConstellations = "athena::constellations::%x"
+	keySolarSystem    = "athena::solar_system::%d"
+	keySolarSystems   = "athena::solar_systems::%x"
+	keyStation        = "athena::station::%d"
+	keyStations       = "athena::stations::%x"
+	keyStructure      = "athena::structure::%d"
+	keyStructures     = "athena::structures::%x"
 )
 
 func (s *service) Ancestry(ctx context.Context, id uint) (*athena.Ancestry, error) {
@@ -82,7 +111,7 @@ func (s *service) Ancestry(ctx context.Context, id uint) (*athena.Ancestry, erro
 
 }
 
-func (s *service) SetAncestry(ctx context.Context, ancestry *athena.Ancestry, optionFuncs ...OptionFunc) error {
+func (s *service) SetAncestry(ctx context.Context, ancestry *athena.Ancestry) error {
 
 	key := fmt.Sprintf(keyAncestry, ancestry.ID)
 	data, err := json.Marshal(ancestry)
@@ -90,11 +119,73 @@ func (s *service) SetAncestry(ctx context.Context, ancestry *athena.Ancestry, op
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Ancestries(ctx context.Context, operators ...*athena.Operator) ([]*athena.Ancestry, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyAncestries, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var ancestries = make([]*athena.Ancestry, 0, len(members))
+	for _, member := range members {
+		var ancestry = new(athena.Ancestry)
+		err = json.Unmarshal([]byte(member), ancestry)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal ancestry: %w", err)
+		}
+
+		ancestries = append(ancestries, ancestry)
+	}
+
+	return ancestries, nil
+
+}
+
+func (s *service) SetAncestries(ctx context.Context, ancestries []*athena.Ancestry, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(ancestries))
+	for _, ancestry := range ancestries {
+		b, err := json.Marshal(ancestry)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal ancestry for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyAncestries, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to cache labels: %w", err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -123,7 +214,7 @@ func (s *service) Bloodline(ctx context.Context, id uint) (*athena.Bloodline, er
 
 }
 
-func (s *service) SetBloodline(ctx context.Context, bloodline *athena.Bloodline, optionFuncs ...OptionFunc) error {
+func (s *service) SetBloodline(ctx context.Context, bloodline *athena.Bloodline) error {
 
 	key := fmt.Sprintf(keyBloodline, bloodline.ID)
 	data, err := json.Marshal(bloodline)
@@ -131,11 +222,73 @@ func (s *service) SetBloodline(ctx context.Context, bloodline *athena.Bloodline,
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Bloodlines(ctx context.Context, operators ...*athena.Operator) ([]*athena.Bloodline, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyBloodlines, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Bloodline, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Bloodline)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetBloodlines(ctx context.Context, records []*athena.Bloodline, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyBloodlines, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -164,7 +317,7 @@ func (s *service) Race(ctx context.Context, id uint) (*athena.Race, error) {
 
 }
 
-func (s *service) SetRace(ctx context.Context, race *athena.Race, optionFuncs ...OptionFunc) error {
+func (s *service) SetRace(ctx context.Context, race *athena.Race) error {
 
 	key := fmt.Sprintf(keyRace, race.ID)
 	data, err := json.Marshal(race)
@@ -172,11 +325,73 @@ func (s *service) SetRace(ctx context.Context, race *athena.Race, optionFuncs ..
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Races(ctx context.Context, operators ...*athena.Operator) ([]*athena.Race, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyRaces, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Race, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Race)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetRaces(ctx context.Context, records []*athena.Race, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyRaces, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -205,7 +420,7 @@ func (s *service) Faction(ctx context.Context, id uint) (*athena.Faction, error)
 
 }
 
-func (s *service) SetFaction(ctx context.Context, faction *athena.Faction, optionFuncs ...OptionFunc) error {
+func (s *service) SetFaction(ctx context.Context, faction *athena.Faction) error {
 
 	key := fmt.Sprintf(keyFaction, faction.ID)
 	data, err := json.Marshal(faction)
@@ -213,11 +428,73 @@ func (s *service) SetFaction(ctx context.Context, faction *athena.Faction, optio
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Factions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Faction, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyFactions, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Faction, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Faction)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetFactions(ctx context.Context, records []*athena.Faction, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyFactions, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -246,7 +523,7 @@ func (s *service) Region(ctx context.Context, id uint) (*athena.Region, error) {
 
 }
 
-func (s *service) SetRegion(ctx context.Context, region *athena.Region, optionFuncs ...OptionFunc) error {
+func (s *service) SetRegion(ctx context.Context, region *athena.Region) error {
 
 	key := fmt.Sprintf(keyRegion, region.ID)
 	data, err := json.Marshal(region)
@@ -254,11 +531,73 @@ func (s *service) SetRegion(ctx context.Context, region *athena.Region, optionFu
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Regions(ctx context.Context, operators ...*athena.Operator) ([]*athena.Region, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyRegions, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Region, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Region)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetRegions(ctx context.Context, records []*athena.Region, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyRegions, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -288,7 +627,7 @@ func (s *service) Constellation(ctx context.Context, id uint) (*athena.Constella
 
 }
 
-func (s *service) SetConstellation(ctx context.Context, constellation *athena.Constellation, optionFuncs ...OptionFunc) error {
+func (s *service) SetConstellation(ctx context.Context, constellation *athena.Constellation) error {
 
 	key := fmt.Sprintf(keyConstellation, constellation.ID)
 	data, err := json.Marshal(constellation)
@@ -296,10 +635,73 @@ func (s *service) SetConstellation(ctx context.Context, constellation *athena.Co
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Constellations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Constellation, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyConstellations, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Constellation, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Constellation)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetConstellations(ctx context.Context, records []*athena.Constellation, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyConstellations, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -329,7 +731,7 @@ func (s *service) SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem
 
 }
 
-func (s *service) SetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem, optionFuncs ...OptionFunc) error {
+func (s *service) SetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) error {
 
 	key := fmt.Sprintf(keySolarSystem, solarSystem.ID)
 	data, err := json.Marshal(solarSystem)
@@ -337,9 +739,7 @@ func (s *service) SetSolarSystem(ctx context.Context, solarSystem *athena.SolarS
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
@@ -348,123 +748,64 @@ func (s *service) SetSolarSystem(ctx context.Context, solarSystem *athena.SolarS
 
 }
 
-func (s *service) Planet(ctx context.Context, id uint) (*athena.Planet, error) {
+func (s *service) SolarSystems(ctx context.Context, operators ...*athena.Operator) ([]*athena.SolarSystem, error) {
 
-	key := fmt.Sprintf(keyPlanet, id)
-	result, err := s.client.Get(ctx, key).Bytes()
-	if err != nil && err != redis.Nil {
-		return nil, fmt.Errorf("[Cache Layer Fialed to fetch results from cache for key %s: %w]", key, err)
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
 	}
 
-	if len(result) == 0 {
+	key := fmt.Sprintf(keySolarSystems, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
 		return nil, nil
 	}
 
-	var planet = new(athena.Planet)
-	err = json.Unmarshal(result, planet)
-	if err != nil {
-		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
+	var results = make([]*athena.SolarSystem, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.SolarSystem)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
 	}
 
-	return planet, nil
+	return results, nil
 
 }
 
-func (s *service) SetPlanet(ctx context.Context, planet *athena.Planet, optionFuncs ...OptionFunc) error {
+func (s *service) SetSolarSystems(ctx context.Context, records []*athena.SolarSystem, operators ...*athena.Operator) error {
 
-	key := fmt.Sprintf(keyPlanet, planet.ID)
-	data, err := json.Marshal(planet)
-	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
 
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	key := fmt.Sprintf(keySolarSystems, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
-	return nil
-
-}
-
-func (s *service) Moon(ctx context.Context, id uint) (*athena.Moon, error) {
-
-	key := fmt.Sprintf(keyMoon, id)
-	result, err := s.client.Get(ctx, key).Bytes()
-	if err != nil && err != redis.Nil {
-		return nil, fmt.Errorf("[Cache Layer Fialed to fetch results from cache for key %s: %w]", key, err)
-	}
-
-	if len(result) == 0 {
-		return nil, nil
-	}
-
-	var moon = new(athena.Moon)
-	err = json.Unmarshal(result, moon)
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
 	if err != nil {
-		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
-	}
-
-	return moon, nil
-
-}
-
-func (s *service) SetMoon(ctx context.Context, moon *athena.Moon, optionFuncs ...OptionFunc) error {
-
-	key := fmt.Sprintf(keyMoon, moon.ID)
-	data, err := json.Marshal(moon)
-	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
-	}
-
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
-	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
-	}
-
-	return nil
-
-}
-
-func (s *service) AsteroidBelt(ctx context.Context, id uint) (*athena.AsteroidBelt, error) {
-
-	key := fmt.Sprintf(keyAsteroidBelt, id)
-	result, err := s.client.Get(ctx, key).Bytes()
-	if err != nil && err != redis.Nil {
-		return nil, fmt.Errorf("[Cache Layer Fialed to fetch results from cache for key %s: %w]", key, err)
-	}
-
-	if len(result) == 0 {
-		return nil, nil
-	}
-
-	var belt = new(athena.AsteroidBelt)
-	err = json.Unmarshal(result, belt)
-	if err != nil {
-		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
-	}
-
-	return belt, nil
-
-}
-
-func (s *service) SetAsteroidBelt(ctx context.Context, belt *athena.AsteroidBelt, optionFuncs ...OptionFunc) error {
-
-	key := fmt.Sprintf(keyAsteroidBelt, belt.ID)
-	data, err := json.Marshal(belt)
-	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
-	}
-
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
-	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -494,7 +835,7 @@ func (s *service) Station(ctx context.Context, id uint) (*athena.Station, error)
 
 }
 
-func (s *service) SetStation(ctx context.Context, station *athena.Station, optionFuncs ...OptionFunc) error {
+func (s *service) SetStation(ctx context.Context, station *athena.Station) error {
 
 	key := fmt.Sprintf(keyStation, station.ID)
 	data, err := json.Marshal(station)
@@ -502,11 +843,73 @@ func (s *service) SetStation(ctx context.Context, station *athena.Station, optio
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyStation, station.ID), data, options.expiry).Result()
+	_, err = s.client.Set(ctx, fmt.Sprintf(keyStation, station.ID), data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Stations(ctx context.Context, operators ...*athena.Operator) ([]*athena.Station, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyStations, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Station, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Station)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetStations(ctx context.Context, records []*athena.Station, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyStations, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -536,7 +939,7 @@ func (s *service) Structure(ctx context.Context, id uint64) (*athena.Structure, 
 
 }
 
-func (s *service) SetStructure(ctx context.Context, structure *athena.Structure, optionFuncs ...OptionFunc) error {
+func (s *service) SetStructure(ctx context.Context, structure *athena.Structure) error {
 
 	key := fmt.Sprintf(keyStructure, structure.ID)
 	data, err := json.Marshal(structure)
@@ -544,11 +947,73 @@ func (s *service) SetStructure(ctx context.Context, structure *athena.Structure,
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Structures(ctx context.Context, operators ...*athena.Operator) ([]*athena.Structure, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyStructures, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Structure, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Structure)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetStructures(ctx context.Context, records []*athena.Structure, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyStructures, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -578,7 +1043,7 @@ func (s *service) Category(ctx context.Context, id uint) (*athena.Category, erro
 
 }
 
-func (s *service) SetCategory(ctx context.Context, category *athena.Category, optionFuncs ...OptionFunc) error {
+func (s *service) SetCategory(ctx context.Context, category *athena.Category) error {
 
 	key := fmt.Sprintf(keyCategory, category.ID)
 	data, err := json.Marshal(category)
@@ -586,11 +1051,73 @@ func (s *service) SetCategory(ctx context.Context, category *athena.Category, op
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Categories(ctx context.Context, operators ...*athena.Operator) ([]*athena.Category, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyCategories, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Category, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Category)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetCategories(ctx context.Context, records []*athena.Category, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyCategories, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -620,7 +1147,7 @@ func (s *service) Group(ctx context.Context, id uint) (*athena.Group, error) {
 
 }
 
-func (s *service) SetGroup(ctx context.Context, group *athena.Group, optionFuncs ...OptionFunc) error {
+func (s *service) SetGroup(ctx context.Context, group *athena.Group) error {
 
 	key := fmt.Sprintf(keyGroup, group.ID)
 	data, err := json.Marshal(group)
@@ -628,11 +1155,73 @@ func (s *service) SetGroup(ctx context.Context, group *athena.Group, optionFuncs
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Groups(ctx context.Context, operators ...*athena.Operator) ([]*athena.Group, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyGroups, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Group, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Group)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetGroups(ctx context.Context, records []*athena.Group, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyGroups, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil
@@ -661,7 +1250,7 @@ func (s *service) Type(ctx context.Context, id uint) (*athena.Type, error) {
 
 }
 
-func (s *service) SetType(ctx context.Context, item *athena.Type, optionFuncs ...OptionFunc) error {
+func (s *service) SetType(ctx context.Context, item *athena.Type) error {
 
 	key := fmt.Sprintf(keyType, item.ID)
 	data, err := json.Marshal(item)
@@ -669,11 +1258,73 @@ func (s *service) SetType(ctx context.Context, item *athena.Type, optionFuncs ..
 		return fmt.Errorf("failed to marshal item: %w", err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	return nil
+
+}
+
+func (s *service) Types(ctx context.Context, operators ...*athena.Operator) ([]*athena.Type, error) {
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyTypes, sha1.Sum(data))
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	var results = make([]*athena.Type, 0, len(members))
+	for _, member := range members {
+		var result = new(athena.Type)
+		err = json.Unmarshal([]byte(member), result)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal result: %w", err)
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+
+}
+
+func (s *service) SetTypes(ctx context.Context, records []*athena.Type, operators ...*athena.Operator) error {
+
+	members := make([]string, 0, len(records))
+	for _, record := range records {
+		b, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal record for cache: %w", err)
+		}
+
+		members = append(members, string(b))
+	}
+
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyTypes, sha1.Sum(data))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
 
 	return nil

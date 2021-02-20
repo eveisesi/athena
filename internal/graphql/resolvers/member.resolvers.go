@@ -6,7 +6,19 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/graphql"
+	"github.com/eveisesi/athena/internal/graphql/dataloaders"
 )
+
+func (r *queryResolver) Member(ctx context.Context) (*athena.Member, error) {
+	member := r.member.MemberFromContext(ctx)
+
+	return member, nil
+}
+
+type memberResolver struct{ *resolver }
+
+// Member returns graphql.MemberResolver implementation.
+func (r *resolver) Member() graphql.MemberResolver { return &memberResolver{r} }
 
 func (r *memberResolver) OwnerHash(ctx context.Context, obj *athena.Member) (*string, error) {
 	panic(fmt.Errorf("not implemented"))
@@ -21,21 +33,23 @@ func (r *memberResolver) Scopes(ctx context.Context, obj *athena.Member) ([]*ath
 	return s, nil
 }
 
-func (r *memberScopeResolver) Scope(ctx context.Context, obj *athena.MemberScope) (string, error) {
-	return obj.Scope.String(), nil
+func (r *memberResolver) Main(ctx context.Context, obj *athena.Member) (*athena.Character, error) {
+	if !obj.MainID.Valid {
+		return nil, nil
+	}
+
+	return dataloaders.CtxLoaders(ctx).Character.Load(obj.MainID.Uint)
 }
 
-func (r *queryResolver) Member(ctx context.Context) (*athena.Member, error) {
-	member := r.member.MemberFromContext(ctx)
-
-	return member, nil
+func (r *memberResolver) Character(ctx context.Context, obj *athena.Member) (*athena.Character, error) {
+	return dataloaders.CtxLoaders(ctx).Character.Load(obj.ID)
 }
 
-// Member returns graphql.MemberResolver implementation.
-func (r *resolver) Member() graphql.MemberResolver { return &memberResolver{r} }
+type memberScopeResolver struct{ *resolver }
 
 // MemberScope returns generated.MemberScopeResolver implementation.
 func (r *resolver) MemberScope() graphql.MemberScopeResolver { return &memberScopeResolver{r} }
 
-type memberResolver struct{ *resolver }
-type memberScopeResolver struct{ *resolver }
+func (r *memberScopeResolver) Scope(ctx context.Context, obj *athena.MemberScope) (string, error) {
+	return obj.Scope.String(), nil
+}

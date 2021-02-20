@@ -2,9 +2,10 @@ package cache
 
 import (
 	"context"
-	"crypto/sha256"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -12,9 +13,9 @@ import (
 
 type allianceService interface {
 	Alliance(ctx context.Context, id uint) (*athena.Alliance, error)
-	SetAlliance(ctx context.Context, alliance *athena.Alliance, optionFuncs ...OptionFunc) error
-	Alliances(ctx context.Context, operators []*athena.Operator) ([]*athena.Alliance, error)
-	SetAlliances(ctx context.Context, operators []*athena.Operator, alliances []*athena.Alliance, optionFuncs ...OptionFunc) error
+	SetAlliance(ctx context.Context, allianceID uint, alliance *athena.Alliance) error
+	Alliances(ctx context.Context, operators ...*athena.Operator) ([]*athena.Alliance, error)
+	SetAlliances(ctx context.Context, alliances []*athena.Alliance, operators ...*athena.Operator) error
 }
 
 const (
@@ -22,9 +23,9 @@ const (
 	keyAlliances = "athena::alliances::%x"
 )
 
-func (s *service) Alliance(ctx context.Context, id uint) (*athena.Alliance, error) {
+func (s *service) Alliance(ctx context.Context, allianceID uint) (*athena.Alliance, error) {
 
-	key := fmt.Sprintf(keyAlliance, id)
+	key := fmt.Sprintf(keyAlliance, allianceID)
 	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
 		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
@@ -44,32 +45,32 @@ func (s *service) Alliance(ctx context.Context, id uint) (*athena.Alliance, erro
 
 }
 
-func (s *service) SetAlliance(ctx context.Context, alliance *athena.Alliance, optionFuncs ...OptionFunc) error {
+func (s *service) SetAlliance(ctx context.Context, allianceID uint, alliance *athena.Alliance) error {
 
-	key := fmt.Sprintf(keyAlliance, alliance.ID)
+	key := fmt.Sprintf(keyAlliance, allianceID)
+
 	data, err := json.Marshal(alliance)
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
-	_, err = s.client.Set(ctx, key, data, options.expiry).Result()
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil
+
 }
 
-func (s *service) Alliances(ctx context.Context, operators []*athena.Operator) ([]*athena.Alliance, error) {
+func (s *service) Alliances(ctx context.Context, operators ...*athena.Operator) ([]*athena.Alliance, error) {
 
 	data, err := json.Marshal(operators)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal operators: %w", err)
 	}
 
-	key := fmt.Sprintf(keyAlliances, sha256.Sum256(data))
+	key := fmt.Sprintf(keyAlliances, sha1.Sum(data))
 	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
@@ -90,12 +91,7 @@ func (s *service) Alliances(ctx context.Context, operators []*athena.Operator) (
 
 }
 
-func (s *service) SetAlliances(ctx context.Context, operators []*athena.Operator, alliances []*athena.Alliance, optionFuncs ...OptionFunc) error {
-
-	ops, err := json.Marshal(operators)
-	if err != nil {
-		return fmt.Errorf("failed to marshal operators: %w", err)
-	}
+func (s *service) SetAlliances(ctx context.Context, alliances []*athena.Alliance, operators ...*athena.Operator) error {
 
 	members := make([]string, 0, len(alliances))
 	for _, alliance := range alliances {
@@ -107,15 +103,22 @@ func (s *service) SetAlliances(ctx context.Context, operators []*athena.Operator
 		members = append(members, string(data))
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
+	if len(operators) == 0 {
+		return fmt.Errorf("length of operators should be greater 0")
+	}
 
-	key := fmt.Sprintf(keyAlliances, sha256.Sum256(ops))
+	keyData, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("failed to marshal operators: %w", err)
+	}
+
+	key := fmt.Sprintf(keyAlliances, sha1.Sum(keyData))
 	_, err = s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
 	}
 
-	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	_, err = s.client.Expire(ctx, key, time.Minute*10).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToSetExpiry, key, err)
 	}

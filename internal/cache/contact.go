@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
@@ -13,9 +14,9 @@ import (
 
 type contactService interface {
 	MemberContacts(ctx context.Context, memberID uint, page int) ([]*athena.MemberContact, error)
-	SetMemberContacts(ctx context.Context, memberID uint, page int, contacts []*athena.MemberContact, optionFuncs ...OptionFunc) error
+	SetMemberContacts(ctx context.Context, memberID uint, page int, contacts []*athena.MemberContact) error
 	MemberContactLabels(ctx context.Context, memberID uint) ([]*athena.MemberContactLabel, error)
-	SetMemberContactLabels(ctx context.Context, memberID uint, labels []*athena.MemberContactLabel, optionFuncs ...OptionFunc) error
+	SetMemberContactLabels(ctx context.Context, memberID uint, labels []*athena.MemberContactLabel) error
 }
 
 const (
@@ -76,9 +77,7 @@ func (s *service) MemberContacts(ctx context.Context, memberID uint, page int) (
 
 }
 
-func (s *service) SetMemberContacts(ctx context.Context, memberID uint, page int, contacts []*athena.MemberContact, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberContacts(ctx context.Context, memberID uint, page int, contacts []*athena.MemberContact) error {
 
 	// Build the interface to send to redis
 	members := make([]string, 0, len(contacts))
@@ -97,7 +96,7 @@ func (s *service) SetMemberContacts(ctx context.Context, memberID uint, page int
 		return fmt.Errorf("[Cache Layer] Failed to cache contacts for member %d: %w", memberID, err)
 	}
 
-	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}
@@ -146,9 +145,7 @@ func (s *service) MemberContactLabels(ctx context.Context, memberID uint) ([]*at
 
 }
 
-func (s *service) SetMemberContactLabels(ctx context.Context, memberID uint, labels []*athena.MemberContactLabel, optionFuncs ...OptionFunc) error {
-
-	options := applyOptionFuncs(nil, optionFuncs)
+func (s *service) SetMemberContactLabels(ctx context.Context, memberID uint, labels []*athena.MemberContactLabel) error {
 
 	// Build the interface to send to redis
 	members := make([]string, 0, len(labels))
@@ -168,7 +165,7 @@ func (s *service) SetMemberContactLabels(ctx context.Context, memberID uint, lab
 		return fmt.Errorf("[Cache Layer] Failed to cache labels for member %d: %w", memberID, err)
 	}
 
-	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}

@@ -57,13 +57,15 @@ models:
       - github.com/99designs/gqlgen/graphql.Int32
   Float:
     model:
-      - github.com/99designs/gqlgen/graphql.Float
+      - github.com/eveisesi/athena/internal/graphql/scalar.Float32
+      - github.com/eveisesi/athena/internal/graphql/scalar.Float64
       - github.com/eveisesi/athena/internal/graphql/scalar/null.Float32
       - github.com/eveisesi/athena/internal/graphql/scalar/null.Float64
 
   Uint:
     model:
       - github.com/eveisesi/athena/internal/graphql/scalar.Uint
+      - github.com/eveisesi/athena/internal/graphql/scalar.Uint64
       - github.com/eveisesi/athena/internal/graphql/scalar/null.Uint
   String:
     model:

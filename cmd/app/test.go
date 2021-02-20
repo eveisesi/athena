@@ -12,7 +12,7 @@ import (
 
 func testCommand(c *cli.Context) error {
 
-	t := athena.Alliance{}
+	t := athena.Structure{}
 
 	rt := reflect.TypeOf(t)
 	fmt.Printf("type %s @goModel(model: \"%s.%s\") {\n", rt.Name(), rt.PkgPath(), rt.Name())
@@ -75,7 +75,7 @@ func graphqlTypeFromGoType(t string) string {
 	case "time":
 		out = "Time"
 	case "bool":
-		out = "Bool"
+		out = "Boolean"
 	}
 
 	if !nullable {

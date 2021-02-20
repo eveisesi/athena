@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/eveisesi/athena"
 	"github.com/sirkon/go-format"
@@ -11,13 +12,13 @@ import (
 
 type contractService interface {
 	MemberContracts(ctx context.Context, memberID uint, page int) ([]*athena.MemberContract, error)
-	SetMemberContracts(ctx context.Context, memberID uint, page int, contracts []*athena.MemberContract, optionFunc ...OptionFunc) error
+	SetMemberContracts(ctx context.Context, memberID uint, page int, contracts []*athena.MemberContract) error
 
 	MemberContractItems(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractItem, error)
-	SetMemberContractItems(ctx context.Context, memberID uint, contractID int, bids []*athena.MemberContractItem, optionFuncs ...OptionFunc) error
+	SetMemberContractItems(ctx context.Context, memberID uint, contractID int, bids []*athena.MemberContractItem) error
 
 	MemberContractBids(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractBid, error)
-	SetMemberContractBids(ctx context.Context, memberID uint, contractID int, items []*athena.MemberContractBid, optionFuncs ...OptionFunc) error
+	SetMemberContractBids(ctx context.Context, memberID uint, contractID int, items []*athena.MemberContractBid) error
 }
 
 const (
@@ -66,7 +67,7 @@ func (s *service) MemberContracts(ctx context.Context, memberID uint, page int) 
 
 }
 
-func (s *service) SetMemberContracts(ctx context.Context, memberID uint, page int, contracts []*athena.MemberContract, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberContracts(ctx context.Context, memberID uint, page int, contracts []*athena.MemberContract) error {
 
 	if len(contracts) > 1000 {
 		return fmt.Errorf(errMaxNumContractsExceeded, 1000)
@@ -82,15 +83,13 @@ func (s *service) SetMemberContracts(ctx context.Context, memberID uint, page in
 		members = append(members, string(data))
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
 	key := fmt.Sprintf(keyMemberContracts, memberID, page)
 	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToCachePage, page, "contracts", memberID, err)
 	}
 
-	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToSetExpiry, key, err)
 	}
@@ -126,7 +125,7 @@ func (s *service) MemberContractItems(ctx context.Context, memberID uint, contra
 
 }
 
-func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, contractID int, items []*athena.MemberContractItem, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, contractID int, items []*athena.MemberContractItem) error {
 
 	members := make([]string, 0, len(items))
 	for _, item := range items {
@@ -138,15 +137,13 @@ func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, con
 		members = append(members, string(data))
 	}
 
-	options := applyOptionFuncs(nil, optionFuncs)
-
 	key := fmt.Sprintf(keyMemberContractItems, memberID, contractID)
 	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToCacheMembers, key, err)
 	}
 
-	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToSetExpiry, key, err)
 	}
@@ -182,14 +179,12 @@ func (s *service) MemberContractBids(ctx context.Context, memberID uint, contrac
 
 }
 
-func (s *service) SetMemberContractBids(ctx context.Context, memberID uint, contractID int, bids []*athena.MemberContractBid, optionFuncs ...OptionFunc) error {
+func (s *service) SetMemberContractBids(ctx context.Context, memberID uint, contractID int, bids []*athena.MemberContractBid) error {
 
 	members := make([]interface{}, len(bids))
 	for i, bid := range bids {
 		members[i] = bid
 	}
-
-	options := applyOptionFuncs(nil, optionFuncs)
 
 	key := format.Formatm(keyMemberContractBids, format.Values{
 		"memberID":   memberID,
@@ -201,7 +196,7 @@ func (s *service) SetMemberContractBids(ctx context.Context, memberID uint, cont
 		return fmt.Errorf(errFailedToCacheMembers, key, err)
 	}
 
-	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToSetExpiry, key, err)
 	}
