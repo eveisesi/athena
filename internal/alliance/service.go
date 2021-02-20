@@ -60,14 +60,14 @@ func (s *service) FetchAlliance(ctx context.Context, allianceID uint) (*athena.E
 		"method":    "FetchAlliance",
 	})
 
-	ptag := etag.Etag
+	petag := etag.Etag
 	alliance, etag, _, err := s.esi.GetAlliance(ctx, allianceID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch alliance from ESI")
 		return nil, fmt.Errorf("failed to fetch alliance from ESI")
 	}
 
-	if etag.Etag == ptag {
+	if etag.Etag == petag {
 		return etag, err
 	}
 

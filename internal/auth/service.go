@@ -142,10 +142,10 @@ func (s *service) ParseAndVerifyToken(ctx context.Context, t string) (jwt.Token,
 		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}
 
-	err = jwt.Validate(token, jwt.WithIssuer("login.eveonline.com"), jwt.WithClaimValue("azp", "27a0d315019c4d15bf909abefe67282b"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate token: %w", err)
-	}
+	// err = jwt.Validate(token, jwt.WithIssuer("login.eveonline.com"), jwt.WithClaimValue("azp", "27a0d315019c4d15bf909abefe67282b"))
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to validate token: %w", err)
+	// }
 
 	return token, nil
 

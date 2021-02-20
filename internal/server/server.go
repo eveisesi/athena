@@ -20,9 +20,12 @@ import (
 	"github.com/eveisesi/athena/internal/auth"
 	"github.com/eveisesi/athena/internal/cache"
 	"github.com/eveisesi/athena/internal/character"
+	"github.com/eveisesi/athena/internal/clone"
+	"github.com/eveisesi/athena/internal/contact"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/graphql"
 	"github.com/eveisesi/athena/internal/graphql/resolvers"
+	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/eveisesi/athena/internal/universe"
 	"github.com/go-chi/chi"
@@ -44,6 +47,9 @@ type server struct {
 	corporation corporation.Service
 	alliance    alliance.Service
 	universe    universe.Service
+	location    location.Service
+	clone       clone.Service
+	contact     contact.Service
 
 	server *http.Server
 }
@@ -59,6 +65,10 @@ func NewServer(
 	character character.Service,
 	corporation corporation.Service,
 	alliance alliance.Service,
+	universe universe.Service,
+	location location.Service,
+	clone clone.Service,
+	contact contact.Service,
 ) *server {
 
 	s := &server{
@@ -72,6 +82,10 @@ func NewServer(
 		character:   character,
 		corporation: corporation,
 		alliance:    alliance,
+		universe:    universe,
+		clone:       clone,
+		location:    location,
+		contact:     contact,
 	}
 
 	s.server = &http.Server{

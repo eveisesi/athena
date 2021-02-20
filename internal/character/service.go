@@ -66,14 +66,14 @@ func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena
 		"method":    "FetchCharacter",
 	})
 
-	ptag := etag.Etag
+	petag := etag.Etag
 	character, etag, _, err := s.esi.GetCharacter(ctx, characterID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch character from ESI")
 		return nil, fmt.Errorf("failed to fetch character from ESI")
 	}
 
-	if etag.Etag == ptag {
+	if etag.Etag == petag {
 		return etag, nil
 	}
 

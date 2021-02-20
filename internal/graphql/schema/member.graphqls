@@ -9,7 +9,7 @@ type Member @goModel(model: "github.com/eveisesi/athena.Member") {
     refreshToken: String
     expires: Time
     ownerHash: String
-    scopes: [MemberScope]!
+    scopes: [String!]!
     disabled: Boolean!
     disabledReason: String
     disabledTimestamp: Time
@@ -17,9 +17,4 @@ type Member @goModel(model: "github.com/eveisesi/athena.Member") {
 
     main: Character
     character: Character
-}
-
-type MemberScope @goModel(model: "github.com/eveisesi/athena.MemberScope") {
-    Scope: String!
-    Expiry: Time
 }

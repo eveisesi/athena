@@ -67,14 +67,14 @@ func (s *service) FetchCorporation(ctx context.Context, corporationID uint) (*at
 		"method":         "FetchCorporation",
 	})
 
-	ptag := etag.Etag
+	petag := etag.Etag
 	corporation, etag, _, err := s.esi.GetCorporation(ctx, corporationID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch corporation from ESI")
 		return nil, fmt.Errorf("failed to fetch corporation from ESI")
 	}
 
-	if etag.Etag == ptag {
+	if etag.Etag == petag {
 		return etag, err
 	}
 
@@ -192,14 +192,14 @@ func (s *service) FetchCorporationAllianceHistory(ctx context.Context, corporati
 		"method":         "FetchCorporationAllianceHistory",
 	})
 
-	ptag := etag.Etag
+	petag := etag.Etag
 	history, etag, _, err := s.esi.GetCorporationAllianceHistory(ctx, corporationID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch corporation alliance history from ESI")
 		return nil, fmt.Errorf("failed to fetch corporation alliance history from ESI")
 	}
 
-	if etag.Etag == ptag {
+	if etag.Etag == petag {
 		return etag, nil
 	}
 

@@ -24,10 +24,10 @@ func (r *memberResolver) OwnerHash(ctx context.Context, obj *athena.Member) (*st
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *memberResolver) Scopes(ctx context.Context, obj *athena.Member) ([]*athena.MemberScope, error) {
-	s := make([]*athena.MemberScope, 0, len(obj.Scopes))
+func (r *memberResolver) Scopes(ctx context.Context, obj *athena.Member) ([]string, error) {
+	s := make([]string, 0, len(obj.Scopes))
 	for _, i := range obj.Scopes {
-		s = append(s, &i)
+		s = append(s, i.Scope.String())
 	}
 
 	return s, nil
@@ -43,13 +43,4 @@ func (r *memberResolver) Main(ctx context.Context, obj *athena.Member) (*athena.
 
 func (r *memberResolver) Character(ctx context.Context, obj *athena.Member) (*athena.Character, error) {
 	return dataloaders.CtxLoaders(ctx).Character.Load(obj.ID)
-}
-
-type memberScopeResolver struct{ *resolver }
-
-// MemberScope returns generated.MemberScopeResolver implementation.
-func (r *resolver) MemberScope() graphql.MemberScopeResolver { return &memberScopeResolver{r} }
-
-func (r *memberScopeResolver) Scope(ctx context.Context, obj *athena.MemberScope) (string, error) {
-	return obj.Scope.String(), nil
 }

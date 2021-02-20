@@ -43,7 +43,6 @@ type ResolverRoot interface {
 	AuthAttempt() AuthAttemptResolver
 	Character() CharacterResolver
 	Member() MemberResolver
-	MemberScope() MemberScopeResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
 }
@@ -162,11 +161,6 @@ type ComplexityRoot struct {
 		Scopes            func(childComplexity int) int
 	}
 
-	MemberScope struct {
-		Expiry func(childComplexity int) int
-		Scope  func(childComplexity int) int
-	}
-
 	Query struct {
 		Auth   func(childComplexity int) int
 		Member func(childComplexity int) int
@@ -244,13 +238,10 @@ type CharacterResolver interface {
 	Alliance(ctx context.Context, obj *athena.Character) (*athena.Alliance, error)
 }
 type MemberResolver interface {
-	Scopes(ctx context.Context, obj *athena.Member) ([]*athena.MemberScope, error)
+	Scopes(ctx context.Context, obj *athena.Member) ([]string, error)
 
 	Main(ctx context.Context, obj *athena.Member) (*athena.Character, error)
 	Character(ctx context.Context, obj *athena.Member) (*athena.Character, error)
-}
-type MemberScopeResolver interface {
-	Scope(ctx context.Context, obj *athena.MemberScope) (string, error)
 }
 type QueryResolver interface {
 	Auth(ctx context.Context) (*athena.AuthAttempt, error)
@@ -840,20 +831,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Member.Scopes(childComplexity), true
 
-	case "MemberScope.Expiry":
-		if e.complexity.MemberScope.Expiry == nil {
-			break
-		}
-
-		return e.complexity.MemberScope.Expiry(childComplexity), true
-
-	case "MemberScope.Scope":
-		if e.complexity.MemberScope.Scope == nil {
-			break
-		}
-
-		return e.complexity.MemberScope.Scope(childComplexity), true
-
 	case "Query.auth":
 		if e.complexity.Query.Auth == nil {
 			break
@@ -1270,7 +1247,7 @@ type Member @goModel(model: "github.com/eveisesi/athena.Member") {
     refreshToken: String
     expires: Time
     ownerHash: String
-    scopes: [MemberScope]!
+    scopes: [String!]!
     disabled: Boolean!
     disabledReason: String
     disabledTimestamp: Time
@@ -1278,11 +1255,6 @@ type Member @goModel(model: "github.com/eveisesi/athena.Member") {
 
     main: Character
     character: Character
-}
-
-type MemberScope @goModel(model: "github.com/eveisesi/athena.MemberScope") {
-    Scope: String!
-    Expiry: Time
 }
 `, BuiltIn: false},
 	{Name: "internal/graphql/schema/schema.graphqls", Input: `directive @goModel(model: String) on OBJECT
@@ -4017,9 +3989,9 @@ func (ec *executionContext) _Member_scopes(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*athena.MemberScope)
+	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalNMemberScope2ᚕᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberScope(ctx, field.Selections, res)
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Member_disabled(ctx context.Context, field graphql.CollectedField, obj *athena.Member) (ret graphql.Marshaler) {
@@ -4218,73 +4190,6 @@ func (ec *executionContext) _Member_character(ctx context.Context, field graphql
 	res := resTmp.(*athena.Character)
 	fc.Result = res
 	return ec.marshalOCharacter2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐCharacter(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _MemberScope_Scope(ctx context.Context, field graphql.CollectedField, obj *athena.MemberScope) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "MemberScope",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   true,
-		IsResolver: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.MemberScope().Scope(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _MemberScope_Expiry(ctx context.Context, field graphql.CollectedField, obj *athena.MemberScope) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:     "MemberScope",
-		Field:      field,
-		Args:       nil,
-		IsMethod:   false,
-		IsResolver: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Expiry, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(null.Time)
-	fc.Result = res
-	return ec.marshalOTime2githubᚗcomᚋvolatiletechᚋnullᚐTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_auth(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -7440,44 +7345,6 @@ func (ec *executionContext) _Member(ctx context.Context, sel ast.SelectionSet, o
 	return out
 }
 
-var memberScopeImplementors = []string{"MemberScope"}
-
-func (ec *executionContext) _MemberScope(ctx context.Context, sel ast.SelectionSet, obj *athena.MemberScope) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, memberScopeImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("MemberScope")
-		case "Scope":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._MemberScope_Scope(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
-		case "Expiry":
-			out.Values[i] = ec._MemberScope_Expiry(ctx, field, obj)
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var queryImplementors = []string{"Query"}
 
 func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -8167,43 +8034,6 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNMemberScope2ᚕᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberScope(ctx context.Context, sel ast.SelectionSet, v []*athena.MemberScope) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalOMemberScope2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberScope(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
-}
-
 func (ec *executionContext) marshalNRace2githubᚗcomᚋeveisesiᚋathenaᚐRace(ctx context.Context, sel ast.SelectionSet, v athena.Race) graphql.Marshaler {
 	return ec._Race(ctx, sel, &v)
 }
@@ -8231,6 +8061,36 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
@@ -8566,13 +8426,6 @@ func (ec *executionContext) marshalOMember2ᚖgithubᚗcomᚋeveisesiᚋathena�
 		return graphql.Null
 	}
 	return ec._Member(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalOMemberScope2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberScope(ctx context.Context, sel ast.SelectionSet, v *athena.MemberScope) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._MemberScope(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2githubᚗcomᚋvolatiletechᚋnullᚐString(ctx context.Context, v interface{}) (null.String, error) {
