@@ -25,7 +25,7 @@ func allianceLoader(ctx context.Context, a alliance.Service) *generated.Alliance
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Alliance, len(keys))
 
-			rows, err := a.Alliances(ctx, athena.NewOperators(athena.NewInOperator("id", keys)))
+			rows, err := a.Alliances(ctx, athena.NewInOperator("id", keys))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors

@@ -52,31 +52,32 @@ func (s *service) GetAlliance(ctx context.Context, allianceID uint) (*athena.All
 		return nil, nil, nil, err
 	}
 
-	var alliance = new(athena.Alliance)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, alliance)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		alliance.ID = allianceID
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-		if !isAllianceValid(alliance) {
-			return nil, nil, nil, fmt.Errorf("invalid alliance returned from esi, missing name or ticker")
-		}
-	case sc >= http.StatusBadRequest:
-		return alliance, etag, res, fmt.Errorf("failed to fetch alliance %d, received status code of %d", alliance.ID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch alliance %d, received status code of %d", allianceID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var alliance = new(athena.Alliance)
+	err = json.Unmarshal(b, alliance)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
+	}
+
+	alliance.ID = allianceID
+
+	if !isAllianceValid(alliance) {
+		return nil, nil, nil, fmt.Errorf("invalid alliance returned from esi, missing name or ticker")
 	}
 
 	return alliance, etag, res, nil

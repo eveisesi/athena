@@ -96,7 +96,7 @@ func (s *service) MemberWalletTransactions(ctx context.Context, member *athena.M
 			var transaction = new(athena.MemberWalletTransaction)
 			err = json.Unmarshal([]byte(member), transaction)
 			if err != nil {
-				return nil, fmt.Errorf("failed to unmarsahl member onto struct: %w", err)
+				return nil, fmt.Errorf("failed to unmarshal member onto struct: %w", err)
 			}
 
 			transactions = append(transactions, transaction)
@@ -168,7 +168,7 @@ func (s *service) MemberWalletJournal(ctx context.Context, member *athena.Member
 			var journal = new(athena.MemberWalletJournal)
 			err = json.Unmarshal([]byte(member), journal)
 			if err != nil {
-				return nil, fmt.Errorf("failed to unmarsahl member onto struct: %w", err)
+				return nil, fmt.Errorf("failed to unmarshal member onto struct: %w", err)
 			}
 
 			journals = append(journals, journal)

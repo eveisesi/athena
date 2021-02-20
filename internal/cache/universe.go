@@ -363,7 +363,7 @@ func (s *service) Planet(ctx context.Context, id uint) (*athena.Planet, error) {
 	var planet = new(athena.Planet)
 	err = json.Unmarshal(result, planet)
 	if err != nil {
-		return nil, fmt.Errorf("[Cache Layer] Failed to unmarsahl results for key %s on struct: %w", key, err)
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return planet, nil
@@ -404,7 +404,7 @@ func (s *service) Moon(ctx context.Context, id uint) (*athena.Moon, error) {
 	var moon = new(athena.Moon)
 	err = json.Unmarshal(result, moon)
 	if err != nil {
-		return nil, fmt.Errorf("[Cache Layer] Failed to unmarsahl results for key %s on struct: %w", key, err)
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return moon, nil
@@ -445,7 +445,7 @@ func (s *service) AsteroidBelt(ctx context.Context, id uint) (*athena.AsteroidBe
 	var belt = new(athena.AsteroidBelt)
 	err = json.Unmarshal(result, belt)
 	if err != nil {
-		return nil, fmt.Errorf("[Cache Layer] Failed to unmarsahl results for key %s on struct: %w", key, err)
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal results for key %s on struct: %w", key, err)
 	}
 
 	return belt, nil

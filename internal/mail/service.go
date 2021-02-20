@@ -59,7 +59,7 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, cha
 
 func (s *service) EmptyMemberMailHeaders(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterMailHeaders, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterMailHeaders, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -74,43 +74,43 @@ func (s *service) EmptyMemberMailHeaders(ctx context.Context, member *athena.Mem
 
 func (s *service) FetchMemberMailHeaders(ctx context.Context, member *athena.Member, etag *athena.Etag) (*athena.Etag, error) {
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
-	}
+	// if etag != nil && etag.CachedUntil.After(time.Now()) {
+	// 	return etag, nil
+	// }
 
-	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
-		"service":   serviceIdentifier,
-		"method":    "FetchMemberMailHeaders",
-	})
+	// entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+	// 	"member_id": member.ID,
+	// 	"service":   serviceIdentifier,
+	// 	"method":    "FetchMemberMailHeaders",
+	// })
 
-	// We need to make sure that mailing lists are update to date before processing headers
-	// We can call EmptyMemberMailingLists to accomplish this
-	_, err := s.EmptyMemberMailingLists(ctx, member)
-	if err != nil {
-		entry.WithError(err).Error("failed to prefetch member mailing lists")
-		return etag, fmt.Errorf("failed to prefetch member mailing lists")
-	}
+	// // We need to make sure that mailing lists are up to date before processing headers
+	// // We can call EmptyMemberMailingLists to accomplish this
+	// _, err := s.EmptyMemberMailingLists(ctx, member)
+	// if err != nil {
+	// 	entry.WithError(err).Error("failed to prefetch member mailing lists")
+	// 	return etag, fmt.Errorf("failed to prefetch member mailing lists")
+	// }
 
-	newHeaders, etag, _, err := s.esi.GetCharacterMailHeaders(ctx, member)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member mail headers from ESI")
-		return nil, fmt.Errorf("failed to fetch member mail headers from ESI")
-	}
+	// newHeaders, etag, _, err := s.esi.GetCharacterMailHeaders(ctx, member.ID, member.AccessToken.String)
+	// if err != nil {
+	// 	entry.WithError(err).Error("failed to fetch member mail headers from ESI")
+	// 	return nil, fmt.Errorf("failed to fetch member mail headers from ESI")
+	// }
 
-	if len(newHeaders) == 0 {
-		return etag, nil
-	}
+	// if len(newHeaders) == 0 {
+	// 	return etag, nil
+	// }
 
-	memberHeaders, err := s.mail.MemberMailHeaders(ctx, athena.NewEqualOperator("member_id", member.ID))
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		entry.WithError(err).Error("failed to fetch member mail headers from DB")
-		return nil, fmt.Errorf("failed to fetch member mail headers from DB")
-	}
-	// processHeaders takes care of creating/updating the headers in the db for us.
-	s.processHeaders(ctx, member, memberHeaders, newHeaders)
+	// memberHeaders, err := s.mail.MemberMailHeaders(ctx, athena.NewEqualOperator("member_id", member.ID))
+	// if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	// 	entry.WithError(err).Error("failed to fetch member mail headers from DB")
+	// 	return nil, fmt.Errorf("failed to fetch member mail headers from DB")
+	// }
+	// // processHeaders takes care of creating/updating the headers in the db for us.
+	// s.processHeaders(ctx, member, memberHeaders, newHeaders)
 
-	return etag, err
+	return etag, nil
 
 }
 
@@ -158,7 +158,7 @@ func (s *service) processHeaders(ctx context.Context, member *athena.Member, old
 			entry := entry.WithField("header_id", header.MailID.Uint)
 
 			// Fetch the body of the header
-			singleMailHeader, _, _, err := s.esi.GetCharacterMailHeader(ctx, member, header)
+			singleMailHeader, _, _, err := s.esi.GetCharacterMailHeader(ctx, member.ID, header.MailID.Uint, member.AccessToken.String)
 			if err != nil {
 				entry.WithError(err).Error("failed to fetch indiviudal header from ESI")
 				continue
@@ -378,7 +378,7 @@ func SliceUint64Equal(a, b []uint64) bool {
 
 func (s *service) EmptyMemberMailingLists(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterMailLists, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterMailLists, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -436,7 +436,7 @@ func (s *service) FetchMemberMailingLists(ctx context.Context, member *athena.Me
 		"method":    "FetchMemberMailingLists",
 	})
 
-	lists, etag, _, err := s.esi.GetCharacterMailLists(ctx, member, make([]*athena.MailingList, 0))
+	lists, etag, _, err := s.esi.GetCharacterMailLists(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member mailing lists from ESI")
 		return nil, fmt.Errorf("failed to fetch member mailing lists from ESI")

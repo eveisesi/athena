@@ -53,31 +53,32 @@ func (s *service) GetCorporation(ctx context.Context, corporationID uint) (*athe
 		return nil, nil, nil, err
 	}
 
-	var corporation = new(athena.Corporation)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, corporation)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		corporation.ID = corporationID
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-		if !isCorporationValid(corporation) {
-			return nil, nil, nil, fmt.Errorf("invalid corporation return from esi, missing name or ticker")
-		}
-	case sc >= http.StatusBadRequest:
-		return corporation, etag, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporation.ID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporationID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var corporation = new(athena.Corporation)
+	err = json.Unmarshal(b, corporation)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
+	}
+
+	corporation.ID = corporationID
+
+	if !isCorporationValid(corporation) {
+		return nil, nil, nil, fmt.Errorf("invalid corporation return from esi, missing name or ticker")
 	}
 
 	return corporation, etag, res, nil
@@ -148,7 +149,7 @@ func (s *service) GetCorporationAllianceHistory(ctx context.Context, corporation
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
 	}
 
 	return history, etag, res, nil

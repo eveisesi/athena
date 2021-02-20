@@ -50,7 +50,7 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, uni
 
 func (s *service) EmptyMemberAssets(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterAssets, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterAssets, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch updated etag")
 	}
@@ -65,7 +65,7 @@ func (s *service) EmptyMemberAssets(ctx context.Context, member *athena.Member) 
 		"method":    "FetchMemberAssets",
 	})
 
-	_, res, err := s.esi.HeadCharacterAssets(ctx, member, 1)
+	_, res, err := s.esi.HeadCharacterAssets(ctx, member.ID, 1, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to exec head request for member assets from ESI")
 		return nil, fmt.Errorf("failed to exec head request for member assets from ESI")
@@ -76,7 +76,7 @@ func (s *service) EmptyMemberAssets(ctx context.Context, member *athena.Member) 
 	for page := uint(0); page <= pages; page++ {
 		entry := entry.WithField("page", page)
 
-		newAssets, _, _, err := s.esi.GetCharacterAssets(ctx, member, page)
+		newAssets, _, _, err := s.esi.GetCharacterAssets(ctx, member.ID, page, member.AccessToken.String)
 		if err != nil {
 			entry.WithError(err).Error("failed to fetch member assets from ESI")
 			return nil, fmt.Errorf("failed to fetch member assets from ESI")
@@ -100,7 +100,7 @@ func (s *service) EmptyMemberAssets(ctx context.Context, member *athena.Member) 
 		}
 	}
 
-	etag, err = s.esi.Etag(ctx, esi.GetCharacterAssets, esi.ModWithMember(member))
+	etag, err = s.esi.Etag(ctx, esi.GetCharacterAssets, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch updated etag")
 		return nil, fmt.Errorf("failed to fetch updated etag")

@@ -49,7 +49,7 @@ func (s *service) SetMember(ctx context.Context, memberID uint, member *athena.M
 
 	data, err := json.Marshal(member)
 	if err != nil {
-		return fmt.Errorf("failed to marsahl struct: %w", err)
+		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
 	_, err = s.client.Set(ctx, fmt.Sprintf(keyMember, memberID), data, options.expiry).Result()
@@ -108,7 +108,7 @@ func (s *service) SetMembers(ctx context.Context, operators []*athena.Operator, 
 
 	data, err = json.Marshal(members)
 	if err != nil {
-		return fmt.Errorf("Failed to marsahl payload: %w", err)
+		return fmt.Errorf("Failed to marshal payload: %w", err)
 	}
 
 	_, err = s.client.Set(ctx, fmt.Sprintf(keyMembers, fmt.Sprintf("%x", bs)), data, options.expiry).Result()

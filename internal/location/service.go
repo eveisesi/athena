@@ -60,7 +60,7 @@ func (s *service) EmptyMemberLocation(ctx context.Context, member *athena.Member
 		"method":    "EmptyMemberLocation",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterLocation, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterLocation, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, fmt.Errorf("failed to fetch etag object")
@@ -84,7 +84,7 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 		"method":    "MemberLocation",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterLocation, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterLocation, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, nil, fmt.Errorf("failed to fetch etag object")
@@ -128,7 +128,7 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 
 	}
 
-	location, etag, _, err = s.esi.GetCharacterLocation(ctx, member, location)
+	location, etag, _, err = s.esi.GetCharacterLocation(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member location from ESI")
 		return nil, nil, fmt.Errorf("failed to fetch member location from ESI")
@@ -208,7 +208,7 @@ func (s *service) EmptyMemberShip(ctx context.Context, member *athena.Member) (*
 		"method":    "EmptyMemberShip",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterShip, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterShip, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, fmt.Errorf("failed to fetch etag object")
@@ -232,7 +232,7 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 		"method":    "MemberShip",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterShip, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterShip, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, nil, fmt.Errorf("failed to fetch etag object")
@@ -276,7 +276,7 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 
 	}
 
-	ship, etag, _, err = s.esi.GetCharacterShip(ctx, member, ship)
+	ship, etag, _, err = s.esi.GetCharacterShip(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member ship from ESI")
 		return nil, nil, fmt.Errorf("failed to fetch member ship from ESI")
@@ -330,7 +330,7 @@ func (s *service) EmptyMemberOnline(ctx context.Context, member *athena.Member) 
 		"method":    "EmptyMemberOnline",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterOnline, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterOnline, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, fmt.Errorf("failed to fetch etag object")
@@ -354,7 +354,7 @@ func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*ath
 		"method":    "MemberOnline",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterOnline, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterOnline, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, nil, fmt.Errorf("failed to fetch etag object")
@@ -398,7 +398,7 @@ func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*ath
 
 	}
 
-	online, etag, _, err = s.esi.GetCharacterOnline(ctx, member, online)
+	online, etag, _, err = s.esi.GetCharacterOnline(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member online from ESI")
 		return nil, nil, fmt.Errorf("failed to fetch member online from ESI")

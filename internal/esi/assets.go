@@ -47,7 +47,7 @@ func (s *service) HeadCharacterAssets(ctx context.Context, characterID, page uin
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, fmt.Errorf("failed to update etag: %w", err)
 		}
 	}
 
@@ -80,22 +80,22 @@ func (s *service) GetCharacterAssets(ctx context.Context, characterID, page uint
 		return nil, nil, nil, err
 	}
 
-	assets := make([]*athena.MemberAsset, 0, 1000) // ESI Specification states a max of 1000 items can be returned per page
-
 	if res.StatusCode >= http.StatusBadRequest {
-		return assets, etag, res, fmt.Errorf("failed to fetch assets for character %d, received status code of %d", characterID, res.StatusCode)
-	} else if res.StatusCode == http.StatusNotModified {
-
-		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
-		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
-		}
-
-		return assets, etag, res, nil
-
+		return nil, etag, res, fmt.Errorf("failed to fetch assets for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	assets := make([]*athena.MemberAsset, 0, 1000) // ESI Specification states a max of 1000 items can be returned per page
 	err = json.Unmarshal(b, &assets)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)

@@ -70,7 +70,7 @@ func NewService(
 
 func (s *service) FetchMemberBalance(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletBalance, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletBalance, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -85,7 +85,7 @@ func (s *service) FetchMemberBalance(ctx context.Context, member *athena.Member)
 		"method":    "FetchMemberBalance",
 	})
 
-	rawBalance, etag, _, err := s.esi.GetCharacterWalletBalance(ctx, member)
+	rawBalance, etag, _, err := s.esi.GetCharacterWalletBalance(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member balance from ESI")
 		return nil, fmt.Errorf("failed to fetch member balance from ESI")
@@ -165,7 +165,7 @@ func (s *service) MemberBalance(ctx context.Context, member *athena.Member) (*at
 
 func (s *service) FetchMemberWalletTransactions(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletTransactions, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletTransactions, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -180,7 +180,7 @@ func (s *service) FetchMemberWalletTransactions(ctx context.Context, member *ath
 		"method":    "FetchMemberWalletTransaction",
 	})
 
-	_, _, err = s.esi.HeadCharacterWalletTransactions(ctx, member, 1)
+	_, _, err = s.esi.HeadCharacterWalletTransactions(ctx, member.ID, 0, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to exec head request for member wallet transactions from ESI")
 		return nil, fmt.Errorf("failed to exec head request for member wallet transactions from ESI")
@@ -191,7 +191,7 @@ func (s *service) FetchMemberWalletTransactions(ctx context.Context, member *ath
 
 		entry := entry.WithField("from", from)
 
-		ptransactions, _, _, err := s.esi.GetCharacterWalletTransactions(ctx, member, from)
+		ptransactions, _, _, err := s.esi.GetCharacterWalletTransactions(ctx, member.ID, from, member.AccessToken.String)
 		if err != nil {
 			entry.WithError(err).Error("failed to fetch member wallet transactions from ESI")
 			return nil, fmt.Errorf("failed to fetch member wallet transactions from ESI")
@@ -218,7 +218,7 @@ func (s *service) FetchMemberWalletTransactions(ctx context.Context, member *ath
 
 	}
 
-	etag, err = s.esi.Etag(ctx, esi.GetCharacterWalletTransactions, esi.ModWithMember(member))
+	etag, err = s.esi.Etag(ctx, esi.GetCharacterWalletTransactions, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -345,7 +345,7 @@ func (s *service) resolveMemberWalletTransactionAttributes(ctx context.Context, 
 
 func (s *service) FetchMemberWalletJournals(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletJournal, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletJournal, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -370,7 +370,7 @@ func (s *service) FetchMemberWalletJournal(ctx context.Context, member *athena.M
 		"method":    "FetchMemberWalletJournal",
 	})
 
-	etag, res, err := s.esi.HeadCharacterWalletJournals(ctx, member, 1)
+	etag, res, err := s.esi.HeadCharacterWalletJournals(ctx, member.ID, 1, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to exec head request for member wallet journals from ESI")
 		return nil, fmt.Errorf("failed to exec head request for member wallet journals from ESI")
@@ -382,7 +382,7 @@ func (s *service) FetchMemberWalletJournal(ctx context.Context, member *athena.M
 	for page := uint(1); page <= pages; page++ {
 		entry := entry.WithField("page", page)
 
-		entries, _, _, err := s.esi.GetCharacterWalletJournals(ctx, member, page)
+		entries, _, _, err := s.esi.GetCharacterWalletJournals(ctx, member.ID, page, member.AccessToken.String)
 		if err != nil {
 			entry.WithError(err).Error("failed to fetch member wallet journals from ESI")
 			return nil, fmt.Errorf("failed to fetch member wallet journals from ESI")

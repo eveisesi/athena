@@ -49,7 +49,7 @@ func (s *service) HeadCharacterContracts(ctx context.Context, characterID, page 
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, fmt.Errorf("failed to update etag: %w", err)
 		}
 	}
 
@@ -149,26 +149,26 @@ func (s *service) GetCharacterContractItems(ctx context.Context, characterID, co
 		return nil, nil, nil, err
 	}
 
-	var items = make([]*athena.MemberContractItem, 0, 2000)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &items)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-	case sc >= http.StatusBadRequest:
-		return items, etag, res, fmt.Errorf("failed to fetch contract items for character %d, received status code of %d", characterID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch contract items for character %d contract %d, received status code of %d", characterID, contractID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var items = make([]*athena.MemberContractItem, 0, 2000)
+	err = json.Unmarshal(b, &items)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
 	}
 
 	return items, etag, res, nil
@@ -216,26 +216,26 @@ func (s *service) GetCharacterContractBids(ctx context.Context, characterID, con
 		return nil, nil, nil, err
 	}
 
-	var bids = make([]*athena.MemberContractBid, 0, 2000)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &bids)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-	case sc >= http.StatusBadRequest:
-		return bids, etag, res, fmt.Errorf("failed to fetch contract bids for character %d, received status code of %d", characterID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch contract bids for character %d contract %d, received status code of %d", characterID, contractID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var bids = make([]*athena.MemberContractBid, 0, 2000)
+	err = json.Unmarshal(b, &bids)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
 	}
 
 	return bids, etag, res, nil

@@ -49,7 +49,7 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, uni
 
 func (s *service) EmptyMemberClones(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object")
 	}
@@ -72,7 +72,7 @@ func (s *service) MemberClones(ctx context.Context, member *athena.Member) (*ath
 		"method":    "MemberClones",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, nil, fmt.Errorf("failed to fetch etag object")
@@ -117,7 +117,7 @@ func (s *service) MemberClones(ctx context.Context, member *athena.Member) (*ath
 
 	}
 
-	clones, etag, _, err = s.esi.GetCharacterClones(ctx, member, clones)
+	clones, etag, _, err = s.esi.GetCharacterClones(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member clones from ESI")
 		return nil, nil, fmt.Errorf("failed to fetch member clones from ESI")
@@ -214,7 +214,7 @@ func (s *service) resolveCloneAttributes(ctx context.Context, member *athena.Mem
 
 func (s *service) EmptyMemberImplants(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -237,7 +237,7 @@ func (s *service) MemberImplants(ctx context.Context, member *athena.Member) ([]
 		"method":    "MemberImplants",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterImplants, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterImplants, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, nil, fmt.Errorf("failed to fetch etag object")
@@ -273,7 +273,7 @@ func (s *service) MemberImplants(ctx context.Context, member *athena.Member) ([]
 		return implants, etag, nil
 	}
 
-	newImplants, etag, _, err := s.esi.GetCharacterImplants(ctx, member, make([]uint, 0))
+	newImplants, etag, _, err := s.esi.GetCharacterImplants(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member implants from ESI")
 		return nil, nil, fmt.Errorf("failed to fetch member implants from ESI")

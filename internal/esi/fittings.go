@@ -10,7 +10,7 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-func (s *service) GetCharacterFittings(ctx context.Context, characterID uint, token string) ([]*athena.MemberFitting, *http.Response, error) {
+func (s *service) GetCharacterFittings(ctx context.Context, characterID uint, token string) ([]*athena.MemberFitting, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterFittings]
 
@@ -18,7 +18,7 @@ func (s *service) GetCharacterFittings(ctx context.Context, characterID uint, to
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -31,32 +31,32 @@ func (s *service) GetCharacterFittings(ctx context.Context, characterID uint, to
 		WithAuthorization(token),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	var fittings = make([]*athena.MemberFitting, 0, 250)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &fittings)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-	case sc >= http.StatusBadRequest:
-		return fittings, res, fmt.Errorf("failed to fetch fittings for character %d, received status code of %d", characterID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch fittings for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
 	}
 
-	return fittings, res, nil
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var fittings = make([]*athena.MemberFitting, 0, 250)
+	err = json.Unmarshal(b, &fittings)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
+	}
+
+	return fittings, etag, res, nil
 
 }
 

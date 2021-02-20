@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/eveisesi/athena"
-	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirkon/go-format"
 )
 
@@ -23,9 +22,9 @@ type contractService interface {
 
 const (
 	// Segmented sets by page. Each set will hold up to 1000 contracts
-	keyMemberContracts     = "athena::member::${memberID}::contracts::${pageID}"
-	keyMemberContractBids  = "athena::member::${memberID}::contracts::${contractID}::bids"
-	keyMemberContractItems = "athena::member::${memberID}::contracts::${contractID}::items"
+	keyMemberContracts     = "athena::member::%d::contracts::%d"
+	keyMemberContractBids  = "athena::member::%d::contracts::%d::bids"
+	keyMemberContractItems = "athena::member::%d::contracts::%d::items"
 )
 
 const (
@@ -40,10 +39,7 @@ const (
 
 func (s *service) MemberContracts(ctx context.Context, memberID uint, page int) ([]*athena.MemberContract, error) {
 
-	key := format.Formatm(keyMemberContracts, format.Values{
-		"memberID": memberID,
-		"page":     page,
-	})
+	key := fmt.Sprintf(keyMemberContracts, memberID, page)
 
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil {
@@ -53,17 +49,17 @@ func (s *service) MemberContracts(ctx context.Context, memberID uint, page int) 
 		return nil, nil
 	}
 
-	contracts := make([]*athena.MemberContract, len(members))
-	for i, member := range members {
+	contracts := make([]*athena.MemberContract, 0, len(members))
+	for _, member := range members {
+
 		var contract = new(athena.MemberContract)
 		err = json.Unmarshal([]byte(member), contract)
 		if err != nil {
-			err = fmt.Errorf(errFailedToUnmarshalSetMember, key, err)
-			newrelic.FromContext(ctx).NoticeError(err)
-			continue
+			return nil, fmt.Errorf(errFailedToUnmarshalSetMember, key, err)
 		}
 
-		contracts[i] = contract
+		contracts = append(contracts, contract)
+
 	}
 
 	return contracts, nil
@@ -76,19 +72,20 @@ func (s *service) SetMemberContracts(ctx context.Context, memberID uint, page in
 		return fmt.Errorf(errMaxNumContractsExceeded, 1000)
 	}
 
-	members := make([]interface{}, len(contracts))
-	for i, contract := range contracts {
-		members[i] = contract
+	members := make([]string, 0, len(contracts))
+	for _, contract := range contracts {
+		data, err := json.Marshal(contract)
+		if err != nil {
+			return fmt.Errorf("failed to marshal contract: %w", err)
+		}
+
+		members = append(members, string(data))
 	}
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	key := format.Formatm(keyMemberContracts, format.Values{
-		"memberID": memberID,
-		"page":     page,
-	})
-
-	_, err := s.client.SAdd(ctx, key, members...).Result()
+	key := fmt.Sprintf(keyMemberContracts, memberID, page)
+	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToCachePage, page, "contracts", memberID, err)
 	}
@@ -104,10 +101,7 @@ func (s *service) SetMemberContracts(ctx context.Context, memberID uint, page in
 
 func (s *service) MemberContractItems(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractItem, error) {
 
-	key := format.Formatm(keyMemberContractItems, format.Values{
-		"memberID":   memberID,
-		"contractID": contractID,
-	})
+	key := fmt.Sprintf(keyMemberContractItems, memberID, contractID)
 
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil {
@@ -117,17 +111,15 @@ func (s *service) MemberContractItems(ctx context.Context, memberID uint, contra
 		return nil, nil
 	}
 
-	items := make([]*athena.MemberContractItem, len(members))
-	for i, member := range members {
+	items := make([]*athena.MemberContractItem, 0, len(members))
+	for _, member := range members {
 		var item = new(athena.MemberContractItem)
 		err = json.Unmarshal([]byte(member), item)
 		if err != nil {
-			err = fmt.Errorf(errFailedToUnmarshalSetMember, key, err)
-			newrelic.FromContext(ctx).NoticeError(err)
-			continue
+			return nil, fmt.Errorf(errFailedToUnmarshalSetMember, key, err)
 		}
 
-		items[i] = item
+		items = append(items, item)
 	}
 
 	return items, nil
@@ -148,11 +140,7 @@ func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, con
 
 	options := applyOptionFuncs(nil, optionFuncs)
 
-	key := format.Formatm(keyMemberContractItems, format.Values{
-		"memberID":   memberID,
-		"contractID": contractID,
-	})
-
+	key := fmt.Sprintf(keyMemberContractItems, memberID, contractID)
 	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToCacheMembers, key, err)
@@ -169,10 +157,7 @@ func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, con
 
 func (s *service) MemberContractBids(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractBid, error) {
 
-	key := format.Formatm(keyMemberContractBids, format.Values{
-		"memberID":   memberID,
-		"contractID": contractID,
-	})
+	key := fmt.Sprintf(keyMemberContractBids, memberID, contractID)
 
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil {
@@ -182,17 +167,15 @@ func (s *service) MemberContractBids(ctx context.Context, memberID uint, contrac
 		return nil, nil
 	}
 
-	bids := make([]*athena.MemberContractBid, len(members))
-	for i, member := range members {
+	bids := make([]*athena.MemberContractBid, 0, len(members))
+	for _, member := range members {
 		var bid = new(athena.MemberContractBid)
 		err = json.Unmarshal([]byte(member), bid)
 		if err != nil {
-			err = fmt.Errorf(errFailedToUnmarshalSetMember, key, err)
-			newrelic.FromContext(ctx).NoticeError(err)
-			continue
+			return nil, fmt.Errorf(errFailedToUnmarshalSetMember, key, err)
 		}
 
-		bids[i] = bid
+		bids = append(bids, bid)
 	}
 
 	return bids, nil

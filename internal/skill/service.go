@@ -53,7 +53,7 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, eta
 
 func (s *service) EmptyMemberSkills(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkills, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkills, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("[Skills Service] Failed to fetch etag object: %w", err)
 	}
@@ -76,7 +76,7 @@ func (s *service) MemberSkills(ctx context.Context, member *athena.Member) (*ath
 		"method":    "MemberSkills",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkills, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkills, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, nil, fmt.Errorf("failed to fetch etag object")
@@ -147,7 +147,7 @@ func (s *service) MemberSkills(ctx context.Context, member *athena.Member) (*ath
 		return properties, etag, nil
 	}
 
-	newProperties, etag, _, err := s.esi.GetCharacterSkills(ctx, member, &athena.MemberSkills{MemberID: member.ID})
+	newProperties, etag, _, err := s.esi.GetCharacterSkills(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		return nil, nil, fmt.Errorf("[Skills Service] Failed to fetch skills for member %d: %w", member.ID, err)
 	}
@@ -242,7 +242,7 @@ func (s *service) diffAndUpdateSkills(ctx context.Context, member *athena.Member
 
 func (s *service) EmptyMemberSkillQueue(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkillQueue, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkillQueue, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("[Skills Service] Failed to fetch etag object: %w", err)
 	}
@@ -265,7 +265,7 @@ func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) (
 		"method":    "MemberSkillQueue",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkillQueue, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkillQueue, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, nil, fmt.Errorf("failed to fetch etag object")
@@ -299,7 +299,7 @@ func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) (
 		return positions, etag, nil
 	}
 
-	newPositions, etag, _, err := s.esi.GetCharacterSkillQueue(ctx, member, make([]*athena.MemberSkillQueue, 0))
+	newPositions, etag, _, err := s.esi.GetCharacterSkillQueue(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member implants from ESI")
 		return nil, nil, fmt.Errorf("failed to fetch member implants from ESI")

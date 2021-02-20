@@ -26,7 +26,7 @@ func characterLoader(ctx context.Context, c character.Service) *generated.Charac
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Character, len(keys))
 
-			rows, err := c.Characters(ctx, athena.NewOperators(athena.NewInOperator("id", keys)))
+			rows, err := c.Characters(ctx, athena.NewInOperator("id", keys))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors

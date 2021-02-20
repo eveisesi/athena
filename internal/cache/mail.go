@@ -96,7 +96,7 @@ func (s *service) MailHeaderRecipients(ctx context.Context, mailID uint) ([]*ath
 	var recipients = make([]*athena.MailRecipient, 0)
 	err = json.Unmarshal(result, &recipients)
 	if err != nil {
-		return nil, fmt.Errorf("[Cache Layer] Failed to unmarsahl recipients on slice of struct: %w", err)
+		return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal recipients on slice of struct: %w", err)
 	}
 
 	return recipients, nil
@@ -195,7 +195,7 @@ func (s *service) MemberMailLabels(ctx context.Context, memberID uint) (*athena.
 	var labels = new(athena.MemberMailLabels)
 	err = json.Unmarshal(result, labels)
 	if err != nil {
-		return nil, fmt.Errorf("[Cache Layer] failed to unmarsahl member mail labels on struct: %w", err)
+		return nil, fmt.Errorf("[Cache Layer] failed to unmarshal member mail labels on struct: %w", err)
 	}
 
 	return labels, nil

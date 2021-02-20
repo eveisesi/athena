@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 
@@ -12,13 +13,13 @@ import (
 type allianceService interface {
 	Alliance(ctx context.Context, id uint) (*athena.Alliance, error)
 	SetAlliance(ctx context.Context, alliance *athena.Alliance, optionFuncs ...OptionFunc) error
-	// Alliances(ctx context.Context, operators []*athena.Operator) ([]*athena.Alliance, error)
-	// SetAlliances(ctx context.Context, operators []*athena.Operator, alliances []*athena.Alliance, optionFuncs ...OptionFunc) error
+	Alliances(ctx context.Context, operators []*athena.Operator) ([]*athena.Alliance, error)
+	SetAlliances(ctx context.Context, operators []*athena.Operator, alliances []*athena.Alliance, optionFuncs ...OptionFunc) error
 }
 
 const (
-	keyAlliance = "athena::alliance::%d"
-	// keyAlliances = "athena::alliances::%d"
+	keyAlliance  = "athena::alliance::%d"
+	keyAlliances = "athena::alliances::%x"
 )
 
 func (s *service) Alliance(ctx context.Context, id uint) (*athena.Alliance, error) {
@@ -61,60 +62,64 @@ func (s *service) SetAlliance(ctx context.Context, alliance *athena.Alliance, op
 	return nil
 }
 
-// func (s *service) Alliances(ctx context.Context, operators []*athena.Operator) ([]*athena.Alliance, error) {
+func (s *service) Alliances(ctx context.Context, operators []*athena.Operator) ([]*athena.Alliance, error) {
 
-// 	data, err := json.Marshal(operators)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to marshal operators: %w", err)
-// 	}
+	data, err := json.Marshal(operators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal operators: %w", err)
+	}
 
-// 	h := sha256.New()
-// 	_, _ = h.Write(data)
-// 	bs := h.Sum(nil)
+	key := fmt.Sprintf(keyAlliances, sha256.Sum256(data))
+	result, err := s.client.Get(ctx, key).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
 
-// 	result, err := s.client.Get(ctx, fmt.Sprintf(keyAlliances, fmt.Sprintf("%x", bs))).Result()
-// 	if err != nil && err != redis.Nil {
-// 		return nil, err
-// 	}
+	if len(result) > 0 {
+		var alliances = make([]*athena.Alliance, 0)
 
-// 	if len(result) > 0 {
-// 		var alliances = make([]*athena.Alliance, 0)
+		err = json.Unmarshal([]byte(result), &alliances)
+		if err != nil {
+			return nil, err
+		}
 
-// 		err = json.Unmarshal([]byte(result), &alliances)
-// 		if err != nil {
-// 			return nil, err
-// 		}
+		return alliances, nil
+	}
 
-// 		return alliances, nil
-// 	}
+	return nil, nil
 
-// 	return nil, nil
+}
 
-// }
+func (s *service) SetAlliances(ctx context.Context, operators []*athena.Operator, alliances []*athena.Alliance, optionFuncs ...OptionFunc) error {
 
-// func (s *service) SetAlliances(ctx context.Context, operators []*athena.Operator, alliances []*athena.Alliance, optionFuncs ...OptionFunc) error {
+	ops, err := json.Marshal(operators)
+	if err != nil {
+		return fmt.Errorf("failed to marshal operators: %w", err)
+	}
 
-// 	data, err := json.Marshal(operators)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to marshal operators: %w", err)
-// 	}
+	members := make([]string, 0, len(alliances))
+	for _, alliance := range alliances {
+		data, err := json.Marshal(alliance)
+		if err != nil {
+			return fmt.Errorf("[Cache Layer] Failed to marshal alliance: %w", err)
+		}
 
-// 	h := sha256.New()
-// 	_, _ = h.Write(data)
-// 	bs := h.Sum(nil)
+		members = append(members, string(data))
+	}
 
-// 	data, err = json.Marshal(alliances)
-// 	if err != nil {
-// 		return fmt.Errorf("Failed to marsahl payload: %w", err)
-// 	}
+	options := applyOptionFuncs(nil, optionFuncs)
 
-// 	options := applyOptionFuncs(nil, optionFuncs)
+	key := fmt.Sprintf(keyAlliances, sha256.Sum256(ops))
+	_, err = s.client.SAdd(ctx, key, members).Result()
+	if err != nil {
+		return fmt.Errorf("failed to write to cache: %w", err)
+	}
 
-// 	_, err = s.client.Set(ctx, fmt.Sprintf(keyAlliances, fmt.Sprintf("%x", bs)), data, options.expiry).Result()
-// 	if err != nil {
-// 		return fmt.Errorf("failed to write to cache: %w", err)
-// 	}
+	_, err = s.client.Expire(ctx, key, options.expiry).Result()
+	if err != nil {
+		return fmt.Errorf(errFailedToSetExpiry, key, err)
+	}
 
-// 	return nil
+	return nil
 
-// }
+}

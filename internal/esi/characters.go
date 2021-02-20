@@ -51,31 +51,32 @@ func (s *service) GetCharacter(ctx context.Context, characterID uint) (*athena.C
 		return nil, nil, nil, err
 	}
 
-	var character = new(athena.Character)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, character)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		character.ID = characterID
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-		if !isCharacterValid(character) {
-			return nil, nil, nil, fmt.Errorf("invalid character return from esi, missing name or ticker")
-		}
-	case sc >= http.StatusBadRequest:
-		return character, etag, res, fmt.Errorf("failed to fetch character %d, received status code of %d", character.ID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var character = new(athena.Character)
+	err = json.Unmarshal(b, character)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
+	}
+
+	character.ID = characterID
+
+	if !isCharacterValid(character) {
+		return nil, nil, nil, fmt.Errorf("invalid character return from esi, missing name or ticker")
 	}
 
 	return character, etag, res, nil
@@ -126,26 +127,26 @@ func (s *service) GetCharacterCorporationHistory(ctx context.Context, characterI
 		return nil, nil, nil, err
 	}
 
-	var history = make([]*athena.CharacterCorporationHistory, 0, 512)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &history)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-	case sc >= http.StatusBadRequest:
-		return history, etag, res, fmt.Errorf("failed to fetch character history %d, received status code of %d", characterID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch corporation history for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var history = make([]*athena.CharacterCorporationHistory, 0, 512)
+	err = json.Unmarshal(b, &history)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
 	}
 
 	return history, etag, res, nil

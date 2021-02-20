@@ -13,7 +13,8 @@ import (
 )
 
 type mailInterface interface {
-	GetCharacterMailHeaders(ctx context.Context, characterID uint, token string) ([]*MailHeader, *athena.Etag, *http.Response, error)
+	HeadCharacterMailHeaders(ctx context.Context, characterID uint, token string) (*athena.Etag, *http.Response, error)
+	GetCharacterMailHeaders(ctx context.Context, characterID uint, fromID uint64, token string) ([]*MailHeader, *athena.Etag, *http.Response, error)
 	GetCharacterMailHeader(ctx context.Context, characterID, mailID uint, token string) (*MailHeader, *athena.Etag, *http.Response, error)
 	GetCharacterMailLists(ctx context.Context, characterID uint, token string) ([]*athena.MailingList, *athena.Etag, *http.Response, error)
 	GetCharacterMailLabels(ctx context.Context, characterID uint, token string) (*athena.MemberMailLabels, *athena.Etag, *http.Response, error)
@@ -34,7 +35,7 @@ type MailHeader struct {
 	Timestamp time.Time   `json:"timestamp"`
 }
 
-func (s *service) GetCharacterMailHeaders(ctx context.Context, characterID uint, token string) ([]*MailHeader, *athena.Etag, *http.Response, error) {
+func (s *service) HeadCharacterMailHeaders(ctx context.Context, characterID uint, token string) (*athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterMailHeaders]
 
@@ -42,7 +43,7 @@ func (s *service) GetCharacterMailHeaders(ctx context.Context, characterID uint,
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	path := endpoint.PathFunc(mods)
@@ -55,84 +56,137 @@ func (s *service) GetCharacterMailHeaders(ctx context.Context, characterID uint,
 		WithAuthorization(token),
 	)
 	if err != nil {
+		return nil, nil, err
+	}
+
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, res, fmt.Errorf("failed to make head request to mail headers for character %d, received status code of %d", characterID, res.StatusCode)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
+		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to update etag: %w", err)
+		}
+	}
+
+	return etag, res, nil
+}
+
+func (s *service) GetCharacterMailHeaders(ctx context.Context, characterID uint, fromID uint64, token string) ([]*MailHeader, *athena.Etag, *http.Response, error) {
+
+	endpoint := endpoints[GetCharacterMailHeaders]
+
+	mods := s.modifiers(ModWithCharacterID(characterID), ModWithFromID(fromID))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	var headers = make([]*MailHeader, 0)
+	path := endpoint.PathFunc(mods)
 
-	if res.StatusCode >= http.StatusBadRequest {
-		return headers, etag, res, fmt.Errorf("failed to exec mail headers head request for character %d, received status code of %d", characterID, res.StatusCode)
-	} else if res.StatusCode == http.StatusNotModified {
-		etag.Etag = RetrieveEtagHeader(res.Header)
-		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
-		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
-		}
-
-		return headers, etag, res, nil
+	pageReqOpts := append(
+		make([]OptionFunc, 0),
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithAuthorization(token),
+	)
+	if fromID > 0 {
+		pageReqOpts = append(pageReqOpts, WithQuery("last_mail_id", strconv.FormatUint(fromID, 10)))
 	}
 
-	fromID := uint64(0)
+	b, res, err := s.request(
+		ctx,
+		pageReqOpts...,
+	)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	ageLimit := time.Now().AddDate(0, -3, 0)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch mail headers for character %d, received status code of %d", characterID, res.StatusCode)
+	}
 
-MailHeaderLoop:
-	for {
+	etag.Etag = RetrieveEtagHeader(res.Header)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
 
-		pageHeaders := make([]*MailHeader, 0, 50)
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
 
-		pageReqOpts := append(
-			make([]OptionFunc, 0),
-			WithMethod(http.MethodGet),
-			WithPath(path),
-			WithAuthorization(token),
-		)
-		if fromID > 0 {
-			pageReqOpts = append(pageReqOpts, WithQuery("last_mail_id", strconv.FormatUint(fromID, 10)))
-		}
-
-		b, res, err := s.request(
-			ctx,
-			pageReqOpts...,
-		)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		switch sc := res.StatusCode; {
-		case sc == http.StatusOK:
-			err = json.Unmarshal(b, &pageHeaders)
-			if err != nil {
-				err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-				return nil, nil, nil, err
-			}
-
-			headers = append(headers, pageHeaders...)
-
-			// If the last mail is more than three month old, break out of this loop
-			if pageHeaders[len(pageHeaders)-1].Timestamp.Before(ageLimit) {
-				break MailHeaderLoop
-			}
-
-		case sc >= http.StatusBadRequest:
-			return headers, etag, res, fmt.Errorf("Failed to fetch mail headers from character  %d, received status code of %d", characterID, sc)
-		}
-
-		if len(pageHeaders) < 50 {
-			break
-		}
-
-		if !headers[len(headers)-1].MailID.Valid {
-			break
-		}
-
-		fromID = uint64(headers[len(headers)-1].MailID.Uint)
-
-		time.Sleep(time.Second)
+	var headers = make([]*MailHeader, 0, 50) // Each page only returns 50 headers
+	err = json.Unmarshal(b, &headers)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
 	}
 
 	return headers, etag, res, nil
+
+	// 	fromID := uint64(0)
+
+	// 	ageLimit := time.Now().AddDate(0, -3, 0)
+
+	// MailHeaderLoop:
+	// 	for {
+
+	// 		pageHeaders := make([]*MailHeader, 0, 50)
+
+	// 		pageReqOpts := append(
+	// 			make([]OptionFunc, 0),
+	// 			WithMethod(http.MethodGet),
+	// 			WithPath(path),
+	// 			WithAuthorization(token),
+	// 		)
+	// 		if fromID > 0 {
+	// 			pageReqOpts = append(pageReqOpts, WithQuery("last_mail_id", strconv.FormatUint(fromID, 10)))
+	// 		}
+
+	// 		b, res, err := s.request(
+	// 			ctx,
+	// 			pageReqOpts...,
+	// 		)
+	// 		if err != nil {
+	// 			return nil, nil, nil, err
+	// 		}
+
+	// 		switch sc := res.StatusCode; {
+	// 		case sc == http.StatusOK:
+	// err = json.Unmarshal(b, &pageHeaders)
+	// if err != nil {
+	// 	err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+	// 	return nil, nil, nil, err
+	// }
+
+	// 			headers = append(headers, pageHeaders...)
+
+	// 			// If the last mail is more than three month old, break out of this loop
+	// 			if pageHeaders[len(pageHeaders)-1].Timestamp.Before(ageLimit) {
+	// 				break MailHeaderLoop
+	// 			}
+
+	// 		case sc >= http.StatusBadRequest:
+	// 			return headers, etag, res, fmt.Errorf("Failed to fetch mail headers from character  %d, received status code of %d", characterID, sc)
+	// 		}
+
+	// 		if len(pageHeaders) < 50 {
+	// 			break
+	// 		}
+
+	// 		if !headers[len(headers)-1].MailID.Valid {
+	// 			break
+	// 		}
+
+	// 		fromID = uint64(headers[len(headers)-1].MailID.Uint)
+
+	// 		time.Sleep(time.Second)
+	// 	}
 
 }
 
@@ -185,7 +239,7 @@ func (s *service) GetCharacterMailHeader(ctx context.Context, characterID, mailI
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
 		}
 
 		return header, etag, res, nil
@@ -251,7 +305,7 @@ func (s *service) GetCharacterMailLists(ctx context.Context, characterID uint, t
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
 		}
 
 		return lists, etag, res, nil
@@ -315,7 +369,7 @@ func (s *service) GetCharacterMailLabels(ctx context.Context, characterID uint, 
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
 		}
 
 		return labels, etag, res, nil

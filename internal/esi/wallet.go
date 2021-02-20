@@ -51,7 +51,7 @@ func (s *service) HeadCharacterWalletBalance(ctx context.Context, characterID ui
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, fmt.Errorf("failed to update etag: %w", err)
 		}
 	}
 
@@ -87,12 +87,15 @@ func (s *service) GetCharacterWalletBalance(ctx context.Context, characterID uin
 		return 0.00, etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return 0.00, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
 	if res.StatusCode == http.StatusNotModified {
-		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
-		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
-		if err != nil {
-			return 0.00, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
-		}
+		return 0.00, etag, res, nil
 	}
 
 	var balance float64
@@ -100,13 +103,6 @@ func (s *service) GetCharacterWalletBalance(ctx context.Context, characterID uin
 	if err != nil {
 		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 		return 0.00, nil, nil, err
-	}
-
-	etag.Etag = RetrieveEtagHeader(res.Header)
-	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
-	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
-	if err != nil {
-		return 0.00, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
 	}
 
 	return balance, etag, res, nil
@@ -170,7 +166,7 @@ func (s *service) HeadCharacterWalletTransactions(ctx context.Context, character
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, fmt.Errorf("failed to update etag: %w", err)
 		}
 	}
 
@@ -214,22 +210,21 @@ func (s *service) GetCharacterWalletTransactions(ctx context.Context, characterI
 		return nil, nil, nil, err
 	}
 
-	var transactions = make([]*athena.MemberWalletTransaction, 0, 2500)
-
 	if res.StatusCode >= http.StatusBadRequest {
-		return transactions, etag, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", characterID, res.StatusCode)
+		return nil, etag, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
 	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
 	}
 
 	if res.StatusCode == http.StatusNotModified {
-		return transactions, etag, res, nil
+		return nil, etag, res, nil
 	}
+	var transactions = make([]*athena.MemberWalletTransaction, 0, 2500)
 
 	err = json.Unmarshal(b, &transactions)
 	if err != nil {
@@ -295,7 +290,7 @@ func (s *service) HeadCharacterWalletJournals(ctx context.Context, characterID, 
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, fmt.Errorf("failed to update etag: %w", err)
 		}
 	}
 
@@ -328,35 +323,27 @@ func (s *service) GetCharacterWalletJournals(ctx context.Context, characterID, p
 		return nil, nil, nil, err
 	}
 
-	journals := make([]*athena.MemberWalletJournal, 0, 2500)
-
 	if res.StatusCode >= http.StatusBadRequest {
-		return journals, etag, res, fmt.Errorf("failed to fetch wallet journal for character %d, received status code of %d", characterID, res.StatusCode)
+		return nil, etag, res, fmt.Errorf("failed to fetch wallet journal for character %d, received status code of %d", characterID, res.StatusCode)
 	}
+
+	etag.Etag = RetrieveEtagHeader(res.Header)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
 	if res.StatusCode == http.StatusNotModified {
-		etag.Etag = RetrieveEtagHeader(res.Header)
-		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
-		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
-		}
-
-		return journals, etag, res, nil
-
+		return nil, etag, res, nil
 	}
+
+	journals := make([]*athena.MemberWalletJournal, 0, 2500)
 
 	err = json.Unmarshal(b, &journals)
 	if err != nil {
 		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 		return nil, nil, nil, err
-	}
-
-	etag.Etag = RetrieveEtagHeader(res.Header)
-
-	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
-	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
 	}
 
 	return journals, etag, res, nil

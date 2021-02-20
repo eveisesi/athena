@@ -50,7 +50,7 @@ func (s *service) Corporation(ctx context.Context, id uint, optionFuncs ...Optio
 
 	options := s.options(optionFuncs)
 
-	etag, err := s.esi.Etag(ctx, esi.GetCorporation, esi.ModWithCorporation(&athena.Corporation{ID: id}))
+	etag, err := s.esi.Etag(ctx, esi.GetCorporation, esi.ModWithCorporationID(id))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}

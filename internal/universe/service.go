@@ -82,7 +82,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 	p := mpb.New(pOpts...)
 
 	if o.chr {
-		races, _, err := s.esi.GetRaces(ctx, []*athena.Race{})
+		races, _, _, err := s.esi.GetRaces(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch races from ESI: %w", err)
 		}
@@ -115,7 +115,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 			time.Sleep(time.Millisecond * 500)
 		}
 
-		bloodlines, _, err := s.esi.GetBloodlines(ctx, []*athena.Bloodline{})
+		bloodlines, _, _, err := s.esi.GetBloodlines(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch bloodlines from ESI: %w", err)
 		}
@@ -149,7 +149,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 			time.Sleep(time.Millisecond * 50)
 		}
 
-		ancestries, _, err := s.esi.GetAncestries(ctx, []*athena.Ancestry{})
+		ancestries, _, _, err := s.esi.GetAncestries(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch ancestries from ESI: %w", err)
 		}
@@ -182,7 +182,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 			time.Sleep(time.Millisecond * 50)
 		}
 
-		factions, _, err := s.esi.GetFactions(ctx, []*athena.Faction{})
+		factions, _, _, err := s.esi.GetFactions(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch factions from ESI: %w", err)
 		}
@@ -219,7 +219,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 	}
 
 	if o.inv {
-		categoryIDs, _, err := s.esi.GetCategories(ctx, []uint{})
+		categoryIDs, _, _, err := s.esi.GetCategories(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch category IDs from ESI: %w", err)
 		}
@@ -238,7 +238,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 		for _, categoryID := range categoryIDs {
 			categoryEntry := s.logger.WithField("category_id", categoryID)
 
-			category, _, err := s.esi.GetCategory(ctx, &athena.Category{ID: categoryID})
+			category, _, _, err := s.esi.GetCategory(ctx, categoryID)
 			if err != nil {
 				categoryEntry.WithError(err).Error("failed to fetch category from ESI")
 				continue
@@ -293,7 +293,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 	}
 
 	if o.loc {
-		regionIDs, _, err := s.esi.GetRegions(ctx, []uint{})
+		regionIDs, _, _, err := s.esi.GetRegions(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch region id for ESI: %w", err)
 		}
@@ -313,7 +313,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 
 			regionEntry := s.logger.WithField("region_id", regionID)
 
-			region, _, err := s.esi.GetRegion(ctx, &athena.Region{ID: regionID})
+			region, _, _, err := s.esi.GetRegion(ctx, regionID)
 			if err != nil {
 				regionEntry.WithError(err).Error("failed to fetch region from ESI")
 				continue
@@ -344,7 +344,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 
 					constellationsEntry := regionEntry.WithField("constellation_id", constellationID)
 
-					constellation, _, err := s.esi.GetConstellation(ctx, &athena.Constellation{ID: constellationID})
+					constellation, _, _, err := s.esi.GetConstellation(ctx, constellationID)
 					if err != nil {
 						constellationsEntry.WithError(err).Error("failed to fetch constellation from ESI")
 						return
@@ -369,7 +369,7 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 
 					for _, systemID := range constellation.SystemIDs {
 						systemEntry := constellationsEntry.WithField("type_id", systemID)
-						system, _, err := s.esi.GetSolarSystem(ctx, &athena.SolarSystem{ID: systemID})
+						system, _, _, err := s.esi.GetSolarSystem(ctx, systemID)
 						if err != nil {
 							systemEntry.WithError(err).Error("failed to fetch system from ESI")
 							continue
@@ -425,7 +425,7 @@ func (s *service) groupWorker(wid int, buffQ chan uint, wg *sync.WaitGroup, prog
 
 		groupEntry := logEntry.WithField("group_id", groupID)
 
-		group, _, err := s.esi.GetGroup(ctx, &athena.Group{ID: groupID})
+		group, _, _, err := s.esi.GetGroup(ctx, groupID)
 		if err != nil {
 			groupEntry.WithError(err).Error("failed to fetch group from ESI")
 			return
@@ -502,7 +502,7 @@ func (s *service) typeWorker(wid int, buffQQ chan uint, wg *sync.WaitGroup, bar 
 		var ctx = context.Background()
 
 		typeEntry := groupEntry.WithField("type_id", typeID)
-		item, _, err := s.esi.GetType(ctx, &athena.Type{ID: typeID})
+		item, _, _, err := s.esi.GetType(ctx, typeID)
 		if err != nil {
 			typeEntry.WithError(err).Error("failed to fetch type from ESI")
 			continue
@@ -586,7 +586,7 @@ func (s *service) Category(ctx context.Context, id uint) (*athena.Category, erro
 	}
 
 	if category == nil || errors.Is(err, sql.ErrNoRows) {
-		category, _, err = s.esi.GetCategory(ctx, &athena.Category{ID: id})
+		category, _, _, err = s.esi.GetCategory(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -624,7 +624,7 @@ func (s *service) Constellation(ctx context.Context, id uint) (*athena.Constella
 	}
 
 	if constellation == nil || errors.Is(err, sql.ErrNoRows) {
-		constellation, _, err = s.esi.GetConstellation(ctx, &athena.Constellation{ID: id})
+		constellation, _, _, err = s.esi.GetConstellation(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -686,7 +686,7 @@ func (s *service) Group(ctx context.Context, id uint) (*athena.Group, error) {
 	}
 
 	if group == nil || errors.Is(err, sql.ErrNoRows) {
-		group, _, err = s.esi.GetGroup(ctx, &athena.Group{ID: id})
+		group, _, _, err = s.esi.GetGroup(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -772,7 +772,7 @@ func (s *service) Region(ctx context.Context, id uint) (*athena.Region, error) {
 	}
 
 	if region == nil || errors.Is(err, sql.ErrNoRows) {
-		region, _, err = s.esi.GetRegion(ctx, &athena.Region{ID: id})
+		region, _, _, err = s.esi.GetRegion(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -810,7 +810,7 @@ func (s *service) SolarSystem(ctx context.Context, id uint) (*athena.SolarSystem
 	}
 
 	if solarSystem == nil || errors.Is(err, sql.ErrNoRows) {
-		solarSystem, _, err = s.esi.GetSolarSystem(ctx, &athena.SolarSystem{ID: id})
+		solarSystem, _, _, err = s.esi.GetSolarSystem(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -848,7 +848,7 @@ func (s *service) Station(ctx context.Context, id uint) (*athena.Station, error)
 	}
 
 	if station == nil || errors.Is(err, sql.ErrNoRows) {
-		station, _, err = s.esi.GetStation(ctx, &athena.Station{ID: id})
+		station, _, _, err = s.esi.GetStation(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -883,7 +883,7 @@ func (s *service) Structure(ctx context.Context, member *athena.Member, id uint6
 
 	if structure == nil || errors.Is(err, sql.ErrNoRows) {
 		// TODO: Deliver a Concreate Error from ESI Package and insert th is into
-		structure, _, err = s.esi.GetStructure(ctx, member, &athena.Structure{ID: id})
+		structure, _, _, err = s.esi.GetStructure(ctx, id, member.AccessToken.String)
 		if err != nil {
 			return nil, err
 		}
@@ -917,7 +917,7 @@ func (s *service) Type(ctx context.Context, id uint) (*athena.Type, error) {
 	}
 
 	if item == nil || errors.Is(err, sql.ErrNoRows) {
-		item, _, err = s.esi.GetType(ctx, &athena.Type{ID: id})
+		item, _, _, err = s.esi.GetType(ctx, id)
 		if err != nil {
 			return nil, err
 		}

@@ -48,7 +48,7 @@ func (s *service) HeadCharacterContacts(ctx context.Context, characterID, page u
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+			return nil, nil, fmt.Errorf("failed to update etag: %w", err)
 		}
 	}
 
@@ -80,23 +80,26 @@ func (s *service) GetCharacterContacts(ctx context.Context, characterID, page ui
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	contacts := make([]*athena.MemberContact, 0, 1024) // ESI Specification states a max of 1020 items can be returned per page
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return contacts, nil, res, fmt.Errorf("failed to exec contacts head request for character %d, received status code of %d", characterID, res.StatusCode)
-	}
-
-	err = json.Unmarshal(b, &contacts)
-	if err != nil {
-		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-		return nil, nil, nil, err
+		return nil, etag, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
 	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	contacts := make([]*athena.MemberContact, 0, 1024) // ESI Specification states a max of 1024 items can be returned per page
+	err = json.Unmarshal(b, &contacts)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 	}
 
 	return contacts, nil, res, nil
@@ -150,26 +153,26 @@ func (s *service) GetCharacterContactLabels(ctx context.Context, characterID uin
 		return nil, nil, nil, err
 	}
 
-	var labels = make([]*athena.MemberContactLabel, 0, 64)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &labels)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-	case sc >= http.StatusBadRequest:
-		return labels, etag, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", characterID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch contact labels for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var labels = make([]*athena.MemberContactLabel, 0, 64)
+	err = json.Unmarshal(b, &labels)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
 	}
 
 	return labels, etag, res, nil

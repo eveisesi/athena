@@ -170,7 +170,7 @@ func (s *service) SetCorporationAllianceHistory(ctx context.Context, id uint, re
 
 // 	data, err = json.Marshal(corporations)
 // 	if err != nil {
-// 		return fmt.Errorf("Failed to marsahl payload: %w", err)
+// 		return fmt.Errorf("Failed to marshal payload: %w", err)
 // 	}
 
 // 	options := applyOptionFuncs(nil, optionFuncs)

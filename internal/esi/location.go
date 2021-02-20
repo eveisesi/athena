@@ -46,26 +46,26 @@ func (s *service) GetCharacterLocation(ctx context.Context, characterID uint, to
 		return nil, nil, nil, err
 	}
 
-	var location = new(athena.MemberLocation)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, location)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-	case sc >= http.StatusBadRequest:
-		return location, etag, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", characterID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var location = new(athena.MemberLocation)
+	err = json.Unmarshal(b, location)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
 	}
 
 	return location, etag, res, nil
@@ -112,26 +112,26 @@ func (s *service) GetCharacterOnline(ctx context.Context, characterID uint, toke
 		return nil, nil, nil, err
 	}
 
-	var online = new(athena.MemberOnline)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, online)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-	case sc >= http.StatusBadRequest:
-		return online, etag, res, fmt.Errorf("failed to fetch online for character %d, received status code of %d", characterID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch online for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var online = new(athena.MemberOnline)
+	err = json.Unmarshal(b, online)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
 	}
 
 	return online, etag, res, nil
@@ -178,26 +178,26 @@ func (s *service) GetCharacterShip(ctx context.Context, characterID uint, token 
 		return nil, nil, nil, err
 	}
 
-	var ship = new(athena.MemberShip)
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, ship)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, nil, err
-		}
-
-		etag.Etag = RetrieveEtagHeader(res.Header)
-
-	case sc >= http.StatusBadRequest:
-		return ship, etag, res, fmt.Errorf("failed to fetch ship for character %d, received status code of %d", characterID, sc)
+	if res.StatusCode >= http.StatusBadRequest {
+		return nil, etag, res, fmt.Errorf("failed to fetch online for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
+		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, etag, res, nil
+	}
+
+	var ship = new(athena.MemberShip)
+	err = json.Unmarshal(b, ship)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, nil, err
 	}
 
 	return ship, etag, res, nil

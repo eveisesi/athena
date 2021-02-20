@@ -175,7 +175,7 @@ func (s *service) SetCharacterCorporationHistory(ctx context.Context, id uint, r
 
 // 	data, err = json.Marshal(characters)
 // 	if err != nil {
-// 		return fmt.Errorf("Failed to marsahl payload: %w", err)
+// 		return fmt.Errorf("Failed to marshal payload: %w", err)
 // 	}
 
 // 	options := applyOptionFuncs(nil, optionFuncs)

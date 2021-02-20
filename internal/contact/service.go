@@ -61,7 +61,7 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, uni
 
 func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -88,7 +88,7 @@ func (s *service) FetchMemberContacts(ctx context.Context, member *athena.Member
 		"method":    "FetchMemberContacts",
 	})
 
-	_, res, err := s.esi.HeadCharacterContacts(ctx, member, 1)
+	_, res, err := s.esi.HeadCharacterContacts(ctx, member.ID, 1, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to exec head request for member contacts from ESI")
 		return nil, fmt.Errorf("failed to exec head request for member contacts from ESI")
@@ -104,7 +104,7 @@ func (s *service) FetchMemberContacts(ctx context.Context, member *athena.Member
 			return nil, err
 		}
 
-		newContacts, _, _, err := s.esi.GetCharacterContacts(ctx, member, page)
+		newContacts, _, _, err := s.esi.GetCharacterContacts(ctx, member.ID, page, member.AccessToken.String)
 		if err != nil {
 			entry.WithError(err).Error("failed to fetch member contacts from ESI")
 			return nil, fmt.Errorf("failed to fetch member contacts from ESI")
@@ -295,7 +295,7 @@ func (s *service) resolveContactAttributes(ctx context.Context, contacts []*athe
 
 func (s *service) EmptyMemberContactLabels(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterContactLabels, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterContactLabels, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -318,7 +318,7 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 		"method":    "MemberContacts",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterContactLabels, esi.ModWithMember(member))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterContactLabels, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
 		return nil, nil, fmt.Errorf("failed to fetch etag object")
@@ -353,7 +353,7 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 		return labels, etag, nil
 	}
 
-	newLabels, etag, _, err := s.esi.GetCharacterContactLabels(ctx, member, make([]*athena.MemberContactLabel, 0))
+	newLabels, etag, _, err := s.esi.GetCharacterContactLabels(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member contact labels from ESI")
 		return nil, nil, fmt.Errorf("failed to fetch member contact labels from ESI")
