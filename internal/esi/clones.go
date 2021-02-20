@@ -11,8 +11,8 @@ import (
 )
 
 type clonesInterface interface {
-	GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *athena.Etag, *http.Response, error)
-	GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *athena.Etag, *http.Response, error)
+	GetCharacterClones(ctx context.Context, characterID uint, token string) (*athena.MemberClones, *athena.Etag, *http.Response, error)
+	GetCharacterImplants(ctx context.Context, characterID uint, token string) ([]uint, *athena.Etag, *http.Response, error)
 }
 
 // GetCharacterClones makes an HTTP GET Request to the /characters/{character_id}/clones/ endpoint for
@@ -21,11 +21,11 @@ type clonesInterface interface {
 // Documentation: https://esi.evetech.net/ui/#/Clones/get_characters_character_id_clones
 // Version: v3
 // Cache: 120 (2 min)
-func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member, clones *athena.MemberClones) (*athena.MemberClones, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterClones(ctx context.Context, characterID uint, token string) (*athena.MemberClones, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterClones]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -38,12 +38,14 @@ func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member,
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var clones = new(athena.MemberClones)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -53,10 +55,12 @@ func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member,
 			return nil, nil, nil, err
 		}
 
+		clones.MemberID = characterID
+
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return clones, etag, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.ID, sc)
+		return clones, etag, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -72,17 +76,17 @@ func (s *service) GetCharacterClones(ctx context.Context, member *athena.Member,
 
 func characterClonesKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterClones.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	return buildKey(GetCharacterClones.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 
 }
 
 func characterClonesPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterClones].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterClones].Path, mods.characterID)
 
 }
 
@@ -92,11 +96,11 @@ func characterClonesPathFunc(mods *modifiers) string {
 // Documentation: https://esi.evetech.net/ui/#/Clones/get_characters_character_id_implants
 // Version: v1
 // Cache: 120 (2 min)
-func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Member, ids []uint) ([]uint, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterImplants(ctx context.Context, characterID uint, token string) ([]uint, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterImplants]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -109,12 +113,14 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var ids = make([]uint, 0, 11)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -127,7 +133,7 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return ids, etag, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", member.ID, sc)
+		return ids, etag, res, fmt.Errorf("failed to fetch clones for character %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -142,15 +148,15 @@ func (s *service) GetCharacterImplants(ctx context.Context, member *athena.Membe
 
 func characterImplantsKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterImplants.String(), strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterImplants.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 }
 
 func characterImplantsPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterImplants].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterImplants].Path, mods.characterID)
 
 }

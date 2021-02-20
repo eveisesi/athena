@@ -11,8 +11,8 @@ import (
 )
 
 type characterInterface interface {
-	GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *athena.Etag, *http.Response, error)
-	GetCharacterCorporationHistory(ctx context.Context, character *athena.Character, history []*athena.CharacterCorporationHistory) ([]*athena.CharacterCorporationHistory, *athena.Etag, *http.Response, error)
+	GetCharacter(ctx context.Context, characterID uint) (*athena.Character, *athena.Etag, *http.Response, error)
+	GetCharacterCorporationHistory(ctx context.Context, characterID uint) ([]*athena.CharacterCorporationHistory, *athena.Etag, *http.Response, error)
 }
 
 func isCharacterValid(r *athena.Character) bool {
@@ -28,11 +28,11 @@ func isCharacterValid(r *athena.Character) bool {
 // Documentation: https://esi.evetech.net/ui/#/Character/get_characters_character_id
 // Version: v4
 // Cache: 86400 sec (24 Hour)
-func (s *service) GetCharacter(ctx context.Context, character *athena.Character) (*athena.Character, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacter(ctx context.Context, characterID uint) (*athena.Character, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacter]
 
-	mods := s.modifiers(ModWithCharacter(character))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -45,11 +45,13 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var character = new(athena.Character)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -58,6 +60,8 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 			return nil, nil, nil, err
 		}
+
+		character.ID = characterID
 
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
@@ -80,16 +84,16 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 
 func characterKeyFunc(mods *modifiers) string {
 
-	requireCharacter(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacter.String(), strconv.Itoa(int(mods.character.ID)))
+	return buildKey(GetCharacter.String(), strconv.Itoa(int(mods.characterID)))
 }
 
 func characterPathFunc(mods *modifiers) string {
 
-	requireCharacter(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacter].Path, mods.character.ID)
+	return fmt.Sprintf(endpoints[GetCharacter].Path, mods.characterID)
 
 }
 
@@ -99,11 +103,11 @@ func characterPathFunc(mods *modifiers) string {
 // Documentation: https://esi.evetech.net/ui/?version=_latest#/Character/get_characters_character_id_corporationhistory
 // Version: v1
 // Cache: 86400 sec (24 Hour)
-func (s *service) GetCharacterCorporationHistory(ctx context.Context, character *athena.Character, history []*athena.CharacterCorporationHistory) ([]*athena.CharacterCorporationHistory, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterCorporationHistory(ctx context.Context, characterID uint) ([]*athena.CharacterCorporationHistory, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterCorporationHistory]
 
-	mods := s.modifiers(ModWithCharacter(character))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -116,11 +120,13 @@ func (s *service) GetCharacterCorporationHistory(ctx context.Context, character 
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var history = make([]*athena.CharacterCorporationHistory, 0, 512)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -133,7 +139,7 @@ func (s *service) GetCharacterCorporationHistory(ctx context.Context, character 
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return history, etag, res, fmt.Errorf("failed to fetch character history %d, received status code of %d", character.ID, sc)
+		return history, etag, res, fmt.Errorf("failed to fetch character history %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -148,16 +154,16 @@ func (s *service) GetCharacterCorporationHistory(ctx context.Context, character 
 
 func characterCorporationHistoryKeyFunc(mods *modifiers) string {
 
-	requireCharacter(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterCorporationHistory.String(), strconv.Itoa(int(mods.character.ID)))
+	return buildKey(GetCharacterCorporationHistory.String(), strconv.Itoa(int(mods.characterID)))
 
 }
 
 func characterCorporationHistoryPathFunc(mods *modifiers) string {
 
-	requireCharacter(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterCorporationHistory].Path, mods.character.ID)
+	return fmt.Sprintf(endpoints[GetCharacterCorporationHistory].Path, mods.characterID)
 
 }

@@ -11,8 +11,8 @@ import (
 )
 
 type corporationInterface interface {
-	GetCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *athena.Etag, *http.Response, error)
-	GetCorporationAllianceHistory(ctx context.Context, corporation *athena.Corporation, history []*athena.CorporationAllianceHistory) ([]*athena.CorporationAllianceHistory, *athena.Etag, *http.Response, error)
+	GetCorporation(ctx context.Context, corporationID uint) (*athena.Corporation, *athena.Etag, *http.Response, error)
+	GetCorporationAllianceHistory(ctx context.Context, corporationID uint) ([]*athena.CorporationAllianceHistory, *athena.Etag, *http.Response, error)
 }
 
 func isCorporationValid(r *athena.Corporation) bool {
@@ -29,11 +29,11 @@ func isCorporationValid(r *athena.Corporation) bool {
 // Documentation: https://esi.evetech.net/ui/#/Corporation/get_corporations_corporation_id
 // Version: v4
 // Cache: 3600 sec (1 Hour)
-func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corporation) (*athena.Corporation, *athena.Etag, *http.Response, error) {
+func (s *service) GetCorporation(ctx context.Context, corporationID uint) (*athena.Corporation, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCorporation]
 
-	mods := s.modifiers(ModWithCorporation(corporation))
+	mods := s.modifiers(ModWithCorporationID(corporationID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -47,22 +47,23 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
+	var corporation = new(athena.Corporation)
+
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
-		id := corporation.ID
 		err = json.Unmarshal(b, corporation)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 			return nil, nil, nil, err
 		}
 
-		corporation.ID = id
+		corporation.ID = corporationID
 
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
@@ -84,17 +85,17 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 
 func corporationKeyFunc(mods *modifiers) string {
 
-	requireCorporation(mods)
+	requireCorporationID(mods)
 
-	return buildKey(GetCorporation.String(), strconv.FormatUint(uint64(mods.corporation.ID), 10))
+	return buildKey(GetCorporation.String(), strconv.FormatUint(uint64(mods.corporationID), 10))
 
 }
 
 func corporationPathFunc(mods *modifiers) string {
 
-	requireCorporation(mods)
+	requireCorporationID(mods)
 
-	return fmt.Sprintf(endpoints[GetCorporation].Path, mods.corporation.ID)
+	return fmt.Sprintf(endpoints[GetCorporation].Path, mods.corporationID)
 
 }
 
@@ -104,11 +105,11 @@ func corporationPathFunc(mods *modifiers) string {
 // Documentation: https://esi.evetech.net/ui/?version=_latest#/Corporation/get_corporations_corporation_id_alliancehistory
 // Version: v4
 // Cache: 3600 sec (1 Hour)
-func (s *service) GetCorporationAllianceHistory(ctx context.Context, corporation *athena.Corporation, history []*athena.CorporationAllianceHistory) ([]*athena.CorporationAllianceHistory, *athena.Etag, *http.Response, error) {
+func (s *service) GetCorporationAllianceHistory(ctx context.Context, corporationID uint) ([]*athena.CorporationAllianceHistory, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCorporationAllianceHistory]
 
-	mods := s.modifiers(ModWithCorporation(corporation))
+	mods := s.modifiers(ModWithCorporationID(corporationID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -122,11 +123,13 @@ func (s *service) GetCorporationAllianceHistory(ctx context.Context, corporation
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var history = make([]*athena.CorporationAllianceHistory, 0, 512)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -139,7 +142,7 @@ func (s *service) GetCorporationAllianceHistory(ctx context.Context, corporation
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return history, etag, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporation.ID, sc)
+		return history, etag, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporationID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -154,16 +157,16 @@ func (s *service) GetCorporationAllianceHistory(ctx context.Context, corporation
 
 func corporationAllianceHistoryPathFunc(mods *modifiers) string {
 
-	requireCorporation(mods)
+	requireCorporationID(mods)
 
-	return fmt.Sprintf(endpoints[GetCorporationAllianceHistory].Path, mods.corporation.ID)
+	return fmt.Sprintf(endpoints[GetCorporationAllianceHistory].Path, mods.corporationID)
 
 }
 
 func corporationAllianceHistoryKeyFunc(mods *modifiers) string {
 
-	requireCorporation(mods)
+	requireCorporationID(mods)
 
-	return buildKey(GetCorporationAllianceHistory.String(), strconv.FormatUint(uint64(mods.corporation.ID), 10))
+	return buildKey(GetCorporationAllianceHistory.String(), strconv.FormatUint(uint64(mods.corporationID), 10))
 
 }

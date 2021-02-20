@@ -11,9 +11,9 @@ import (
 )
 
 type locationInterface interface {
-	GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *athena.Etag, *http.Response, error)
-	GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *athena.Etag, *http.Response, error)
-	GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *athena.Etag, *http.Response, error)
+	GetCharacterLocation(ctx context.Context, characterID uint, token string) (*athena.MemberLocation, *athena.Etag, *http.Response, error)
+	GetCharacterOnline(ctx context.Context, characterID uint, token string) (*athena.MemberOnline, *athena.Etag, *http.Response, error)
+	GetCharacterShip(ctx context.Context, characterID uint, token string) (*athena.MemberShip, *athena.Etag, *http.Response, error)
 }
 
 // GetCharacterLocation makes an HTTP GET Request to the /characters/{character_id}/location endpoint for
@@ -22,11 +22,11 @@ type locationInterface interface {
 // Documentation: https://esi.evetech.net/ui/#/Location/get_characters_character_id_location
 // Version: v1
 // Cache: 5 secs
-func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Member, location *athena.MemberLocation) (*athena.MemberLocation, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterLocation(ctx context.Context, characterID uint, token string) (*athena.MemberLocation, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterLocation]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -39,12 +39,14 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var location = new(athena.MemberLocation)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -57,7 +59,7 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return location, etag, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.ID, sc)
+		return location, etag, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -72,25 +74,25 @@ func (s *service) GetCharacterLocation(ctx context.Context, member *athena.Membe
 
 func characterLocationsKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterLocation.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	return buildKey(GetCharacterLocation.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 
 }
 
 func characterLocationsPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterLocation].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterLocation].Path, mods.characterID)
 
 }
 
-func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member, online *athena.MemberOnline) (*athena.MemberOnline, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterOnline(ctx context.Context, characterID uint, token string) (*athena.MemberOnline, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterOnline]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -103,15 +105,14 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err != nil {
-		return nil, nil, nil, err
-	}
+
+	var online = new(athena.MemberOnline)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -124,7 +125,7 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return online, etag, res, fmt.Errorf("failed to fetch online for character %d, received status code of %d", member.ID, sc)
+		return online, etag, res, fmt.Errorf("failed to fetch online for character %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -139,25 +140,25 @@ func (s *service) GetCharacterOnline(ctx context.Context, member *athena.Member,
 
 func characterOnlinesKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterOnline.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	return buildKey(GetCharacterOnline.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 
 }
 
 func characterOnlinesPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterOnline].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterOnline].Path, mods.characterID)
 
 }
 
-func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, ship *athena.MemberShip) (*athena.MemberShip, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterShip(ctx context.Context, characterID uint, token string) (*athena.MemberShip, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterShip]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -170,12 +171,14 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var ship = new(athena.MemberShip)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -188,7 +191,7 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return ship, etag, res, fmt.Errorf("failed to fetch ship for character %d, received status code of %d", member.ID, sc)
+		return ship, etag, res, fmt.Errorf("failed to fetch ship for character %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -203,16 +206,16 @@ func (s *service) GetCharacterShip(ctx context.Context, member *athena.Member, s
 
 func characterShipsKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterShip.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	return buildKey(GetCharacterShip.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 
 }
 
 func characterShipsPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterShip].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterShip].Path, mods.characterID)
 
 }

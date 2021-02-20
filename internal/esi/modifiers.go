@@ -1,31 +1,23 @@
 package esi
 
-import (
-	"github.com/eveisesi/athena"
-)
-
 type (
 	modifiers struct {
-		alliance      *athena.Alliance
-		asteroidBelt  *athena.AsteroidBelt
-		category      *athena.Category
-		character     *athena.Character
-		constellation *athena.Constellation
-		contract      *athena.MemberContract
-		corporation   *athena.Corporation
-		from          uint64
-		group         *athena.Group
-		header        *MailHeader
-		item          *athena.Type
-		lastMailID    uint64
-		member        *athena.Member
-		moon          *athena.Moon
-		page          uint
-		planet        *athena.Planet
-		region        *athena.Region
-		station       *athena.Station
-		solarSystem   *athena.SolarSystem
-		structure     *athena.Structure
+		allianceID      uint
+		categoryID      uint
+		characterID     uint
+		constellationID uint
+		contractID      uint
+		corporationID   uint
+		from            uint64
+		groupID         uint
+		mailID          uint
+		itemID          uint
+		lastMailID      uint64
+		page            uint
+		regionID        uint
+		stationID       uint
+		solarSystemID   uint
+		structureID     uint64
 	}
 
 	modifierFunc func(mod *modifiers) *modifiers
@@ -74,223 +66,171 @@ func ModWithLastMailID(lastMailID uint64) modifierFunc {
 	}
 }
 
-func ModWithAsteroidBelt(belt *athena.AsteroidBelt) modifierFunc {
+func ModWithMailID(mailID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.asteroidBelt = belt
+		mod.mailID = mailID
 		return mod
 	}
 }
 
-func requireAsteriodBelt(mods *modifiers) {
-	if mods.asteroidBelt == nil {
-		panic("expected type *athena.AsteroidBelt to be provided, received nil instead")
+func requireMailID(mods *modifiers) {
+	if mods.mailID == 0 {
+		panic("modifier mailID should be greater than 0")
 	}
 }
 
-func ModWithMoon(moon *athena.Moon) modifierFunc {
+func ModWithContractID(contractID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.moon = moon
+		mod.contractID = contractID
 		return mod
 	}
 }
 
-func requireMoon(mods *modifiers) {
-	if mods.moon == nil {
-		panic("expected type *athena.Moon to be provided, received nil instead")
+func requireContractID(mods *modifiers) {
+	if mods.contractID == 0 {
+		panic("modifier allianceID should be greater than 0")
 	}
 }
 
-func ModWithMailHeader(mail *MailHeader) modifierFunc {
+func ModWithAllianceID(allianceID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.header = mail
+		mod.allianceID = allianceID
 		return mod
 	}
 }
 
-func requireMailHeader(mods *modifiers) {
-	if mods.header == nil {
-		panic("expected type *athena.MailHeader to be provided, received nil instead")
+func requireAllianceID(mods *modifiers) {
+	if mods.allianceID == 0 {
+		panic("modifier allianceID should be greater than 0")
 	}
 }
 
-func ModWithContract(contract *athena.MemberContract) modifierFunc {
+func ModWithCategoryID(categoryID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.contract = contract
+		mod.categoryID = categoryID
 		return mod
 	}
 }
 
-func requireContract(mods *modifiers) {
-	if mods.contract == nil {
-		panic("expected type *athena.MemberContract to be provided, received nil instead")
+func requireCategoryID(mods *modifiers) {
+	if mods.categoryID == 0 {
+		panic("modifier categoryID should be greater than 0")
 	}
 }
 
-func ModWithMember(member *athena.Member) modifierFunc {
+func ModWithCharacterID(characterID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.member = member
+		mod.characterID = characterID
 		return mod
 	}
 }
 
-func requireMember(mods *modifiers) {
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil instead")
+func requireCharacterID(mods *modifiers) {
+	if mods.characterID == 0 {
+		panic("modifier characterID should be greater than 0")
 	}
 }
 
-func ModWithAlliance(alliance *athena.Alliance) modifierFunc {
+func ModWithCorporationID(corporationID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.alliance = alliance
+		mod.corporationID = corporationID
 		return mod
 	}
 }
 
-func requireAlliance(mods *modifiers) {
-	if mods.alliance == nil {
-		panic("expected type *athena.Alliance to be provided, received nil instead")
+func requireCorporationID(mods *modifiers) {
+	if mods.corporationID == 0 {
+		panic("modifier corporationID should be greater than 0")
 	}
 }
 
-func ModWithCategory(category *athena.Category) modifierFunc {
+func ModWithRegionID(regionID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.category = category
+		mod.regionID = regionID
 		return mod
 	}
 }
 
-func requireCategory(mods *modifiers) {
-	if mods.category == nil {
-		panic("expected type *athena.Category to be provided, received nil instead")
+func requireRegionID(mods *modifiers) {
+	if mods.regionID == 0 {
+		panic("modifier regionID should be greater than 0")
 	}
 }
 
-func ModWithCharacter(character *athena.Character) modifierFunc {
+func ModWithConstellationID(constellationID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.character = character
+		mod.constellationID = constellationID
 		return mod
 	}
 }
 
-func requireCharacter(mods *modifiers) {
-	if mods.character == nil {
-		panic("expected type *athena.Character to be provided, received nil instead")
+func requireConstellationID(mods *modifiers) {
+	if mods.constellationID == 0 {
+		panic("modifier constellationID should be greater than 0")
 	}
 }
 
-func ModWithCorporation(corporation *athena.Corporation) modifierFunc {
+func ModWithGroupID(groupID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.corporation = corporation
+		mod.groupID = groupID
 		return mod
 	}
 }
 
-func requireCorporation(mods *modifiers) {
-	if mods.corporation == nil {
-		panic("expected type *athena.Corporation to be provided, received nil instead")
+func requireGroupID(mods *modifiers) {
+	if mods.groupID == 0 {
+		panic("modifier groupID should be greater than 0")
 	}
 }
 
-func ModWithPlanet(planet *athena.Planet) modifierFunc {
+func ModWithItemID(itemID uint) modifierFunc {
+	return func(mods *modifiers) *modifiers {
+		mods.itemID = itemID
+		return mods
+	}
+}
+
+func requireItemID(mods *modifiers) {
+	if mods.itemID == 0 {
+		panic("modifier itemID should be greater than 0")
+	}
+}
+
+func ModWithSystemID(solarSystemID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.planet = planet
+		mod.solarSystemID = solarSystemID
 		return mod
 	}
 }
 
-func requirePlanet(mods *modifiers) {
-	if mods.planet == nil {
-		panic("expected type *athena.Planet to be provided, received nil instead")
+func requireSystemID(mods *modifiers) {
+	if mods.solarSystemID == 0 {
+		panic("modifier solarSystemID should be greater than 0")
 	}
 }
 
-func ModWithRegion(region *athena.Region) modifierFunc {
+func ModWithStationID(stationID uint) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.region = region
+		mod.stationID = stationID
 		return mod
 	}
 }
 
-func requireRegion(mods *modifiers) {
-	if mods.region == nil {
-		panic("expected type *athena.Region to be provided, received nil instead")
+func requireStationID(mods *modifiers) {
+	if mods.stationID == 0 {
+		panic("modifier stationID should be greater than 0")
 	}
 }
 
-func ModWithConstellation(constellation *athena.Constellation) modifierFunc {
+func ModWithStructureID(structureID uint64) modifierFunc {
 	return func(mod *modifiers) *modifiers {
-		mod.constellation = constellation
+		mod.structureID = structureID
 		return mod
 	}
 }
 
-func requireConstellation(mods *modifiers) {
-	if mods.constellation == nil {
-		panic("expected type *athena.Constellation to be provided, received nil instead")
-	}
-}
-
-func ModWithGroup(group *athena.Group) modifierFunc {
-	return func(mod *modifiers) *modifiers {
-		mod.group = group
-		return mod
-	}
-}
-
-func requireGroup(mods *modifiers) {
-	if mods.group == nil {
-		panic("expected type *athena.Group to be provided, received nil instead")
-	}
-}
-
-func ModWithItem(item *athena.Type) modifierFunc {
-	return func(mod *modifiers) *modifiers {
-		mod.item = item
-		return mod
-	}
-}
-
-func requireItem(mods *modifiers) {
-	if mods.item == nil {
-		panic("expected type *athena.Item to be provided, received nil instead")
-	}
-}
-
-func ModWithSystem(system *athena.SolarSystem) modifierFunc {
-	return func(mod *modifiers) *modifiers {
-		mod.solarSystem = system
-		return mod
-	}
-}
-
-func requireSystem(mods *modifiers) {
-	if mods.solarSystem == nil {
-		panic("expected type *athena.System to be provided, received nil instead")
-	}
-}
-
-func ModWithStation(station *athena.Station) modifierFunc {
-	return func(mod *modifiers) *modifiers {
-		mod.station = station
-		return mod
-	}
-}
-
-func requireStation(mods *modifiers) {
-	if mods.station == nil {
-		panic("expected type *athena.station to be provided, received nil instead")
-	}
-}
-
-func ModWithStructure(structure *athena.Structure) modifierFunc {
-	return func(mod *modifiers) *modifiers {
-		mod.structure = structure
-		return mod
-	}
-}
-
-func requireStructure(mods *modifiers) {
-	if mods.structure == nil {
-		panic("expected type *athena.Structure to be provided, received nil instead")
+func requireStructureID(mods *modifiers) {
+	if mods.structureID == 0 {
+		panic("modifier structureID should be greater than 0")
 	}
 }

@@ -11,15 +11,15 @@ import (
 )
 
 type assetInterface interface {
-	HeadCharacterAssets(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error)
-	GetCharacterAssets(ctx context.Context, member *athena.Member, page uint) ([]*athena.MemberAsset, *athena.Etag, *http.Response, error)
+	HeadCharacterAssets(ctx context.Context, characterID, page uint, token string) (*athena.Etag, *http.Response, error)
+	GetCharacterAssets(ctx context.Context, characterID, page uint, token string) ([]*athena.MemberAsset, *athena.Etag, *http.Response, error)
 }
 
-func (s *service) HeadCharacterAssets(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error) {
+func (s *service) HeadCharacterAssets(ctx context.Context, characterID, page uint, token string) (*athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterAssets]
 
-	mods := s.modifiers(ModWithMember(member), ModWithPage(page))
+	mods := s.modifiers(ModWithCharacterID(characterID), ModWithPage(page))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -33,14 +33,14 @@ func (s *service) HeadCharacterAssets(ctx context.Context, member *athena.Member
 		WithMethod(http.MethodHead),
 		WithPath(path),
 		WithPage(page),
-		WithAuthorization(member.AccessToken),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, res.StatusCode)
+		return etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
 	if res.StatusCode == http.StatusNotModified {
@@ -55,11 +55,11 @@ func (s *service) HeadCharacterAssets(ctx context.Context, member *athena.Member
 
 }
 
-func (s *service) GetCharacterAssets(ctx context.Context, member *athena.Member, page uint) ([]*athena.MemberAsset, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterAssets(ctx context.Context, characterID, page uint, token string) ([]*athena.MemberAsset, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterAssets]
 
-	mods := s.modifiers(ModWithMember(member), ModWithPage(page))
+	mods := s.modifiers(ModWithCharacterID(characterID), ModWithPage(page))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -73,7 +73,8 @@ func (s *service) GetCharacterAssets(ctx context.Context, member *athena.Member,
 		WithMethod(http.MethodGet),
 		WithPath(path),
 		WithPage(page),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
@@ -82,7 +83,7 @@ func (s *service) GetCharacterAssets(ctx context.Context, member *athena.Member,
 	assets := make([]*athena.MemberAsset, 0, 1000) // ESI Specification states a max of 1000 items can be returned per page
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return assets, etag, res, fmt.Errorf("failed to fetch assets for character %d, received status code of %d", member.ID, res.StatusCode)
+		return assets, etag, res, fmt.Errorf("failed to fetch assets for character %d, received status code of %d", characterID, res.StatusCode)
 	} else if res.StatusCode == http.StatusNotModified {
 
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -106,16 +107,16 @@ func (s *service) GetCharacterAssets(ctx context.Context, member *athena.Member,
 
 func characterAssetsPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterAssets].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterAssets].Path, mods.characterID)
 
 }
 
 func characterAssetsKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterAssets.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	return buildKey(GetCharacterAssets.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 
 }

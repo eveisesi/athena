@@ -279,11 +279,6 @@ func (s *service) buildEndpointMap() {
 			KeyFunc:  ancestriesKeyFunc,
 			PathFunc: ancestriesPathFunc,
 		},
-		GetAsteroidBelt: &endpoint{
-			Path:     "/v1/universe/asteroid_belts/%d/",
-			KeyFunc:  beltKeyFunc,
-			PathFunc: beltPathFunc,
-		},
 		GetBloodlines: &endpoint{
 			Path:     "/v1/universe/bloodlines/",
 			KeyFunc:  bloodlinesKeyFunc,
@@ -313,16 +308,6 @@ func (s *service) buildEndpointMap() {
 			Path:     "/v1/universe/groups/%d/",
 			KeyFunc:  groupKeyFunc,
 			PathFunc: groupPathFunc,
-		},
-		GetMoon: &endpoint{
-			Path:     "/v1/universe/moons/%d/",
-			KeyFunc:  moonKeyFunc,
-			PathFunc: moonPathFunc,
-		},
-		GetPlanet: &endpoint{
-			Path:     "/v1/universe/planets/%d/",
-			KeyFunc:  planetKeyFunc,
-			PathFunc: planetPathFunc,
 		},
 		GetRaces: &endpoint{
 			Path:     "/v1/universe/races/",

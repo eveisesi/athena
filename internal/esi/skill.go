@@ -5,23 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/eveisesi/athena"
 )
 
 type skillsInterface interface {
-	GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberAttributes) (*athena.MemberAttributes, *athena.Etag, *http.Response, error)
-	GetCharacterSkills(ctx context.Context, member *athena.Member, meta *athena.MemberSkills) (*athena.MemberSkills, *athena.Etag, *http.Response, error)
-	GetCharacterSkillQueue(ctx context.Context, member *athena.Member, queue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, *athena.Etag, *http.Response, error)
+	GetCharacterAttributes(ctx context.Context, characterID uint, token string) (*athena.MemberAttributes, *athena.Etag, *http.Response, error)
+	GetCharacterSkills(ctx context.Context, characterID uint, token string) (*athena.MemberSkills, *athena.Etag, *http.Response, error)
+	GetCharacterSkillQueue(ctx context.Context, characterID uint, token string) ([]*athena.MemberSkillQueue, *athena.Etag, *http.Response, error)
 }
 
-func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Member, attributes *athena.MemberAttributes) (*athena.MemberAttributes, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterAttributes(ctx context.Context, characterID uint, token string) (*athena.MemberAttributes, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterAttributes]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -34,12 +33,14 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var attributes = new(athena.MemberAttributes)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -52,7 +53,7 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return attributes, etag, res, fmt.Errorf("failed to fetch attributes for character %d, received status code of %d", member.ID, sc)
+		return attributes, etag, res, fmt.Errorf("failed to fetch attributes for character %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -67,25 +68,25 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 
 func characterAttributesKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterAttributes.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	return buildKey(GetCharacterAttributes.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 
 }
 
 func characterAttributesPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterAttributes].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterAttributes].Path, mods.characterID)
 
 }
 
-func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member, skills *athena.MemberSkills) (*athena.MemberSkills, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterSkills(ctx context.Context, characterID uint, token string) (*athena.MemberSkills, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterSkills]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -98,16 +99,18 @@ func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member,
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
+	var skills = new(athena.MemberSkills)
+
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &skills)
+		err = json.Unmarshal(b, skills)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 			return nil, nil, nil, err
@@ -116,7 +119,7 @@ func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member,
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return skills, etag, res, fmt.Errorf("failed to fetch skills for character %d, received status code of %d", member.ID, sc)
+		return skills, etag, res, fmt.Errorf("failed to fetch skills for character %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -131,25 +134,25 @@ func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member,
 
 func characterSkillsKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterSkills.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	return buildKey(GetCharacterSkills.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 
 }
 
 func characterSkillsPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterSkills].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterSkills].Path, mods.characterID)
 
 }
 
-func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Member, queue []*athena.MemberSkillQueue) ([]*athena.MemberSkillQueue, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterSkillQueue(ctx context.Context, characterID uint, token string) ([]*athena.MemberSkillQueue, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterSkillQueue]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -162,12 +165,14 @@ func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Mem
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var queue = make([]*athena.MemberSkillQueue, 0, 51)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -180,7 +185,7 @@ func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Mem
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return queue, etag, res, fmt.Errorf("failed to fetch skill queue for character %d, received status code of %d", member.ID, sc)
+		return queue, etag, res, fmt.Errorf("failed to fetch skill queue for character %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -195,23 +200,15 @@ func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Mem
 
 func characterSkillQueueKeyFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for alliance instead")
-	}
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterSkillQueue.String(), strconv.Itoa(int(mods.member.ID)))
+	return buildKey(GetCharacterSkillQueue.String(), strconv.Itoa(int(mods.characterID)))
 }
 
 func characterSkillQueuePathFunc(mods *modifiers) string {
 
-	if mods.member == nil {
-		panic("expected type *athena.Member to be provided, received nil for member instead")
-	}
+	requireCharacterID(mods)
 
-	u := url.URL{
-		Path: fmt.Sprintf(endpoints[GetCharacterSkillQueue].Path, mods.member.ID),
-	}
-
-	return u.String()
+	return fmt.Sprintf(endpoints[GetCharacterSkillQueue].Path, mods.characterID)
 
 }

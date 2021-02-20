@@ -11,18 +11,59 @@ import (
 )
 
 type walletInterface interface {
-	GetCharacterWalletBalance(ctx context.Context, member *athena.Member) (float64, *athena.Etag, *http.Response, error)
-	HeadCharacterWalletTransactions(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error)
-	GetCharacterWalletTransactions(ctx context.Context, member *athena.Member, fromID uint64) ([]*athena.MemberWalletTransaction, *athena.Etag, *http.Response, error)
-	HeadCharacterWalletJournals(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error)
-	GetCharacterWalletJournals(ctx context.Context, member *athena.Member, page uint) ([]*athena.MemberWalletJournal, *athena.Etag, *http.Response, error)
+	HeadCharacterWalletBalance(ctx context.Context, characterID uint, token string) (*athena.Etag, *http.Response, error)
+	GetCharacterWalletBalance(ctx context.Context, characterID uint, token string) (float64, *athena.Etag, *http.Response, error)
+	HeadCharacterWalletTransactions(ctx context.Context, characterID uint, from uint64, token string) (*athena.Etag, *http.Response, error)
+	GetCharacterWalletTransactions(ctx context.Context, characterID uint, fromID uint64, token string) ([]*athena.MemberWalletTransaction, *athena.Etag, *http.Response, error)
+	HeadCharacterWalletJournals(ctx context.Context, characterID, page uint, token string) (*athena.Etag, *http.Response, error)
+	GetCharacterWalletJournals(ctx context.Context, characterID, page uint, token string) ([]*athena.MemberWalletJournal, *athena.Etag, *http.Response, error)
 }
 
-func (s *service) GetCharacterWalletBalance(ctx context.Context, member *athena.Member) (float64, *athena.Etag, *http.Response, error) {
+func (s *service) HeadCharacterWalletBalance(ctx context.Context, characterID uint, token string) (*athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterWalletBalance]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	_, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if res.StatusCode >= http.StatusBadRequest {
+		return etag, res, fmt.Errorf("failed to make head request to contracts for character %d, received status code of %d", characterID, res.StatusCode)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
+		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+		}
+	}
+
+	return etag, res, nil
+
+}
+
+func (s *service) GetCharacterWalletBalance(ctx context.Context, characterID uint, token string) (float64, *athena.Etag, *http.Response, error) {
+
+	endpoint := endpoints[GetCharacterWalletBalance]
+
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -35,15 +76,15 @@ func (s *service) GetCharacterWalletBalance(ctx context.Context, member *athena.
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return 0.00, nil, nil, err
 	}
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return 0.00, etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, res.StatusCode)
+		return 0.00, etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
 	if res.StatusCode == http.StatusNotModified {
@@ -74,28 +115,28 @@ func (s *service) GetCharacterWalletBalance(ctx context.Context, member *athena.
 
 func characterWalletBalanceKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
 	return buildKey(
 		GetCharacterWalletBalance.String(),
-		strconv.FormatUint(uint64(mods.member.ID), 10),
+		strconv.FormatUint(uint64(mods.characterID), 10),
 	)
 
 }
 
 func characterWalletBalancePathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterWalletBalance].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterWalletBalance].Path, mods.characterID)
 
 }
 
-func (s *service) HeadCharacterWalletTransactions(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error) {
+func (s *service) HeadCharacterWalletTransactions(ctx context.Context, characterID uint, fromID uint64, token string) (*athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterWalletTransactions]
 
-	mods := s.modifiers(ModWithMember(member), ModWithPage(page))
+	mods := s.modifiers(ModWithCharacterID(characterID), ModWithFromID(fromID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -103,20 +144,26 @@ func (s *service) HeadCharacterWalletTransactions(ctx context.Context, member *a
 	}
 
 	path := endpoint.PathFunc(mods)
+	reqOpts := append(
+		make([]OptionFunc, 0),
+		WithMethod(http.MethodHead),
+		WithPath(path),
+		WithAuthorization(token),
+	)
+	if fromID > 0 {
+		reqOpts = append(reqOpts, WithQuery("from_id", strconv.FormatUint(fromID, 10)))
+	}
 
 	_, res, err := s.request(
 		ctx,
-		WithMethod(http.MethodHead),
-		WithPath(path),
-		WithPage(page),
-		WithAuthorization(member.AccessToken),
+		reqOpts...,
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, res.StatusCode)
+		return etag, res, fmt.Errorf("failed to exec head request to character wallet transactions for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
 	if res.StatusCode == http.StatusNotModified {
@@ -131,11 +178,16 @@ func (s *service) HeadCharacterWalletTransactions(ctx context.Context, member *a
 
 }
 
-func (s *service) GetCharacterWalletTransactions(ctx context.Context, member *athena.Member, fromID uint64) ([]*athena.MemberWalletTransaction, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterWalletTransactions(ctx context.Context, characterID uint, fromID uint64, token string) ([]*athena.MemberWalletTransaction, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterWalletTransactions]
 
-	mods := s.modifiers(ModWithMember(member), ModWithFromID(fromID))
+	modFuncs := append(make([]modifierFunc, 0, 2), ModWithCharacterID(characterID))
+	if fromID > 0 {
+		modFuncs = append(modFuncs, ModWithFromID(fromID))
+	}
+
+	mods := s.modifiers(modFuncs...)
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -144,10 +196,11 @@ func (s *service) GetCharacterWalletTransactions(ctx context.Context, member *at
 
 	path := endpoint.PathFunc(mods)
 	reqOpts := append(
-		make([]OptionFunc, 0),
+		make([]OptionFunc, 0, 6),
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if fromID > 0 {
 		reqOpts = append(reqOpts, WithQuery("from_id", strconv.FormatUint(fromID, 10)))
@@ -161,19 +214,20 @@ func (s *service) GetCharacterWalletTransactions(ctx context.Context, member *at
 		return nil, nil, nil, err
 	}
 
-	transactions := make([]*athena.MemberWalletTransaction, 0, 2500)
+	var transactions = make([]*athena.MemberWalletTransaction, 0, 2500)
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return transactions, etag, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.ID, res.StatusCode)
+		return transactions, etag, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", characterID, res.StatusCode)
 	}
-	if res.StatusCode == http.StatusNotModified {
-		etag.Etag = RetrieveEtagHeader(res.Header)
-		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
-		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
-		}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
+	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
 		return transactions, etag, res, nil
 	}
 
@@ -189,9 +243,9 @@ func (s *service) GetCharacterWalletTransactions(ctx context.Context, member *at
 
 func characterWalletTransactionsKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	param := append(make([]string, 0), GetCharacterWalletTransactions.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	param := append(make([]string, 0), GetCharacterWalletTransactions.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 
 	if mods.from > 0 {
 		param = append(param, strconv.FormatUint(mods.from, 10))
@@ -203,17 +257,17 @@ func characterWalletTransactionsKeyFunc(mods *modifiers) string {
 
 func characterWalletTransactionsPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterWalletTransactions].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterWalletTransactions].Path, mods.characterID)
 
 }
 
-func (s *service) HeadCharacterWalletJournals(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error) {
+func (s *service) HeadCharacterWalletJournals(ctx context.Context, characterID, page uint, token string) (*athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterWalletJournal]
 
-	mods := s.modifiers(ModWithMember(member), ModWithPage(page))
+	mods := s.modifiers(ModWithCharacterID(characterID), ModWithPage(page))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -227,7 +281,7 @@ func (s *service) HeadCharacterWalletJournals(ctx context.Context, member *athen
 		WithMethod(http.MethodHead),
 		WithPath(path),
 		WithPage(page),
-		WithAuthorization(member.AccessToken),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -249,11 +303,11 @@ func (s *service) HeadCharacterWalletJournals(ctx context.Context, member *athen
 
 }
 
-func (s *service) GetCharacterWalletJournals(ctx context.Context, member *athena.Member, page uint) ([]*athena.MemberWalletJournal, *athena.Etag, *http.Response, error) {
+func (s *service) GetCharacterWalletJournals(ctx context.Context, characterID, page uint, token string) ([]*athena.MemberWalletJournal, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterWalletJournal]
 
-	mods := s.modifiers(ModWithMember(member), ModWithPage(page))
+	mods := s.modifiers(ModWithCharacterID(characterID), ModWithPage(page))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -266,9 +320,9 @@ func (s *service) GetCharacterWalletJournals(ctx context.Context, member *athena
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 		WithPage(page),
-		WithAuthorization(member.AccessToken),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, nil, err
@@ -277,7 +331,7 @@ func (s *service) GetCharacterWalletJournals(ctx context.Context, member *athena
 	journals := make([]*athena.MemberWalletJournal, 0, 2500)
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return journals, etag, res, fmt.Errorf("failed to fetch wallet journal for character %d, received status code of %d", member.ID, res.StatusCode)
+		return journals, etag, res, fmt.Errorf("failed to fetch wallet journal for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 	if res.StatusCode == http.StatusNotModified {
 		etag.Etag = RetrieveEtagHeader(res.Header)
@@ -311,12 +365,12 @@ func (s *service) GetCharacterWalletJournals(ctx context.Context, member *athena
 
 func characterWalletJournalKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 	requirePage(mods)
 
 	return buildKey(
 		GetCharacterWalletJournal.String(),
-		strconv.FormatUint(uint64(mods.member.ID), 10),
+		strconv.FormatUint(uint64(mods.characterID), 10),
 		strconv.FormatUint(uint64(mods.page), 10),
 	)
 
@@ -324,8 +378,8 @@ func characterWalletJournalKeyFunc(mods *modifiers) string {
 
 func characterWalletJournalPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterWalletJournal].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterWalletJournal].Path, mods.characterID)
 
 }

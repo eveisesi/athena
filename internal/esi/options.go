@@ -5,9 +5,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-
-	"github.com/eveisesi/athena"
-	"github.com/volatiletech/null"
 )
 
 type options struct {
@@ -91,13 +88,13 @@ func WithBody(d []byte) OptionFunc {
 // some sort of if check to ensure the value is not empty before
 // calling one of the func above
 
-func WithEtag(etag *athena.Etag) OptionFunc {
+func WithEtag(etag string) OptionFunc {
 
-	if etag == nil || etag.Etag == "" {
+	if etag == "" {
 		return emptyApplicator()
 	}
 
-	return WithHeader("if-none-match", etag.Etag)
+	return WithHeader("if-none-match", etag)
 
 }
 
@@ -105,12 +102,12 @@ func WithPage(i uint) OptionFunc {
 	return WithQuery("page", strconv.FormatUint(uint64(i), 10))
 }
 
-func WithAuthorization(token null.String) OptionFunc {
-	if !token.Valid {
+func WithAuthorization(token string) OptionFunc {
+	if token == "" {
 		return emptyApplicator()
 	}
 
-	return WithHeader("authorization", fmt.Sprintf("Bearer %s", token.String))
+	return WithHeader("authorization", fmt.Sprintf("Bearer %s", token))
 }
 
 func emptyApplicator() OptionFunc {

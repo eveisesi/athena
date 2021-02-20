@@ -10,11 +10,11 @@ import (
 	"github.com/eveisesi/athena"
 )
 
-func (s *service) GetCharacterFittings(ctx context.Context, member *athena.Member, fittings []*athena.MemberFitting) ([]*athena.MemberFitting, *http.Response, error) {
+func (s *service) GetCharacterFittings(ctx context.Context, characterID uint, token string) ([]*athena.MemberFitting, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterFittings]
 
-	mods := s.modifiers(ModWithMember(member))
+	mods := s.modifiers(ModWithCharacterID(characterID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -27,12 +27,14 @@ func (s *service) GetCharacterFittings(ctx context.Context, member *athena.Membe
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	var fittings = make([]*athena.MemberFitting, 0, 250)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -45,7 +47,7 @@ func (s *service) GetCharacterFittings(ctx context.Context, member *athena.Membe
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
-		return fittings, res, fmt.Errorf("failed to fetch fittings for character %d, received status code of %d", member.ID, sc)
+		return fittings, res, fmt.Errorf("failed to fetch fittings for character %d, received status code of %d", characterID, sc)
 	}
 
 	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -60,16 +62,16 @@ func (s *service) GetCharacterFittings(ctx context.Context, member *athena.Membe
 
 func characterFittingsKeyFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return buildKey(GetCharacterFittings.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+	return buildKey(GetCharacterFittings.String(), strconv.FormatUint(uint64(mods.characterID), 10))
 
 }
 
 func characterFittingsPathFunc(mods *modifiers) string {
 
-	requireMember(mods)
+	requireCharacterID(mods)
 
-	return fmt.Sprintf(endpoints[GetCharacterFittings].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetCharacterFittings].Path, mods.characterID)
 
 }

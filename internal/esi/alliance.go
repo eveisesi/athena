@@ -11,7 +11,7 @@ import (
 )
 
 type allianceInterface interface {
-	GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *athena.Etag, *http.Response, error)
+	GetAlliance(ctx context.Context, allianceID uint) (*athena.Alliance, *athena.Etag, *http.Response, error)
 }
 
 func isAllianceValid(r *athena.Alliance) bool {
@@ -27,13 +27,13 @@ func isAllianceValid(r *athena.Alliance) bool {
 // Documentation: https://esi.evetech.net/ui/#/Alliance/get_alliances_alliance_id
 // Version: v3
 // Cache: 3600 sec (1 Hour)
-func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*athena.Alliance, *athena.Etag, *http.Response, error) {
+func (s *service) GetAlliance(ctx context.Context, allianceID uint) (*athena.Alliance, *athena.Etag, *http.Response, error) {
 
 	// Fetch configuration for this endpoint
 	endpoint := endpoints[GetAlliance]
 
 	// Prime modifiers with alliance
-	mods := s.modifiers(ModWithAlliance(alliance))
+	mods := s.modifiers(ModWithAllianceID(allianceID))
 
 	// Fetch Etag for request
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
@@ -46,11 +46,13 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 	b, res, err := s.request(ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	var alliance = new(athena.Alliance)
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
@@ -59,6 +61,8 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 			return nil, nil, nil, err
 		}
+
+		alliance.ID = allianceID
 
 		etag.Etag = RetrieveEtagHeader(res.Header)
 
@@ -81,16 +85,16 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 
 func allianceKeyFunc(mods *modifiers) string {
 
-	requireAlliance(mods)
+	requireAllianceID(mods)
 
-	return buildKey(GetAlliance.String(), strconv.Itoa(int(mods.alliance.ID)))
+	return buildKey(GetAlliance.String(), strconv.Itoa(int(mods.allianceID)))
 
 }
 
 func alliancePathFunc(mods *modifiers) string {
 
-	requireAlliance(mods)
+	requireAllianceID(mods)
 
-	return fmt.Sprintf(endpoints[GetAlliance].Path, mods.alliance.ID)
+	return fmt.Sprintf(endpoints[GetAlliance].Path, mods.allianceID)
 
 }

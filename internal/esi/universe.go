@@ -11,23 +11,20 @@ import (
 )
 
 type universeInterface interface {
-	GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error)
-	GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error)
-	GetCategories(ctx context.Context, ids []uint) ([]uint, *http.Response, error)
-	GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error)
-	GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error)
-	GetFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error)
-	GetGroup(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error)
-	GetMoon(ctx context.Context, moon *athena.Moon) (*athena.Moon, *http.Response, error)
-	GetAsteroidBelt(ctx context.Context, belt *athena.AsteroidBelt) (*athena.AsteroidBelt, *http.Response, error)
-	GetPlanet(ctx context.Context, planet *athena.Planet) (*athena.Planet, *http.Response, error)
-	GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Response, error)
-	GetRegion(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error)
-	GetRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error)
-	GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error)
-	GetStation(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error)
-	GetStructure(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error)
-	GetType(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error)
+	GetAncestries(ctx context.Context) ([]*athena.Ancestry, *http.Response, error)
+	GetBloodlines(ctx context.Context) ([]*athena.Bloodline, *http.Response, error)
+	GetCategories(ctx context.Context) ([]uint, *http.Response, error)
+	GetCategory(ctx context.Context, categoryID uint) (*athena.Category, *http.Response, error)
+	GetConstellation(ctx context.Context, constellationID uint) (*athena.Constellation, *http.Response, error)
+	GetFactions(ctx context.Context) ([]*athena.Faction, *http.Response, error)
+	GetGroup(ctx context.Context, groupID uint) (*athena.Group, *http.Response, error)
+	GetRegions(ctx context.Context) ([]uint, *http.Response, error)
+	GetRegion(ctx context.Context, regionID uint) (*athena.Region, *http.Response, error)
+	GetRaces(ctx context.Context) ([]*athena.Race, *http.Response, error)
+	GetSolarSystem(ctx context.Context, solarSystemID uint) (*athena.SolarSystem, *http.Response, error)
+	GetStation(ctx context.Context, stationID uint) (*athena.Station, *http.Response, error)
+	GetStructure(ctx context.Context, structureID uint64, token string) (*athena.Structure, *http.Response, error)
+	GetType(ctx context.Context, typeID uint) (*athena.Type, *http.Response, error)
 
 	PostUniverseNames(ctx context.Context, ids []uint) ([]*PostUniverseNamesOK, *http.Response, error)
 }
@@ -106,7 +103,7 @@ func (s *service) PostUniverseNames(ctx context.Context, ids []uint) ([]*PostUni
 
 }
 
-func (s *service) GetAncestries(ctx context.Context, ancestries []*athena.Ancestry) ([]*athena.Ancestry, *http.Response, error) {
+func (s *service) GetAncestries(ctx context.Context) ([]*athena.Ancestry, *http.Response, error) {
 
 	endpoint := endpoints[GetAncestries]
 
@@ -123,22 +120,22 @@ func (s *service) GetAncestries(ctx context.Context, ancestries []*athena.Ancest
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &ancestries)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var ancestries = make([]*athena.Ancestry, 0)
 
-	case sc >= http.StatusBadRequest:
-		return ancestries, res, fmt.Errorf("failed to fetch ancestries, received status code of %d", sc)
+	if res.StatusCode > http.StatusOK {
+		return ancestries, res, fmt.Errorf("failed to fetch ancestries, received status code of %d", res.StatusCode)
+	}
+
+	err = json.Unmarshal(b, &ancestries)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return ancestries, res, nil
@@ -146,18 +143,14 @@ func (s *service) GetAncestries(ctx context.Context, ancestries []*athena.Ancest
 }
 
 func ancestriesKeyFunc(mods *modifiers) string {
-
 	return buildKey(GetAncestries.String())
-
 }
 
 func ancestriesPathFunc(mods *modifiers) string {
-
 	return endpoints[GetAncestries].Path
-
 }
 
-func (s *service) GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodline) ([]*athena.Bloodline, *http.Response, error) {
+func (s *service) GetBloodlines(ctx context.Context) ([]*athena.Bloodline, *http.Response, error) {
 
 	endpoint := endpoints[GetBloodlines]
 
@@ -174,22 +167,21 @@ func (s *service) GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodl
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &bloodlines)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var bloodlines = make([]*athena.Bloodline, 0)
+	if res.StatusCode > http.StatusOK {
+		return bloodlines, res, fmt.Errorf("failed to fetch bloodlines, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return bloodlines, res, fmt.Errorf("failed to fetch bloodlines, received status code of %d", sc)
+	err = json.Unmarshal(b, &bloodlines)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return bloodlines, res, nil
@@ -197,18 +189,14 @@ func (s *service) GetBloodlines(ctx context.Context, bloodlines []*athena.Bloodl
 }
 
 func bloodlinesKeyFunc(mods *modifiers) string {
-
 	return buildKey(GetBloodlines.String())
-
 }
 
 func bloodlinesPathFunc(mods *modifiers) string {
-
 	return endpoints[GetBloodlines].Path
-
 }
 
-func (s *service) GetRaces(ctx context.Context, races []*athena.Race) ([]*athena.Race, *http.Response, error) {
+func (s *service) GetRaces(ctx context.Context) ([]*athena.Race, *http.Response, error) {
 
 	endpoint := endpoints[GetRaces]
 
@@ -225,22 +213,21 @@ func (s *service) GetRaces(ctx context.Context, races []*athena.Race) ([]*athena
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &races)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var races = make([]*athena.Race, 0)
+	if res.StatusCode > http.StatusOK {
+		return races, res, fmt.Errorf("failed to fetch races, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return races, res, fmt.Errorf("failed to fetch races, received status code of %d", sc)
+	err = json.Unmarshal(b, &races)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return races, res, nil
@@ -248,18 +235,14 @@ func (s *service) GetRaces(ctx context.Context, races []*athena.Race) ([]*athena
 }
 
 func racesKeyFunc(mods *modifiers) string {
-
 	return buildKey(GetRaces.String())
-
 }
 
 func racesPathFunc(mods *modifiers) string {
-
 	return endpoints[GetRaces].Path
-
 }
 
-func (s *service) GetFactions(ctx context.Context, factions []*athena.Faction) ([]*athena.Faction, *http.Response, error) {
+func (s *service) GetFactions(ctx context.Context) ([]*athena.Faction, *http.Response, error) {
 
 	endpoint := endpoints[GetFactions]
 
@@ -276,22 +259,21 @@ func (s *service) GetFactions(ctx context.Context, factions []*athena.Faction) (
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &factions)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var factions = make([]*athena.Faction, 0)
+	if res.StatusCode > http.StatusOK {
+		return factions, res, fmt.Errorf("failed to fetch factions, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return factions, res, fmt.Errorf("failed to fetch factions, received status code of %d", sc)
+	err = json.Unmarshal(b, &factions)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return factions, res, nil
@@ -299,18 +281,14 @@ func (s *service) GetFactions(ctx context.Context, factions []*athena.Faction) (
 }
 
 func factionsKeyFunc(mods *modifiers) string {
-
 	return buildKey(GetFactions.String())
-
 }
 
 func factionsPathFunc(mods *modifiers) string {
-
 	return endpoints[GetFactions].Path
-
 }
 
-func (s *service) GetCategories(ctx context.Context, ids []uint) ([]uint, *http.Response, error) {
+func (s *service) GetCategories(ctx context.Context) ([]uint, *http.Response, error) {
 
 	endpoint := endpoints[GetCategories]
 
@@ -327,45 +305,40 @@ func (s *service) GetCategories(ctx context.Context, ids []uint) ([]uint, *http.
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &ids)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
-
-	case sc >= http.StatusBadRequest:
-		return ids, res, fmt.Errorf("failed to fetch categories, received status code of %d", sc)
+	var categories = make([]uint, 0)
+	if res.StatusCode > http.StatusOK {
+		return categories, res, fmt.Errorf("failed to fetch categories, received status code of %d", res.StatusCode)
 	}
 
-	return ids, res, nil
+	err = json.Unmarshal(b, &categories)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
+	}
+
+	return categories, res, nil
 
 }
 
 func categoriesKeyFunc(mods *modifiers) string {
-
 	return buildKey(GetCategories.String())
-
 }
 
 func categoriesPathFunc(mods *modifiers) string {
-
 	return endpoints[GetCategories].Path
-
 }
 
-func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*athena.Category, *http.Response, error) {
+func (s *service) GetCategory(ctx context.Context, categoryID uint) (*athena.Category, *http.Response, error) {
 
 	endpoint := endpoints[GetCategory]
 
-	mods := s.modifiers(ModWithCategory(category))
+	mods := s.modifiers(ModWithCategoryID(categoryID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -378,22 +351,21 @@ func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &category)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var category = new(athena.Category)
+	if res.StatusCode > http.StatusOK {
+		return category, res, fmt.Errorf("failed to fetch category, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return category, res, fmt.Errorf("failed to fetch category %d, received status code of %d", category.ID, sc)
+	err = json.Unmarshal(b, category)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return category, res, nil
@@ -402,25 +374,25 @@ func (s *service) GetCategory(ctx context.Context, category *athena.Category) (*
 
 func categoryKeyFunc(mods *modifiers) string {
 
-	requireCategory(mods)
+	requireCategoryID(mods)
 
-	return buildKey(GetCategory.String(), strconv.FormatUint(uint64(mods.category.ID), 10))
+	return buildKey(GetCategory.String(), strconv.FormatUint(uint64(mods.categoryID), 10))
 
 }
 
 func categoryPathFunc(mods *modifiers) string {
 
-	requireCategory(mods)
+	requireCategoryID(mods)
 
-	return fmt.Sprintf(endpoints[GetCategory].Path, mods.category.ID)
+	return fmt.Sprintf(endpoints[GetCategory].Path, mods.categoryID)
 
 }
 
-func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Group, *http.Response, error) {
+func (s *service) GetGroup(ctx context.Context, groupID uint) (*athena.Group, *http.Response, error) {
 
 	endpoint := endpoints[GetGroup]
 
-	mods := s.modifiers(ModWithGroup(group))
+	mods := s.modifiers(ModWithGroupID(groupID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -433,22 +405,21 @@ func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Gr
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &group)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var group = new(athena.Group)
+	if res.StatusCode > http.StatusOK {
+		return group, res, fmt.Errorf("failed to fetch group, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return group, res, fmt.Errorf("failed to fetch group %d, received status code of %d", group.ID, sc)
+	err = json.Unmarshal(b, group)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return group, res, nil
@@ -457,25 +428,25 @@ func (s *service) GetGroup(ctx context.Context, group *athena.Group) (*athena.Gr
 
 func groupKeyFunc(mods *modifiers) string {
 
-	requireGroup(mods)
+	requireGroupID(mods)
 
-	return buildKey(GetGroup.String(), strconv.FormatUint(uint64(mods.group.ID), 10))
+	return buildKey(GetGroup.String(), strconv.FormatUint(uint64(mods.groupID), 10))
 
 }
 
 func groupPathFunc(mods *modifiers) string {
 
-	requireGroup(mods)
+	requireGroupID(mods)
 
-	return fmt.Sprintf(endpoints[GetGroup].Path, mods.member.ID)
+	return fmt.Sprintf(endpoints[GetGroup].Path, mods.groupID)
 
 }
 
-func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type, *http.Response, error) {
+func (s *service) GetType(ctx context.Context, typeID uint) (*athena.Type, *http.Response, error) {
 
 	endpoint := endpoints[GetType]
 
-	mods := s.modifiers(ModWithItem(item))
+	mods := s.modifiers(ModWithItemID(typeID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -488,22 +459,21 @@ func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type,
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &item)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var item = new(athena.Type)
+	if res.StatusCode > http.StatusOK {
+		return item, res, fmt.Errorf("failed to fetch item, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return item, res, fmt.Errorf("failed to fetch type %d, received status code of %d", item.ID, sc)
+	err = json.Unmarshal(b, item)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return item, res, nil
@@ -512,21 +482,21 @@ func (s *service) GetType(ctx context.Context, item *athena.Type) (*athena.Type,
 
 func typeKeyFunc(mods *modifiers) string {
 
-	requireItem(mods)
+	requireItemID(mods)
 
-	return buildKey(GetType.String(), strconv.FormatUint(uint64(mods.item.ID), 10))
+	return buildKey(GetType.String(), strconv.FormatUint(uint64(mods.itemID), 10))
 
 }
 
 func typePathFunc(mods *modifiers) string {
 
-	requireItem(mods)
+	requireItemID(mods)
 
-	return fmt.Sprintf(endpoints[GetType].Path, mods.item.ID)
+	return fmt.Sprintf(endpoints[GetType].Path, mods.itemID)
 
 }
 
-func (s *service) GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Response, error) {
+func (s *service) GetRegions(ctx context.Context) ([]uint, *http.Response, error) {
 
 	endpoint := endpoints[GetRegions]
 
@@ -543,22 +513,21 @@ func (s *service) GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Res
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &ids)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var ids = make([]uint, 0)
+	if res.StatusCode > http.StatusOK {
+		return ids, res, fmt.Errorf("failed to fetch item, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return ids, res, fmt.Errorf("failed to fetch regions, received status code of %d", sc)
+	err = json.Unmarshal(b, &ids)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return ids, res, nil
@@ -566,22 +535,18 @@ func (s *service) GetRegions(ctx context.Context, ids []uint) ([]uint, *http.Res
 }
 
 func regionsKeyFunc(mods *modifiers) string {
-
 	return buildKey(GetRegions.String())
-
 }
 
 func regionsPathFunc(mods *modifiers) string {
-
 	return endpoints[GetRegions].Path
-
 }
 
-func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena.Region, *http.Response, error) {
+func (s *service) GetRegion(ctx context.Context, regionID uint) (*athena.Region, *http.Response, error) {
 
 	endpoint := endpoints[GetRegion]
 
-	mods := s.modifiers(ModWithRegion(region))
+	mods := s.modifiers(ModWithRegionID(regionID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -594,22 +559,21 @@ func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &region)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var region = new(athena.Region)
+	if res.StatusCode > http.StatusOK {
+		return region, res, fmt.Errorf("failed to fetch region, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return region, res, fmt.Errorf("failed to fetch region %d, received status code of %d", region.ID, sc)
+	err = json.Unmarshal(b, region)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return region, res, nil
@@ -618,25 +582,25 @@ func (s *service) GetRegion(ctx context.Context, region *athena.Region) (*athena
 
 func regionKeyFunc(mods *modifiers) string {
 
-	requireRegion(mods)
+	requireRegionID(mods)
 
-	return buildKey(GetRegion.String(), strconv.FormatUint(uint64(mods.region.ID), 10))
+	return buildKey(GetRegion.String(), strconv.FormatUint(uint64(mods.regionID), 10))
 
 }
 
 func regionPathFunc(mods *modifiers) string {
 
-	requireRegion(mods)
+	requireRegionID(mods)
 
-	return fmt.Sprintf(endpoints[GetRegion].Path, mods.region.ID)
+	return fmt.Sprintf(endpoints[GetRegion].Path, mods.regionID)
 
 }
 
-func (s *service) GetConstellation(ctx context.Context, constellation *athena.Constellation) (*athena.Constellation, *http.Response, error) {
+func (s *service) GetConstellation(ctx context.Context, constellationID uint) (*athena.Constellation, *http.Response, error) {
 
 	endpoint := endpoints[GetConstellation]
 
-	mods := s.modifiers(ModWithConstellation(constellation))
+	mods := s.modifiers(ModWithConstellationID(constellationID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -649,22 +613,21 @@ func (s *service) GetConstellation(ctx context.Context, constellation *athena.Co
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &constellation)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var constellation = new(athena.Constellation)
+	if res.StatusCode > http.StatusOK {
+		return constellation, res, fmt.Errorf("failed to fetch constellation, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return constellation, res, fmt.Errorf("failed to fetch constellation %d, received status code of %d", constellation.ID, sc)
+	err = json.Unmarshal(b, constellation)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return constellation, res, nil
@@ -673,25 +636,25 @@ func (s *service) GetConstellation(ctx context.Context, constellation *athena.Co
 
 func constellationKeyFunc(mods *modifiers) string {
 
-	requireConstellation(mods)
+	requireConstellationID(mods)
 
-	return buildKey(GetConstellation.String(), strconv.FormatUint(uint64(mods.constellation.ID), 10))
+	return buildKey(GetConstellation.String(), strconv.FormatUint(uint64(mods.constellationID), 10))
 
 }
 
 func constellationPathFunc(mods *modifiers) string {
 
-	requireConstellation(mods)
+	requireConstellationID(mods)
 
-	return fmt.Sprintf(endpoints[GetConstellation].Path, mods.constellation.ID)
+	return fmt.Sprintf(endpoints[GetConstellation].Path, mods.constellationID)
 
 }
 
-func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarSystem) (*athena.SolarSystem, *http.Response, error) {
+func (s *service) GetSolarSystem(ctx context.Context, systemID uint) (*athena.SolarSystem, *http.Response, error) {
 
 	endpoint := endpoints[GetSolarSystem]
 
-	mods := s.modifiers(ModWithSystem(solarSystem))
+	mods := s.modifiers(ModWithSystemID(systemID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -704,214 +667,48 @@ func (s *service) GetSolarSystem(ctx context.Context, solarSystem *athena.SolarS
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &solarSystem)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
-
-	case sc >= http.StatusBadRequest:
-		return solarSystem, res, fmt.Errorf("failed to fetch solarSystem %d, received status code of %d", solarSystem.ID, sc)
+	var system = new(athena.SolarSystem)
+	if res.StatusCode > http.StatusOK {
+		return system, res, fmt.Errorf("failed to fetch system, received status code of %d", res.StatusCode)
 	}
 
-	return solarSystem, res, nil
+	err = json.Unmarshal(b, system)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
+	}
+
+	return system, res, nil
 
 }
 
 func solarSystemKeyFunc(mods *modifiers) string {
 
-	requireSystem(mods)
+	requireSystemID(mods)
 
-	return buildKey(GetSolarSystem.String(), strconv.FormatUint(uint64(mods.solarSystem.ID), 10))
+	return buildKey(GetSolarSystem.String(), strconv.FormatUint(uint64(mods.solarSystemID), 10))
 
 }
 
 func solarSystemPathFunc(mods *modifiers) string {
 
-	requireSystem(mods)
+	requireSystemID(mods)
 
-	return fmt.Sprintf(endpoints[GetSolarSystem].Path, mods.solarSystem.ID)
-
-}
-
-func (s *service) GetPlanet(ctx context.Context, planet *athena.Planet) (*athena.Planet, *http.Response, error) {
-
-	endpoint := endpoints[GetPlanet]
-
-	mods := s.modifiers(ModWithPlanet(planet))
-
-	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	path := endpoint.PathFunc(mods)
-
-	b, res, err := s.request(
-		ctx,
-		WithMethod(http.MethodGet),
-		WithPath(path),
-		WithEtag(etag),
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &planet)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
-
-	case sc >= http.StatusBadRequest:
-		return planet, res, fmt.Errorf("failed to fetch planet %d, received status code of %d", planet.ID, sc)
-	}
-
-	return planet, res, nil
+	return fmt.Sprintf(endpoints[GetSolarSystem].Path, mods.solarSystemID)
 
 }
 
-func planetKeyFunc(mods *modifiers) string {
-
-	requirePlanet(mods)
-
-	return buildKey(GetPlanet.String(), strconv.FormatUint(uint64(mods.planet.ID), 10))
-
-}
-
-func planetPathFunc(mods *modifiers) string {
-
-	requirePlanet(mods)
-
-	return fmt.Sprintf(endpoints[GetPlanet].Path, mods.planet.ID)
-
-}
-
-func (s *service) GetMoon(ctx context.Context, moon *athena.Moon) (*athena.Moon, *http.Response, error) {
-
-	endpoint := endpoints[GetMoon]
-
-	mods := s.modifiers(ModWithMoon(moon))
-
-	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	path := endpoint.PathFunc(mods)
-
-	b, res, err := s.request(
-		ctx,
-		WithMethod(http.MethodGet),
-		WithPath(path),
-		WithEtag(etag),
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &moon)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
-
-	case sc >= http.StatusBadRequest:
-		return moon, res, fmt.Errorf("failed to fetch moon %d, received status code of %d", moon.ID, sc)
-	}
-
-	return moon, res, nil
-
-}
-
-func moonKeyFunc(mods *modifiers) string {
-
-	requireMoon(mods)
-
-	return buildKey(GetMoon.String(), strconv.FormatUint(uint64(mods.moon.ID), 10))
-
-}
-
-func moonPathFunc(mods *modifiers) string {
-
-	requireMoon(mods)
-
-	return fmt.Sprintf(endpoints[GetMoon].Path, mods.moon.ID)
-
-}
-
-func (s *service) GetAsteroidBelt(ctx context.Context, asteroidBelt *athena.AsteroidBelt) (*athena.AsteroidBelt, *http.Response, error) {
-
-	endpoint := endpoints[GetAsteroidBelt]
-
-	mods := s.modifiers(ModWithAsteroidBelt(asteroidBelt))
-
-	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	path := endpoint.PathFunc(mods)
-
-	b, res, err := s.request(
-		ctx,
-		WithMethod(http.MethodGet),
-		WithPath(path),
-		WithEtag(etag),
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &asteroidBelt)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
-
-	case sc >= http.StatusBadRequest:
-		return asteroidBelt, res, fmt.Errorf("failed to fetch asteroidBelt %d, received status code of %d", asteroidBelt.ID, sc)
-	}
-
-	return asteroidBelt, res, nil
-
-}
-
-func beltKeyFunc(mods *modifiers) string {
-
-	requireAsteriodBelt(mods)
-
-	return buildKey(GetAsteroidBelt.String(), strconv.FormatUint(uint64(mods.asteroidBelt.ID), 10))
-
-}
-
-func beltPathFunc(mods *modifiers) string {
-
-	requireAsteriodBelt(mods)
-
-	return fmt.Sprintf(endpoints[GetAsteroidBelt].Path, mods.asteroidBelt.ID)
-
-}
-
-func (s *service) GetStation(ctx context.Context, station *athena.Station) (*athena.Station, *http.Response, error) {
+func (s *service) GetStation(ctx context.Context, stationID uint) (*athena.Station, *http.Response, error) {
 
 	endpoint := endpoints[GetStation]
 
-	mods := s.modifiers(ModWithStation(station))
+	mods := s.modifiers(ModWithStationID(stationID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -924,22 +721,21 @@ func (s *service) GetStation(ctx context.Context, station *athena.Station) (*ath
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
+		WithEtag(etag.Etag),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &station)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var station = new(athena.Station)
+	if res.StatusCode > http.StatusOK {
+		return station, res, fmt.Errorf("failed to fetch station, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return station, res, fmt.Errorf("failed to fetch station %d, received status code of %d", station.ID, sc)
+	err = json.Unmarshal(b, station)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return station, res, nil
@@ -948,25 +744,25 @@ func (s *service) GetStation(ctx context.Context, station *athena.Station) (*ath
 
 func stationKeyFunc(mods *modifiers) string {
 
-	requireStation(mods)
+	requireStationID(mods)
 
-	return buildKey(GetStation.String(), strconv.FormatUint(uint64(mods.station.ID), 10))
+	return buildKey(GetStation.String(), strconv.FormatUint(uint64(mods.stationID), 10))
 
 }
 
 func stationPathFunc(mods *modifiers) string {
 
-	requireStation(mods)
+	requireStationID(mods)
 
-	return fmt.Sprintf(endpoints[GetStation].Path, mods.station.ID)
+	return fmt.Sprintf(endpoints[GetStation].Path, mods.stationID)
 
 }
 
-func (s *service) GetStructure(ctx context.Context, member *athena.Member, structure *athena.Structure) (*athena.Structure, *http.Response, error) {
+func (s *service) GetStructure(ctx context.Context, structureID uint64, token string) (*athena.Structure, *http.Response, error) {
 
 	endpoint := endpoints[GetStructure]
 
-	mods := s.modifiers(ModWithStructure(structure))
+	mods := s.modifiers(ModWithStructureID(structureID))
 
 	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
 	if err != nil {
@@ -979,23 +775,22 @@ func (s *service) GetStructure(ctx context.Context, member *athena.Member, struc
 		ctx,
 		WithMethod(http.MethodGet),
 		WithPath(path),
-		WithEtag(etag),
-		WithAuthorization(member.AccessToken),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch sc := res.StatusCode; {
-	case sc == http.StatusOK:
-		err = json.Unmarshal(b, &structure)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
-			return nil, nil, err
-		}
+	var structure = new(athena.Structure)
+	if res.StatusCode > http.StatusOK {
+		return structure, res, fmt.Errorf("failed to fetch structure, received status code of %d", res.StatusCode)
+	}
 
-	case sc >= http.StatusBadRequest:
-		return structure, res, fmt.Errorf("failed to fetch structure %d, received status code of %d", structure.ID, sc)
+	err = json.Unmarshal(b, structure)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
+		return nil, nil, err
 	}
 
 	return structure, res, nil
@@ -1004,16 +799,16 @@ func (s *service) GetStructure(ctx context.Context, member *athena.Member, struc
 
 func structureKeyFunc(mods *modifiers) string {
 
-	requireStructure(mods)
+	requireStructureID(mods)
 
-	return buildKey(GetStructure.String(), strconv.FormatUint(mods.structure.ID, 10))
+	return buildKey(GetStructure.String(), strconv.FormatUint(mods.structureID, 10))
 
 }
 
 func structurePathFunc(mods *modifiers) string {
 
-	requireStructure(mods)
+	requireStructureID(mods)
 
-	return fmt.Sprintf(endpoints[GetStructure].Path, mods.structure.ID)
+	return fmt.Sprintf(endpoints[GetStructure].Path, mods.structureID)
 
 }
