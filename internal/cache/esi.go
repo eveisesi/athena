@@ -10,9 +10,9 @@ import (
 )
 
 type esiService interface {
-	SetEsiErrorReset(ctx context.Context, reset int64)
-	SetESIErrCount(ctx context.Context, count int64)
-	SetESITracking(ctx context.Context, code int, ts int64)
+	SetEsiErrorReset(ctx context.Context, reset uint64)
+	SetESIErrCount(ctx context.Context, count uint64)
+	SetESITracking(ctx context.Context, code int, ts uint64)
 }
 
 var (
@@ -29,23 +29,23 @@ const (
 	keyESI5xx        = "athena::esi::5xx"
 )
 
-func (s *service) SetEsiErrorReset(ctx context.Context, reset int64) {
+func (s *service) SetEsiErrorReset(ctx context.Context, reset uint64) {
 	mx.Lock()
 	defer mx.Unlock()
 	s.client.Set(ctx, keyESIErrorReset, reset, 0)
 
 }
 
-func (s *service) SetESIErrCount(ctx context.Context, count int64) {
+func (s *service) SetESIErrCount(ctx context.Context, count uint64) {
 	mx.Lock()
 	defer mx.Unlock()
 	s.client.Set(ctx, keyESIErrorCount, count, 0)
 }
 
-func (s *service) SetESITracking(ctx context.Context, code int, ts int64) {
+func (s *service) SetESITracking(ctx context.Context, code int, ts uint64) {
 	mx.Lock()
 	defer mx.Unlock()
-	z := &redis.Z{Score: float64(ts), Member: strconv.FormatInt(ts, 10)}
+	z := &redis.Z{Score: float64(ts), Member: strconv.FormatUint(ts, 10)}
 
 	switch n := code; {
 	case n == http.StatusOK:

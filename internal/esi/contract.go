@@ -12,6 +12,9 @@ import (
 
 type contractInterface interface {
 	HeadCharacterContracts(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error)
+	GetCharacterContracts(ctx context.Context, member *athena.Member, page uint) ([]*athena.MemberContract, *athena.Etag, *http.Response, error)
+	GetCharacterContractItems(ctx context.Context, member *athena.Member, contract *athena.MemberContract, items []*athena.MemberContractItem) ([]*athena.MemberContractItem, *athena.Etag, *http.Response, error)
+	GetCharacterContractBids(ctx context.Context, member *athena.Member, contract *athena.MemberContract, bids []*athena.MemberContractBid) ([]*athena.MemberContractBid, *athena.Etag, *http.Response, error)
 }
 
 func (s *service) HeadCharacterContracts(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error) {
@@ -43,7 +46,7 @@ func (s *service) HeadCharacterContracts(ctx context.Context, member *athena.Mem
 	}
 
 	if res.StatusCode == http.StatusNotModified {
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -89,13 +92,13 @@ func (s *service) GetCharacterContracts(ctx context.Context, member *athena.Memb
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return contracts, etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", member.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag: %w", err)
@@ -154,13 +157,13 @@ func (s *service) GetCharacterContractItems(ctx context.Context, member *athena.
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return items, etag, res, fmt.Errorf("failed to fetch contract items for character %d, received status code of %d", member.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -219,13 +222,13 @@ func (s *service) GetCharacterContractBids(ctx context.Context, member *athena.M
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return bids, etag, res, fmt.Errorf("failed to fetch contract bids for character %d, received status code of %d", member.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)

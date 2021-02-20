@@ -57,16 +57,16 @@ func buildScopeMap(
 	// 	},
 	// }
 
-	// scopeMap[athena.ReadContactsV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberContacts",
-	// 		Func: contact.EmptyMemberContacts,
-	// 	},
-	// 	{
-	// 		Name: "MemberContactLabels",
-	// 		Func: contact.EmptyMemberContactLabels,
-	// 	},
-	// }
+	scopeMap[athena.ReadContactsV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberContacts",
+			Func: contact.EmptyMemberContacts,
+		},
+		{
+			Name: "MemberContactLabels",
+			Func: contact.EmptyMemberContactLabels,
+		},
+	}
 
 	// scopeMap[athena.ReadSkillQueueV1] = []athena.ScopeResolver{
 	// 	{
@@ -82,34 +82,34 @@ func buildScopeMap(
 	// 	},
 	// }
 
-	scopeMap[athena.ReadWalletV1] = []athena.ScopeResolver{
-		// {
-		// 	Name: "MemberWalletBalannce",
-		// 	Func: wallet.EmptyMemberBalance,
-		// },
-		// {
-		// 	Name: "MemberWalletTransactions",
-		// 	Func: wallet.EmptyMembetWalletTransactions,
-		// },
-		// {
-		// 	Name: "MemberWalletJournals",
-		// 	Func: wallet.EmptyMemberWalletJournals,
-		// },
-	}
+	// scopeMap[athena.ReadWalletV1] = []athena.ScopeResolver{
+	// {
+	// 	Name: "MemberWalletBalannce",
+	// 	Func: wallet.EmptyMemberBalance,
+	// },
+	// {
+	// 	Name: "MemberWalletTransactions",
+	// 	Func: wallet.EmptyMembetWalletTransactions,
+	// },
+	// {
+	// 	Name: "MemberWalletJournals",
+	// 	Func: wallet.EmptyMemberWalletJournals,
+	// },
+	// }
 
-	scopeMap[athena.ReadMailV1] = []athena.ScopeResolver{
-		{
-			Name: "MemberMailHeaders",
-			Func: mail.EmptyMemberMailHeaders,
-		},
-	}
+	// scopeMap[athena.ReadMailV1] = []athena.ScopeResolver{
+	// 	{
+	// 		Name: "MemberMailHeaders",
+	// 		Func: mail.EmptyMemberMailHeaders,
+	// 	},
+	// }
 
-	scopeMap[athena.ReadAssetsV1] = []athena.ScopeResolver{
-		{
-			Name: "MemberAssets",
-			Func: asset.EmptyMemberAssets,
-		},
-	}
+	// scopeMap[athena.ReadAssetsV1] = []athena.ScopeResolver{
+	// 	{
+	// 		Name: "MemberAssets",
+	// 		Func: asset.EmptyMemberAssets,
+	// 	},
+	// }
 
 	return scopeMap
 

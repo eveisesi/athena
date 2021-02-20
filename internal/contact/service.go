@@ -20,7 +20,7 @@ import (
 
 type Service interface {
 	EmptyMemberContacts(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberContacts(ctx context.Context, member *athena.Member) ([]*athena.MemberContact, *athena.Etag, error)
+	MemberContacts(ctx context.Context, member *athena.Member, page int) ([]*athena.MemberContact, error)
 	EmptyMemberContactLabels(ctx context.Context, member *athena.Member) (*athena.Etag, error)
 	MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, *athena.Etag, error)
 }
@@ -70,13 +70,67 @@ func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member
 		return etag, nil
 	}
 
-	_, etag, err = s.MemberContacts(ctx, member)
+	etag, err = s.FetchMemberContacts(ctx, member, etag)
 
 	return etag, err
 
 }
 
-func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]*athena.MemberContact, *athena.Etag, error) {
+func (s *service) FetchMemberContacts(ctx context.Context, member *athena.Member, etag *athena.Etag) (*athena.Etag, error) {
+
+	if etag != nil && etag.CachedUntil.After(time.Now()) {
+		return etag, nil
+	}
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "FetchMemberContacts",
+	})
+
+	_, res, err := s.esi.HeadCharacterContacts(ctx, member, 1)
+	if err != nil {
+		entry.WithError(err).Error("failed to exec head request for member contacts from ESI")
+		return nil, fmt.Errorf("failed to exec head request for member contacts from ESI")
+	}
+
+	pages := esi.RetrieveXPagesFromHeader(res.Header)
+
+	for page := uint(1); page <= pages; page++ {
+		entry := entry.WithField("page", page)
+
+		contacts, err := s.contacts.MemberContacts(ctx, member.ID, athena.NewEqualOperator("source_page", page))
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+
+		newContacts, _, _, err := s.esi.GetCharacterContacts(ctx, member, page)
+		if err != nil {
+			entry.WithError(err).Error("failed to fetch member contacts from ESI")
+			return nil, fmt.Errorf("failed to fetch member contacts from ESI")
+		}
+
+		// Need to add page or sourcePage property to Struct so that the ESI Page that the record was discovered on can be tracked.
+		s.resolveContactAttributes(ctx, newContacts)
+		contacts, err = s.diffAndUpdateContacts(ctx, member, page, contacts, newContacts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to diff and update contacts")
+		}
+
+		if len(contacts) > 0 {
+			err := s.cache.SetMemberContacts(ctx, member.ID, int(page), contacts)
+			if err != nil {
+				entry.WithError(err).Error("failed to cache member contacts")
+			}
+		}
+
+	}
+
+	return etag, err
+
+}
+
+func (s *service) MemberContacts(ctx context.Context, member *athena.Member, page int) ([]*athena.MemberContact, error) {
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
 		"member_id": member.ID,
@@ -84,71 +138,41 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member) ([]
 		"method":    "MemberContacts",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithMember(member))
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch etag object")
-		return nil, nil, fmt.Errorf("failed to fetch etag object")
-	}
-
-	cached := true
-
-	contacts, err := s.cache.MemberContacts(ctx, member.ID)
+	contacts, err := s.cache.MemberContacts(ctx, member.ID, page)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member contacts from cache")
-		return nil, nil, fmt.Errorf("failed to fetch member contacts from cache")
+		return nil, fmt.Errorf("failed to fetch member contacts from cache")
 	}
 
 	if contacts == nil {
-		cached = false
+
 		contacts, err = s.contacts.MemberContacts(ctx, member.ID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			entry.WithError(err).Error("failed to fetch member contacts from DB")
-			return nil, nil, fmt.Errorf("failed to fetch member contacts from DB")
-		}
-	}
-
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-
-		if !cached {
-			err = s.cache.SetMemberContacts(ctx, member.ID, contacts)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member contacts")
-			}
+			return nil, fmt.Errorf("failed to fetch member contacts from DB")
 		}
 
-		return contacts, etag, nil
-	}
-
-	newContacts, etag, _, err := s.esi.GetCharacterContacts(ctx, member, make([]*athena.MemberContact, 0))
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member contacts from ESI")
-		return nil, nil, fmt.Errorf("failed to fetch member contacts from ESI")
-	}
-
-	if len(newContacts) > 0 {
-		s.resolveContactAttributes(ctx, newContacts)
-		contacts, err = s.diffAndUpdateContacts(ctx, member, contacts, newContacts)
+		err = s.cache.SetMemberContacts(ctx, member.ID, page, contacts)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to diff and update contacts")
-		}
-		if len(contacts) > 0 {
-			err := s.cache.SetMemberContacts(ctx, member.ID, contacts)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member contacts")
-			}
+			entry.WithError(err).Error("failed to cache member contacts")
 		}
 	}
 
-	return contacts, etag, nil
+	return contacts, nil
 
 }
 
-func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Member, old []*athena.MemberContact, new []*athena.MemberContact) ([]*athena.MemberContact, error) {
+func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Member, page uint, old []*athena.MemberContact, new []*athena.MemberContact) ([]*athena.MemberContact, error) {
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
 		"service": serviceIdentifier,
 		"method":  "diffAndUpdateContacts",
 	})
+
+	// Apply Page to all structs in new array
+	for _, contact := range new {
+		contact.SourcePage = page
+	}
 
 	contactsToCreate := make([]*athena.MemberContact, 0)
 	contactsToUpdate := make([]*athena.MemberContact, 0)

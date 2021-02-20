@@ -42,13 +42,13 @@ func (s *service) GetCharacterFittings(ctx context.Context, member *athena.Membe
 			return nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return fittings, res, fmt.Errorf("failed to fetch fittings for character %d, received status code of %d", member.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)

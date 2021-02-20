@@ -29,6 +29,7 @@ type (
 		characterInterface
 		clonesInterface
 		contactsInterface
+		contractInterface
 		corporationInterface
 		etagInterface
 		locationInterface
@@ -409,8 +410,14 @@ func (s *service) request(
 
 	s.trackESICallStatusCode(ctx, response.StatusCode)
 
-	s.retrieveErrorReset(ctx, response.Header)
-	s.retrieveErrorCount(ctx, response.Header)
+	reset := RetrieveErrorReset(response.Header)
+	s.storeESIErrorReset(ctx, reset)
+	count := RetrieveErrorCount(response.Header)
+	s.storeESIErrorCount(ctx, count)
+
+	if count <= 20 {
+		time.Sleep(time.Second * time.Duration(reset))
+	}
 
 	return data, response, nil
 }
@@ -437,8 +444,7 @@ func (s *service) _exec(req *http.Request, options *options) (response *http.Res
 
 // retrieveExpiresHeader takes a map[string]string of the response headers, checks to see if the "Expires" key exists, and if it does, parses the timestamp and returns a time.Time. If duraction
 // is greater than zero(0), then that number of minutes will be add to the expires time that is parsed from the header.
-func (s *service) retrieveExpiresHeader(h http.Header, duration time.Duration) time.Time {
-
+func RetrieveExpiresHeader(h http.Header, duration time.Duration) time.Time {
 	oneHour := time.Now().Add(time.Minute * 60)
 
 	header := h.Get("expires")
@@ -458,7 +464,7 @@ func (s *service) retrieveExpiresHeader(h http.Header, duration time.Duration) t
 	return expires
 }
 
-func (s *service) retrieveXPagesFromHeader(h http.Header) int {
+func RetrieveXPagesFromHeader(h http.Header) uint {
 
 	header := h.Get("X-Pages")
 	if header == "" {
@@ -470,51 +476,60 @@ func (s *service) retrieveXPagesFromHeader(h http.Header) int {
 		return 0
 	}
 
-	return pages
+	return uint(pages)
 
 }
 
-// retrieveEtagHeader is a helper method that retrieves an Etag for the most recent request to
-// ESI
-func (s *service) retrieveEtagHeader(h http.Header) string {
+// RetrieveEtagHeader is a helper method that retrieves an
+// Etag for the most recent request to ESI
+func RetrieveEtagHeader(h http.Header) string {
 	return h.Get("Etag")
 }
 
-// retrieveErrorCount is a helper method that retrieves the number of errors that this application
+// RetrieveErrorCount is a helper method that retrieves the number of errors that this application
 // has triggered and how many more can be triggered before potentially encountereding an HTTP Status 420
-func (s *service) retrieveErrorCount(ctx context.Context, h http.Header) {
+func RetrieveErrorCount(h http.Header) uint64 {
 	// Default to a low count. This will cause the app to slow down
 	// if the header is not present to set the actual value from the header
-	var count int64 = 15
+	var count uint64 = 20
 	strCount := h.Get("x-esi-error-limit-remain")
 	if strCount != "" {
-		i, err := strconv.ParseInt(strCount, 10, 64)
+		i, err := strconv.ParseUint(strCount, 10, 64)
 		if err == nil {
 			count = i
 		}
 	}
 
-	s.cache.SetESIErrCount(ctx, count)
+	return count
 
 }
 
-// retrieveErrorReset is a helper method that retrieves the number of seconds until our Error Limit resets
-func (s *service) retrieveErrorReset(ctx context.Context, h http.Header) {
+func (s *service) storeESIErrorCount(ctx context.Context, count uint64) {
+	s.cache.SetESIErrCount(ctx, count)
+}
+
+// RetrieveErrorReset is a helper method that retrieves the number of seconds until our Error Limit resets
+func RetrieveErrorReset(h http.Header) uint64 {
 	reset := h.Get("x-esi-error-limit-reset")
 	if reset == "" {
-		return
+		return 0
 	}
 
-	seconds, err := strconv.ParseUint(reset, 10, 32)
+	seconds, err := strconv.ParseUint(reset, 10, 64)
 	if err != nil {
-		return
+		return 0
 	}
 
-	s.cache.SetEsiErrorReset(ctx, time.Now().Add(time.Second*time.Duration(seconds)).Unix())
+	return seconds
+
+}
+
+func (s *service) storeESIErrorReset(ctx context.Context, seconds uint64) {
+	s.cache.SetEsiErrorReset(ctx, uint64(time.Now().Add(time.Second*time.Duration(seconds)).Unix()))
 }
 
 func (s *service) trackESICallStatusCode(ctx context.Context, code int) {
-	s.cache.SetESITracking(ctx, code, time.Now().UnixNano())
+	s.cache.SetESITracking(ctx, code, uint64(time.Now().UnixNano()))
 }
 
 func buildKey(s ...string) string {

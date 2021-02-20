@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/eveisesi/athena"
@@ -19,9 +20,15 @@ import (
 )
 
 type Service interface {
-	EmptyMemberBalance(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	EmptyMembetWalletTransactions(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	EmptyMemberWalletJournals(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	// Fetch Member Balance fetches the provided characters balance from ESI and stores it in the repository
+	FetchMemberBalance(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberBalance(ctx context.Context, member *athena.Member) (*athena.MemberWalletBalance, error)
+
+	// Fetch Member Wallet Transactions fetches the provided characters transactions from ESI and stores them in the repository
+	FetchMemberWalletTransactions(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+
+	// Fetch Member Wallet Journals fetches the provided characters jounral entries from ESI and stores them in the repository
+	FetchMemberWalletJournals(ctx context.Context, member *athena.Member) (*athena.Etag, error)
 }
 
 type service struct {
@@ -61,58 +68,12 @@ func NewService(
 	}
 }
 
-func (s *service) EmptyMemberBalance(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
+func (s *service) FetchMemberBalance(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletBalance, esi.ModWithMember(member))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
-
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
-	}
-
-	return s.FetchMemberBalance(ctx, member, etag)
-
-}
-
-func (s *service) MemberBalance(ctx context.Context, member *athena.Member) (*athena.MemberWalletBalance, error) {
-
-	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
-		"service":   serviceIdentifier,
-		"method":    "MemberBalance",
-	})
-
-	balance, err := s.cache.MemberWalletBalance(ctx, member)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member wallet balance from cache")
-		return nil, fmt.Errorf("failed to fetch member wallet balance from cache")
-	}
-
-	if balance == nil {
-		balance, err = s.wallet.MemberWalletBalance(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch member wallet balance from db")
-			return nil, fmt.Errorf("failed to fetch member wallet balance from db")
-		}
-
-		if balance == nil || errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("no balance could be found for the specified character")
-		}
-
-		err = s.cache.SetMemberWalletBalance(ctx, member, balance)
-		if err != nil {
-			entry.WithError(err).Error("failed to cache member wallet balance")
-		}
-
-	}
-
-	return balance, nil
-
-}
-
-func (s *service) FetchMemberBalance(ctx context.Context, member *athena.Member, etag *athena.Etag) (*athena.Etag, error) {
 
 	if etag != nil && etag.CachedUntil.After(time.Now()) {
 		return etag, nil
@@ -166,22 +127,48 @@ func (s *service) FetchMemberBalance(ctx context.Context, member *athena.Member,
 
 }
 
-func (s *service) EmptyMembetWalletTransactions(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
+func (s *service) MemberBalance(ctx context.Context, member *athena.Member) (*athena.MemberWalletBalance, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "MemberBalance",
+	})
+
+	balance, err := s.cache.MemberWalletBalance(ctx, member)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member wallet balance from cache")
+		return nil, fmt.Errorf("failed to fetch member wallet balance from cache")
+	}
+
+	if balance == nil {
+		balance, err = s.wallet.MemberWalletBalance(ctx, member.ID)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			entry.WithError(err).Error("failed to fetch member wallet balance from db")
+			return nil, fmt.Errorf("failed to fetch member wallet balance from db")
+		}
+
+		if balance == nil || errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("no balance could be found for the specified character")
+		}
+
+		err = s.cache.SetMemberWalletBalance(ctx, member, balance)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member wallet balance")
+		}
+
+	}
+
+	return balance, nil
+
+}
+
+func (s *service) FetchMemberWalletTransactions(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletTransactions, esi.ModWithMember(member))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
-
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
-	}
-
-	return s.FetchMemberWalletTransaction(ctx, member, etag)
-
-}
-
-func (s *service) FetchMemberWalletTransaction(ctx context.Context, member *athena.Member, etag *athena.Etag) (*athena.Etag, error) {
 
 	if etag != nil && etag.CachedUntil.After(time.Now()) {
 		return etag, nil
@@ -193,30 +180,51 @@ func (s *service) FetchMemberWalletTransaction(ctx context.Context, member *athe
 		"method":    "FetchMemberWalletTransaction",
 	})
 
-	etag, res, err := s.esi.HeadCharacterWalletTransactions(ctx, member, 1)
+	_, _, err = s.esi.HeadCharacterWalletTransactions(ctx, member, 1)
 	if err != nil {
 		entry.WithError(err).Error("failed to exec head request for member wallet transactions from ESI")
 		return nil, fmt.Errorf("failed to exec head request for member wallet transactions from ESI")
 	}
 
-	transactions, etag, _, err := s.esi.GetCharacterWalletTransactions(ctx, member, make([]*athena.MemberWalletTransaction, 0))
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member wallet transactions from ESI")
-		return nil, fmt.Errorf("failed to fetch member wallet transactions from ESI")
-	}
+	from := uint64(0)
+	for {
 
-	if len(transactions) > 0 {
+		entry := entry.WithField("from", from)
 
-		s.resolveMemberWalletTransactionAttributes(ctx, member, transactions)
-		_, err = s.wallet.CreateMemberWalletTransactions(ctx, member.ID, transactions)
+		ptransactions, _, _, err := s.esi.GetCharacterWalletTransactions(ctx, member, from)
 		if err != nil {
-			entry.WithError(err).Error("failed to create transaction in db")
-			return nil, fmt.Errorf("failed to create transaction in db")
+			entry.WithError(err).Error("failed to fetch member wallet transactions from ESI")
+			return nil, fmt.Errorf("failed to fetch member wallet transactions from ESI")
 		}
 
+		if len(ptransactions) > 0 {
+
+			s.resolveMemberWalletTransactionAttributes(ctx, member, ptransactions)
+			_, err = s.wallet.CreateMemberWalletTransactions(ctx, member.ID, ptransactions)
+			if err != nil {
+				entry.WithError(err).Error("failed to create transaction in db")
+				return nil, fmt.Errorf("failed to create transaction in db")
+			}
+
+		}
+
+		lptrans := len(ptransactions)
+
+		if lptrans < 2500 {
+			break
+		}
+
+		from = ptransactions[lptrans-1].TransactionID - 1
+
+	}
+
+	etag, err = s.esi.Etag(ctx, esi.GetCharacterWalletTransactions, esi.ModWithMember(member))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
 
 	return etag, err
+
 }
 
 func (s *service) resolveMemberWalletTransactionAttributes(ctx context.Context, member *athena.Member, transactions []*athena.MemberWalletTransaction) {
@@ -335,7 +343,7 @@ func (s *service) resolveMemberWalletTransactionAttributes(ctx context.Context, 
 
 }
 
-func (s *service) EmptyMemberWalletJournals(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
+func (s *service) FetchMemberWalletJournals(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletJournal, esi.ModWithMember(member))
 	if err != nil {
@@ -362,21 +370,35 @@ func (s *service) FetchMemberWalletJournal(ctx context.Context, member *athena.M
 		"method":    "FetchMemberWalletJournal",
 	})
 
-	entries, etag, _, err := s.esi.GetCharacterWalletJournals(ctx, member, make([]*athena.MemberWalletJournal, 0))
+	etag, res, err := s.esi.HeadCharacterWalletJournals(ctx, member, 1)
 	if err != nil {
-		entry.WithError(err).Error("failed to fetch member wallet journals from ESI")
-		return nil, fmt.Errorf("failed to fetch member wallet journals from ESI")
+		entry.WithError(err).Error("failed to exec head request for member wallet journals from ESI")
+		return nil, fmt.Errorf("failed to exec head request for member wallet journals from ESI")
 	}
 
-	s.logger.WithField("count", len(entries)).Info("num of entries received")
+	pages := esi.RetrieveXPagesFromHeader(res.Header)
+	s.logger.WithField("pages", pages).Info("num of pages")
 
-	if len(entries) > 0 {
-		s.resolveMemberWalletJournalEntries(ctx, member, entries)
-		_, err = s.wallet.CreateMemberWalletJournals(ctx, member.ID, entries)
+	for page := uint(1); page <= pages; page++ {
+		entry := entry.WithField("page", page)
+
+		entries, _, _, err := s.esi.GetCharacterWalletJournals(ctx, member, page)
 		if err != nil {
-			entry.WithError(err).Error("failed to create entries in db")
-			return nil, fmt.Errorf("failed to create entries in db")
+			entry.WithError(err).Error("failed to fetch member wallet journals from ESI")
+			return nil, fmt.Errorf("failed to fetch member wallet journals from ESI")
 		}
+
+		if len(entries) > 0 {
+			s.resolveMemberWalletJournalEntries(ctx, member, entries)
+			_, err = s.wallet.CreateMemberWalletJournals(ctx, member.ID, entries)
+			if err != nil {
+				entry.WithError(err).Error("failed to create entries in db")
+				return nil, fmt.Errorf("failed to create entries in db")
+			}
+		}
+
+		time.Sleep(time.Millisecond * 100)
+
 	}
 
 	return etag, err
@@ -384,10 +406,62 @@ func (s *service) FetchMemberWalletJournal(ctx context.Context, member *athena.M
 }
 
 func (s *service) resolveMemberWalletJournalEntries(ctx context.Context, member *athena.Member, entries []*athena.MemberWalletJournal) {
+	logEntry := s.logger.WithFields(logrus.Fields{
+		"service":   serviceIdentifier,
+		"method":    "resolveMemberWalletJournalEntries",
+		"member_id": member.ID,
+	})
 
 	for _, entry := range entries {
+
+		logEntry := logEntry.WithField("journal_id", entry.JournalID)
+
 		if entry.ContextID.Valid && entry.ContextType.Valid {
 			s.resolveContextIDType(ctx, member, entry.ContextID.Uint64, entry.ContextType.ContextIDType)
+		}
+
+		if entry.FirstPartyID.Valid && entry.SecondPartyID.Valid {
+			s.resolvePartyID(ctx, entry)
+		}
+
+		if entry.TaxReceiverID.Valid {
+			_, err := s.corporation.Corporation(ctx, entry.TaxReceiverID.Uint)
+			if err != nil {
+				logEntry.WithError(err).Error("failed to resolve corporation id on journal for tax receiver id")
+			}
+		}
+
+	}
+
+}
+
+func (s *service) resolvePartyID(ctx context.Context, journal *athena.MemberWalletJournal) {
+	entry := s.logger.WithFields(logrus.Fields{
+		"service": serviceIdentifier,
+		"method":  "resolvePartyID",
+	})
+
+	results, res, err := s.esi.PostUniverseNames(ctx, []uint{journal.FirstPartyID.Uint, journal.SecondPartyID.Uint})
+	if err != nil && res == nil {
+		entry.WithError(err).Error("failed to execute request to post universe names")
+		return
+	}
+
+	if res.StatusCode == http.StatusBadRequest {
+		entry.Error("request to post universe names failed to with status code 400")
+		return
+	}
+
+	if len(results) != 2 {
+		entry.Error("request to post universe names returned unexpected number of results")
+	}
+
+	for _, result := range results {
+		if result.ID == journal.FirstPartyID.Uint {
+			journal.FirstPartyType.SetValid(string(result.Category))
+		}
+		if result.ID == journal.SecondPartyID.Uint {
+			journal.SecondPartyType.SetValid(string(result.Category))
 		}
 	}
 
@@ -395,6 +469,8 @@ func (s *service) resolveMemberWalletJournalEntries(ctx context.Context, member 
 
 func (s *service) resolveContextIDType(ctx context.Context, member *athena.Member, id uint64, idtype athena.ContextIDType) {
 	entry := s.logger.WithFields(logrus.Fields{
+		"service":      serviceIdentifier,
+		"method":       "resolveContextIDType",
 		"context_id":   id,
 		"context_type": idtype,
 	})

@@ -64,8 +64,8 @@ func (s *service) GetCharacterMailHeaders(ctx context.Context, member *athena.Me
 	if res.StatusCode >= http.StatusBadRequest {
 		return headers, etag, res, fmt.Errorf("failed to exec mail headers head request for character %d, received status code of %d", member.ID, res.StatusCode)
 	} else if res.StatusCode == http.StatusNotModified {
-		etag.Etag = s.retrieveEtagHeader(res.Header)
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.Etag = RetrieveEtagHeader(res.Header)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -188,8 +188,8 @@ func (s *service) GetCharacterMailHeader(ctx context.Context, member *athena.Mem
 	if res.StatusCode >= http.StatusBadRequest {
 		return header, etag, res, fmt.Errorf("failed to exec mail header head request for character %d with path %s, received status code of %d", member.ID, path, res.StatusCode)
 	} else if res.StatusCode == http.StatusNotModified {
-		etag.Etag = s.retrieveEtagHeader(res.Header)
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.Etag = RetrieveEtagHeader(res.Header)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -257,8 +257,8 @@ func (s *service) GetCharacterMailLists(ctx context.Context, member *athena.Memb
 	if res.StatusCode >= http.StatusBadRequest {
 		return lists, etag, res, fmt.Errorf("failed to exec mailing list head request for character %d, received status code of %d", member.ID, res.StatusCode)
 	} else if res.StatusCode == http.StatusNotModified {
-		etag.Etag = s.retrieveEtagHeader(res.Header)
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.Etag = RetrieveEtagHeader(res.Header)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -323,8 +323,8 @@ func (s *service) GetCharacterMailLabels(ctx context.Context, member *athena.Mem
 	if res.StatusCode >= http.StatusBadRequest {
 		return labels, etag, res, fmt.Errorf("failed to exec mail labels head request for character %d, received status code of %d", member.ID, res.StatusCode)
 	} else if res.StatusCode == http.StatusNotModified {
-		etag.Etag = s.retrieveEtagHeader(res.Header)
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.Etag = RetrieveEtagHeader(res.Header)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)

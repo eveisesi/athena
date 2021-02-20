@@ -60,7 +60,7 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 		if !isAllianceValid(alliance) {
 			return nil, nil, nil, fmt.Errorf("invalid alliance returned from esi, missing name or ticker")
@@ -69,7 +69,7 @@ func (s *service) GetAlliance(ctx context.Context, alliance *athena.Alliance) (*
 		return alliance, etag, res, fmt.Errorf("failed to fetch alliance %d, received status code of %d", alliance.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)

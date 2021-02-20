@@ -49,13 +49,13 @@ func (s *service) GetCharacterAttributes(ctx context.Context, member *athena.Mem
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return attributes, etag, res, fmt.Errorf("failed to fetch attributes for character %d, received status code of %d", member.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
@@ -113,13 +113,13 @@ func (s *service) GetCharacterSkills(ctx context.Context, member *athena.Member,
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return skills, etag, res, fmt.Errorf("failed to fetch skills for character %d, received status code of %d", member.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
@@ -177,13 +177,13 @@ func (s *service) GetCharacterSkillQueue(ctx context.Context, member *athena.Mem
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return queue, etag, res, fmt.Errorf("failed to fetch skill queue for character %d, received status code of %d", member.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)

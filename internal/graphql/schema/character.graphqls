@@ -1,0 +1,17 @@
+type Character @goModel(model: "github.com/eveisesi/athena.Character") {
+    id: Uint!
+    name: String!
+    corporationID: Uint!
+    allianceID: Uint
+    factionID: Uint
+    securityStatus: Float
+    gender: String!
+    birthday: Time!
+    title: String
+    ancestryID: Uint
+    bloodlineID: Uint!
+    raceID: Uint!
+
+    corporation: Corporation!
+    alliance: Alliance
+}

@@ -59,43 +59,45 @@ func (s *service) EmptyMemberAssets(ctx context.Context, member *athena.Member) 
 		return etag, nil
 	}
 
-	return s.FetchMemberAssets(ctx, member, etag)
-
-}
-
-func (s *service) FetchMemberAssets(ctx context.Context, member *athena.Member, etag *athena.Etag) (*athena.Etag, error) {
-
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
-	}
-
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
 		"member_id": member.ID,
 		"service":   serviceIdentifier,
 		"method":    "FetchMemberAssets",
 	})
 
-	newAssets, _, err := s.esi.GetCharacterAssets(ctx, member, make([]*athena.MemberAsset, 0))
+	_, res, err := s.esi.HeadCharacterAssets(ctx, member, 1)
 	if err != nil {
-		entry.WithError(err).Error("failed to fetch member assets from ESI")
-		return nil, fmt.Errorf("failed to fetch member assets from ESI")
+		entry.WithError(err).Error("failed to exec head request for member assets from ESI")
+		return nil, fmt.Errorf("failed to exec head request for member assets from ESI")
 	}
 
-	if len(newAssets) > 0 {
-		s.resolveMemberAssetsAttributes(ctx, member, newAssets)
+	pages := esi.RetrieveXPagesFromHeader(res.Header)
 
-		oldAssets, err := s.assets.MemberAssets(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch existing member assets from DB")
-			return nil, fmt.Errorf("failed to fetch existing member assets from DB")
-		}
+	for page := uint(0); page <= pages; page++ {
+		entry := entry.WithField("page", page)
 
-		err = s.diffAndCreateOrUpdateAssets(ctx, member, oldAssets, newAssets)
+		newAssets, _, _, err := s.esi.GetCharacterAssets(ctx, member, page)
 		if err != nil {
-			entry.WithError(err).Error("failed to diff and create or update assets")
-			return nil, fmt.Errorf("failed to diff and create or update assets")
+			entry.WithError(err).Error("failed to fetch member assets from ESI")
+			return nil, fmt.Errorf("failed to fetch member assets from ESI")
 		}
 
+		if len(newAssets) > 0 {
+			s.resolveMemberAssetsAttributes(ctx, member, newAssets)
+
+			oldAssets, err := s.assets.MemberAssets(ctx, member.ID)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				entry.WithError(err).Error("failed to fetch existing member assets from DB")
+				return nil, fmt.Errorf("failed to fetch existing member assets from DB")
+			}
+
+			err = s.diffAndCreateOrUpdateAssets(ctx, member, oldAssets, newAssets)
+			if err != nil {
+				entry.WithError(err).Error("failed to diff and create or update assets")
+				return nil, fmt.Errorf("failed to diff and create or update assets")
+			}
+
+		}
 	}
 
 	etag, err = s.esi.Etag(ctx, esi.GetCharacterAssets, esi.ModWithMember(member))

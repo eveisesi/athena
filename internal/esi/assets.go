@@ -11,7 +11,8 @@ import (
 )
 
 type assetInterface interface {
-	GetCharacterAssets(ctx context.Context, member *athena.Member, assets []*athena.MemberAsset) ([]*athena.MemberAsset, *http.Response, error)
+	HeadCharacterAssets(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error)
+	GetCharacterAssets(ctx context.Context, member *athena.Member, page uint) ([]*athena.MemberAsset, *athena.Etag, *http.Response, error)
 }
 
 func (s *service) HeadCharacterAssets(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error) {
@@ -43,7 +44,7 @@ func (s *service) HeadCharacterAssets(ctx context.Context, member *athena.Member
 	}
 
 	if res.StatusCode == http.StatusNotModified {
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -84,7 +85,7 @@ func (s *service) GetCharacterAssets(ctx context.Context, member *athena.Member,
 		return assets, etag, res, fmt.Errorf("failed to fetch assets for character %d, received status code of %d", member.ID, res.StatusCode)
 	} else if res.StatusCode == http.StatusNotModified {
 
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)

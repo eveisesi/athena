@@ -55,13 +55,16 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 
 	switch sc := res.StatusCode; {
 	case sc == http.StatusOK:
+		id := corporation.ID
 		err = json.Unmarshal(b, corporation)
 		if err != nil {
 			err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		corporation.ID = id
+
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 		if !isCorporationValid(corporation) {
 			return nil, nil, nil, fmt.Errorf("invalid corporation return from esi, missing name or ticker")
@@ -70,7 +73,7 @@ func (s *service) GetCorporation(ctx context.Context, corporation *athena.Corpor
 		return corporation, etag, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporation.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
@@ -133,13 +136,13 @@ func (s *service) GetCorporationAllianceHistory(ctx context.Context, corporation
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return history, etag, res, fmt.Errorf("failed to fetch corporation %d, received status code of %d", corporation.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)

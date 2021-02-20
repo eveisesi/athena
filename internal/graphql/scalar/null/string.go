@@ -10,11 +10,12 @@ import (
 )
 
 func MarshalString(ns null.String) graphql.Marshaler {
+
+	if !ns.Valid {
+		return graphql.Null
+	}
+
 	return graphql.WriterFunc(func(w io.Writer) {
-		if !ns.Valid {
-			_, _ = io.WriteString(w, `null`)
-			return
-		}
 
 		_, _ = io.WriteString(w, strconv.Quote(ns.String))
 	})
@@ -28,6 +29,6 @@ func UnmarshalString(i interface{}) (null.String, error) {
 		}
 		return null.NewString(v, true), nil
 	default:
-		return null.NewString("", false), fmt.Errorf("%v is not a valid uint", v)
+		return null.NewString("", false), fmt.Errorf("%v is not a valid string", v)
 	}
 }

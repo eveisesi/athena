@@ -59,7 +59,7 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 		if !isCharacterValid(character) {
 			return nil, nil, nil, fmt.Errorf("invalid character return from esi, missing name or ticker")
@@ -68,7 +68,7 @@ func (s *service) GetCharacter(ctx context.Context, character *athena.Character)
 		return character, etag, res, fmt.Errorf("failed to fetch character %d, received status code of %d", character.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
@@ -130,13 +130,13 @@ func (s *service) GetCharacterCorporationHistory(ctx context.Context, character 
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return history, etag, res, fmt.Errorf("failed to fetch character history %d, received status code of %d", character.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)

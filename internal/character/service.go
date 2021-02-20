@@ -15,9 +15,9 @@ import (
 )
 
 type Service interface {
-	Character(ctx context.Context, id uint, options ...OptionFunc) (*athena.Character, error)
-	Characters(ctx context.Context, operators []*athena.Operator, options ...OptionFunc) ([]*athena.Character, error)
-	CharacterCorporationHistory(ctx context.Context, character *athena.Character, options ...OptionFunc) ([]*athena.CharacterCorporationHistory, error)
+	Character(ctx context.Context, id uint) (*athena.Character, error)
+	Characters(ctx context.Context, operators []*athena.Operator) ([]*athena.Character, error)
+	CharacterCorporationHistory(ctx context.Context, operators []*athena.Operator) ([]*athena.CharacterCorporationHistory, error)
 }
 
 type service struct {
@@ -46,15 +46,22 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, cor
 	}
 }
 
-func (s *service) Character(ctx context.Context, id uint, optionFuncs ...OptionFunc) (*athena.Character, error) {
+// func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena.Etag, error) {
+
+// 	etag, err := s.esi.Etag(ctx, esi.GetCharacter, esi.ModWithCharacter(&athena.Character{ID: characterID}))
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
+// 	}
+
+// }
+
+func (s *service) Character(ctx context.Context, id uint) (*athena.Character, error) {
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
 		"character_id": id,
 		"service":      serviceIdentifier,
 		"method":       "Character",
 	})
-
-	options := s.options(optionFuncs)
 
 	etag, err := s.esi.Etag(ctx, esi.GetCharacter, esi.ModWithCharacter(&athena.Character{ID: id}))
 	if err != nil {
@@ -110,9 +117,7 @@ func (s *service) Character(ctx context.Context, id uint, optionFuncs ...OptionF
 		return nil, fmt.Errorf("Failed to fetch character from ESI")
 	}
 
-	if options.history {
-		_, _ = s.CharacterCorporationHistory(ctx, character)
-	}
+	// _, _ = s.CharacterCorporationHistory(ctx, character)
 
 	switch exists {
 	case true:
@@ -139,7 +144,7 @@ func (s *service) Character(ctx context.Context, id uint, optionFuncs ...OptionF
 
 }
 
-func (s *service) Characters(ctx context.Context, operators []*athena.Operator, options ...OptionFunc) ([]*athena.Character, error) {
+func (s *service) Characters(ctx context.Context, operators []*athena.Operator) ([]*athena.Character, error) {
 
 	characters, err := s.character.Characters(ctx, operators...)
 	if err != nil {
@@ -150,75 +155,74 @@ func (s *service) Characters(ctx context.Context, operators []*athena.Operator, 
 
 }
 
-func (s *service) CharacterCorporationHistory(ctx context.Context, character *athena.Character, optionFuncs ...OptionFunc) ([]*athena.CharacterCorporationHistory, error) {
+func (s *service) CharacterCorporationHistory(ctx context.Context, operators []*athena.Operator) ([]*athena.CharacterCorporationHistory, error) {
 
-	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"character_id": character.ID,
-		"service":      serviceIdentifier,
-		"method":       "CharacterCorporationHistory",
-	})
+	// entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+	// 	"service": serviceIdentifier,
+	// 	"method":  "CharacterCorporationHistory",
+	// })
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterCorporationHistory, esi.ModWithCharacter(character))
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch etag object")
-		return nil, fmt.Errorf("failed to fetch etag object")
-	}
+	// etag, err := s.esi.Etag(ctx, esi.GetCharacterCorporationHistory, esi.ModWithCharacter(character))
+	// if err != nil {
+	// 	entry.WithError(err).Error("failed to fetch etag object")
+	// 	return nil, fmt.Errorf("failed to fetch etag object")
+	// }
 
-	exists := true
-	cached := true
+	// exists := true
+	// cached := true
 
-	history, err := s.cache.CharacterCorporationHistory(ctx, character.ID)
-	if err != nil {
-		entry.WithError(err).Error("failed to cache alliance")
-		return nil, fmt.Errorf("failed to cache alliance")
-	}
+	// history, err := s.cache.CharacterCorporationHistory(ctx, character.ID)
+	// if err != nil {
+	// 	entry.WithError(err).Error("failed to cache alliance")
+	// 	return nil, fmt.Errorf("failed to cache alliance")
+	// }
 
-	if history == nil {
-		cached = false
-		history, err = s.character.CharacterCorporationHistory(ctx, athena.NewEqualOperator("character_id", character.ID))
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch alliance from DB")
-			return nil, fmt.Errorf("failed to fetch alliance from DB")
-		}
+	// if history == nil {
+	// 	cached = false
+	// 	history, err = s.character.CharacterCorporationHistory(ctx, athena.NewEqualOperator("character_id", character.ID))
+	// 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	// 		entry.WithError(err).Error("failed to fetch alliance from DB")
+	// 		return nil, fmt.Errorf("failed to fetch alliance from DB")
+	// 	}
 
-		if history == nil || errors.Is(err, sql.ErrNoRows) {
-			exists = false
-			history = make([]*athena.CharacterCorporationHistory, 0)
-		}
-	}
+	// 	if history == nil || errors.Is(err, sql.ErrNoRows) {
+	// 		exists = false
+	// 		history = make([]*athena.CharacterCorporationHistory, 0)
+	// 	}
+	// }
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
+	// if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
 
-		if !cached {
-			err = s.cache.SetCharacterCorporationHistory(ctx, character.ID, history)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache corporation history")
-			}
-		}
+	// 	if !cached {
+	// 		err = s.cache.SetCharacterCorporationHistory(ctx, character.ID, history)
+	// 		if err != nil {
+	// 			entry.WithError(err).Error("failed to cache corporation history")
+	// 		}
+	// 	}
 
-		return history, nil
-	}
+	// 	return history, nil
+	// }
 
-	newHistory, _, _, err := s.esi.GetCharacterCorporationHistory(ctx, character, make([]*athena.CharacterCorporationHistory, 0))
-	if err != nil {
-		entry.WithError(err).Error("Failed to fetch corporation history from ESI")
-		return nil, fmt.Errorf("Failed to fetch corporation history from ESI")
-	}
+	// newHistory, _, _, err := s.esi.GetCharacterCorporationHistory(ctx, character, make([]*athena.CharacterCorporationHistory, 0))
+	// if err != nil {
+	// 	entry.WithError(err).Error("Failed to fetch corporation history from ESI")
+	// 	return nil, fmt.Errorf("Failed to fetch corporation history from ESI")
+	// }
 
-	if len(newHistory) > 0 {
-		s.resolveHistoryAttributes(ctx, newHistory)
-		history, err := s.diffAndUpdateHistory(ctx, character, history, newHistory)
-		if err != nil {
-			return nil, fmt.Errorf("failed to diff and update corporation history")
-		}
+	// if len(newHistory) > 0 {
+	// 	s.resolveHistoryAttributes(ctx, newHistory)
+	// 	history, err := s.diffAndUpdateHistory(ctx, character, history, newHistory)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("failed to diff and update corporation history")
+	// 	}
 
-		err = s.cache.SetCharacterCorporationHistory(ctx, character.ID, history)
-		if err != nil {
-			entry.WithError(err).Error("failed to cache corporation history")
-		}
-	}
+	// 	err = s.cache.SetCharacterCorporationHistory(ctx, character.ID, history)
+	// 	if err != nil {
+	// 		entry.WithError(err).Error("failed to cache corporation history")
+	// 	}
+	// }
 
-	return history, err
+	return nil, nil
 }
 
 func (s *service) resolveHistoryAttributes(ctx context.Context, history []*athena.CharacterCorporationHistory) {

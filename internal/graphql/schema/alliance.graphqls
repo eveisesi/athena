@@ -1,0 +1,11 @@
+type Alliance @goModel(model: "github.com/eveisesi/athena.Alliance") {
+    id: Uint!
+    name: String!
+    ticker: String!
+    dateFounded: Time!
+    creatorID: Uint!
+    creatorCorporationID: Uint!
+    executorCorporationID: Uint!
+    factionID: Uint
+    isClosed: Bool!
+}

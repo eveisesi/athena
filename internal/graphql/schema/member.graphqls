@@ -1,0 +1,25 @@
+extend type Query {
+    member: Member
+}
+
+type Member @goModel(model: "github.com/eveisesi/athena.Member") {
+    id: Uint!
+    mainID: Uint
+    accessToken: String
+    refreshToken: String
+    expires: Time
+    ownerHash: String
+    scopes: [MemberScope]!
+    disabled: Boolean!
+    disabledReason: String
+    disabledTimestamp: Time
+    lastLogin: Time!
+
+    main: Character
+    character: Character
+}
+
+type MemberScope @goModel(model: "github.com/eveisesi/athena.MemberScope") {
+    Scope: String!
+    Expiry: Time
+}

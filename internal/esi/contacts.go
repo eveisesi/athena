@@ -11,7 +11,8 @@ import (
 )
 
 type contactsInterface interface {
-	GetCharacterContacts(ctx context.Context, member *athena.Member, contacts []*athena.MemberContact) ([]*athena.MemberContact, *athena.Etag, *http.Response, error)
+	HeadCharacterContacts(ctx context.Context, member *athena.Member, page uint) (*athena.Etag, *http.Response, error)
+	GetCharacterContacts(ctx context.Context, member *athena.Member, page uint) ([]*athena.MemberContact, *athena.Etag, *http.Response, error)
 	GetCharacterContactLabels(ctx context.Context, member *athena.Member, labels []*athena.MemberContactLabel) ([]*athena.MemberContactLabel, *athena.Etag, *http.Response, error)
 }
 
@@ -44,7 +45,7 @@ func (s *service) HeadCharacterContacts(ctx context.Context, member *athena.Memb
 	}
 
 	if res.StatusCode == http.StatusNotModified {
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -91,8 +92,8 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 		return nil, nil, nil, err
 	}
 
-	etag.Etag = s.retrieveEtagHeader(res.Header)
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.Etag = RetrieveEtagHeader(res.Header)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
@@ -105,13 +106,15 @@ func (s *service) GetCharacterContacts(ctx context.Context, member *athena.Membe
 func characterContactsKeyFunc(mods *modifiers) string {
 
 	requireMember(mods)
-	requirePage(mods)
 
-	return buildKey(
-		GetCharacterContacts.String(),
-		strconv.FormatUint(uint64(mods.member.ID), 10),
-		strconv.FormatUint(uint64(mods.page), 10),
-	)
+	params := make([]string, 0, 3)
+	params = append(params, GetCharacterContacts.String(), strconv.FormatUint(uint64(mods.member.ID), 10))
+
+	if mods.page > 0 {
+		params = append(params, strconv.FormatUint(uint64(mods.page), 10))
+	}
+
+	return buildKey(params...)
 
 }
 
@@ -155,13 +158,13 @@ func (s *service) GetCharacterContactLabels(ctx context.Context, member *athena.
 			return nil, nil, nil, err
 		}
 
-		etag.Etag = s.retrieveEtagHeader(res.Header)
+		etag.Etag = RetrieveEtagHeader(res.Header)
 
 	case sc >= http.StatusBadRequest:
 		return labels, etag, res, fmt.Errorf("failed to fetch location for character %d, received status code of %d", member.ID, sc)
 	}
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)

@@ -47,7 +47,7 @@ func (s *service) GetCharacterWalletBalance(ctx context.Context, member *athena.
 	}
 
 	if res.StatusCode == http.StatusNotModified {
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return 0.00, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -61,8 +61,8 @@ func (s *service) GetCharacterWalletBalance(ctx context.Context, member *athena.
 		return 0.00, nil, nil, err
 	}
 
-	etag.Etag = s.retrieveEtagHeader(res.Header)
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.Etag = RetrieveEtagHeader(res.Header)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return 0.00, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)
@@ -120,7 +120,7 @@ func (s *service) HeadCharacterWalletTransactions(ctx context.Context, member *a
 	}
 
 	if res.StatusCode == http.StatusNotModified {
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -167,8 +167,8 @@ func (s *service) GetCharacterWalletTransactions(ctx context.Context, member *at
 		return transactions, etag, res, fmt.Errorf("failed to fetch contacts for character %d, received status code of %d", member.ID, res.StatusCode)
 	}
 	if res.StatusCode == http.StatusNotModified {
-		etag.Etag = s.retrieveEtagHeader(res.Header)
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.Etag = RetrieveEtagHeader(res.Header)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -238,7 +238,7 @@ func (s *service) HeadCharacterWalletJournals(ctx context.Context, member *athen
 	}
 
 	if res.StatusCode == http.StatusNotModified {
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -280,8 +280,8 @@ func (s *service) GetCharacterWalletJournals(ctx context.Context, member *athena
 		return journals, etag, res, fmt.Errorf("failed to fetch wallet journal for character %d, received status code of %d", member.ID, res.StatusCode)
 	}
 	if res.StatusCode == http.StatusNotModified {
-		etag.Etag = s.retrieveEtagHeader(res.Header)
-		etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+		etag.Etag = RetrieveEtagHeader(res.Header)
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err := s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", http.StatusNotModified, err)
@@ -297,9 +297,9 @@ func (s *service) GetCharacterWalletJournals(ctx context.Context, member *athena
 		return nil, nil, nil, err
 	}
 
-	etag.Etag = s.retrieveEtagHeader(res.Header)
+	etag.Etag = RetrieveEtagHeader(res.Header)
 
-	etag.CachedUntil = s.retrieveExpiresHeader(res.Header, 0)
+	etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 	_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to update etag after receiving %d: %w", res.StatusCode, err)

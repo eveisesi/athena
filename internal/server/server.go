@@ -22,7 +22,7 @@ import (
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/graphql"
-	"github.com/eveisesi/athena/internal/graphql/generated"
+	"github.com/eveisesi/athena/internal/graphql/resolvers"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -106,12 +106,13 @@ func (s *server) buildRouter() *chi.Mux {
 	r.Group(func(r chi.Router) {
 		r.Use(
 			middleware.SetHeader("Content-Type", "application/json"),
+			s.member.Middleware,
 		)
 
 		r.Group(func(r chi.Router) {
 			// directives := graphql.NewDirectives()
-			es := generated.NewExecutableSchema(generated.Config{
-				Resolvers: graphql.NewResolvers(s.logger, s.auth),
+			es := graphql.NewExecutableSchema(graphql.Config{
+				Resolvers: resolvers.New(s.logger, s.auth, s.member),
 				// Directives: generated.DirectiveRoot{HasGrant: directives.HasGrant},
 			})
 			queryHandler := handler.New(es)

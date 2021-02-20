@@ -1,11 +1,11 @@
 # Where are all the schema files located? globs are supported eg  src/**/*.graphqls
 schema:
-  - internal/graphql/*.graphqls
+  - internal/graphql/**/*.graphqls
 
 # Where should the generated server code go?
 exec:
-  filename: internal/graphql/generated/generated.go
-  package: generated
+  filename: internal/graphql/service.go
+  package: graphql
 
 # Uncomment to enable federation
 # federation:
@@ -14,14 +14,14 @@ exec:
 
 # Where should any generated models go?
 model:
-  filename: ./internal/graphql/models/models_gen.go
-  package: models
+  filename: ./internal/graphql/models.go
+  package: graphql
 
 # Where should the resolver implementations go?
 resolver:
-  layout: follow-schema
-  dir: ./internal/graphql
-  package: graphql
+  dir: ./internal/graphql/resolvers
+  filename: ./internal/graphql/resolvers/resolvers.go
+  package: resolvers
 
 # Optional: turn on use `gqlgen:"fieldName"` tags in your models
 struct_tag: json
@@ -35,7 +35,8 @@ skip_validation: true
 # gqlgen will search for any type names in the schema in these go packages
 # if they match it will use them, otherwise it will generate them.
 autobind:
-  - "github.com/eveisesi/athena/internal/graphql/models"
+  - "github.com/eveisesi/athena/internal/graphql"
+  - "github.com/eveisesi/athena"
 
 # This section declares type mapping between the GraphQL and go type systems
 #
@@ -43,18 +44,32 @@ autobind:
 # modelgen, the others will be allowed when binding to fields. Configure them to
 # your liking
 models:
-  ID:
-    model:
-      - github.com/99designs/gqlgen/graphql.ID
-      - github.com/99designs/gqlgen/graphql.Int
-      - github.com/99designs/gqlgen/graphql.Int64
-      - github.com/99designs/gqlgen/graphql.Int32
+  # ID:
+  #   model:
+  #     - github.com/99designs/gqlgen/graphql.ID
+  #     - github.com/99designs/gqlgen/graphql.Int
+  #     - github.com/99designs/gqlgen/graphql.Int64
+  #     - github.com/99designs/gqlgen/graphql.Int32
   Int:
     model:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
+  Float:
+    model:
+      - github.com/99designs/gqlgen/graphql.Float
+      - github.com/eveisesi/athena/internal/graphql/scalar/null.Float32
+      - github.com/eveisesi/athena/internal/graphql/scalar/null.Float64
+
+  Uint:
+    model:
+      - github.com/eveisesi/athena/internal/graphql/scalar.Uint
+      - github.com/eveisesi/athena/internal/graphql/scalar/null.Uint
   String:
     model:
       - github.com/99designs/gqlgen/graphql.String
       - github.com/eveisesi/athena/internal/graphql/scalar/null.String
+  Time:
+    model:
+      - github.com/99designs/gqlgen/graphql.Time
+      - github.com/eveisesi/athena/internal/graphql/scalar/null.Time

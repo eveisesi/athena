@@ -1,7 +1,9 @@
-package graphql
+package resolvers
 
 import (
 	"github.com/eveisesi/athena/internal/auth"
+	"github.com/eveisesi/athena/internal/graphql"
+	"github.com/eveisesi/athena/internal/member"
 	"github.com/sirupsen/logrus"
 )
 
@@ -9,16 +11,18 @@ import (
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
 
-type Resolver struct {
+type resolver struct {
 	logger *logrus.Logger
 
-	auth auth.Service
+	auth   auth.Service
+	member member.Service
 }
 
-func NewResolvers(logger *logrus.Logger, auth auth.Service) *Resolver {
-	return &Resolver{
+func New(logger *logrus.Logger, auth auth.Service, member member.Service) graphql.ResolverRoot {
+	return &resolver{
 		logger,
 		auth,
+		member,
 	}
 }
 

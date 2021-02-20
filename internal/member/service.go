@@ -3,6 +3,7 @@ package member
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +23,9 @@ type Service interface {
 	UpdateMember(ctx context.Context, member *athena.Member) (*athena.Member, error)
 	Login(ctx context.Context, code, state string) error
 	ValidateToken(ctx context.Context, member *athena.Member) (*athena.Member, error)
+	Middleware(next http.Handler) http.Handler
 	MemberFromToken(ctx context.Context, token jwt.Token) (*athena.Member, error)
+	MemberFromContext(ctx context.Context) *athena.Member
 }
 
 type service struct {
@@ -35,9 +38,15 @@ type service struct {
 	member athena.MemberRepository
 }
 
+type ctxKey struct {
+	name string
+}
+
 // const (
 // 	serviceIdentifier = "Member Service"
 // )
+
+var userCtxKey = ctxKey{name: "user"}
 
 func NewService(auth auth.Service, cache cache.Service, alliance alliance.Service, character character.Service, corporation corporation.Service, member athena.MemberRepository) Service {
 	return &service{
@@ -153,6 +162,68 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 	}
 
 	return nil
+
+}
+
+func (s *service) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		var ctx = r.Context()
+
+		token := r.Header.Get("authorization")
+		if token == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		token = token[7:]
+		parsed, err := s.auth.ParseAndVerifyToken(ctx, token)
+		if err != nil {
+			fmt.Printf("Error Parsing Token: %v, stop auth, proceeding with request\n", err)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		sub := parsed.Subject()
+		if sub == "" {
+			fmt.Printf("Invalid Token Subject: %s\n", sub)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		memberID, err := memberIDFromSubject(sub)
+		if err != nil {
+			fmt.Printf("unable to parse character ID from token sub: %s: %s\n", sub, err)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		member, err := s.member.Member(ctx, memberID)
+		if err != nil {
+			fmt.Printf("failed to retrieve member with ID from token: %s\n", err)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		ctx = context.WithValue(ctx, userCtxKey, member)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+
+	})
+}
+
+func (s *service) MemberFromContext(ctx context.Context) *athena.Member {
+
+	member := ctx.Value(userCtxKey)
+	if member == nil {
+		return nil
+	}
+
+	if _, ok := member.(*athena.Member); !ok {
+		return nil
+	}
+
+	return member.(*athena.Member)
 
 }
 

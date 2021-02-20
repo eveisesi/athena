@@ -2,34 +2,34 @@ package athena
 
 type Operator struct {
 	Column    string    `json:"column"`
-	Operation Operation `json:"operation"`
+	Operation operation `json:"operation"`
 	Value     OpValue   `json:"value"`
 }
 
 type OpValue interface{}
 
-type Operation string
+type operation string
 
 const (
-	EqualOp              Operation = "="
-	NotEqualOp           Operation = "!="
-	GreaterThanOp        Operation = ">"
-	GreaterThanEqualToOp Operation = ">="
-	LessThanOp           Operation = "<"
-	LessThanEqualToOp    Operation = "<="
-	InOp                 Operation = "in"
-	NotInOp              Operation = "not in"
-	LikeOp               Operation = "like"
+	EqualOp              operation = "="
+	NotEqualOp           operation = "!="
+	GreaterThanOp        operation = ">"
+	GreaterThanEqualToOp operation = ">="
+	LessThanOp           operation = "<"
+	LessThanEqualToOp    operation = "<="
+	InOp                 operation = "in"
+	NotInOp              operation = "not in"
+	LikeOp               operation = "like"
 
-	LimitOp  Operation = "limit"
-	OrderOp  Operation = "order"
-	SkipOp   Operation = "skip"
-	OrOp     Operation = "or"
-	AndOp    Operation = "and"
-	ExistsOp Operation = "exists"
+	LimitOp  operation = "limit"
+	OrderOp  operation = "order"
+	SkipOp   operation = "skip"
+	OrOp     operation = "or"
+	AndOp    operation = "and"
+	ExistsOp operation = "exists"
 )
 
-var AllOperations = []Operation{
+var AllOperations = []operation{
 	EqualOp,
 	NotEqualOp,
 	GreaterThanOp,
@@ -47,7 +47,7 @@ var AllOperations = []Operation{
 	ExistsOp,
 }
 
-func (o Operation) IsValid() bool {
+func (o operation) IsValid() bool {
 	switch o {
 	case EqualOp, NotEqualOp,
 		GreaterThanOp, LessThanOp, GreaterThanEqualToOp, LessThanEqualToOp,
@@ -58,7 +58,7 @@ func (o Operation) IsValid() bool {
 	return false
 }
 
-func (o Operation) Value() string {
+func (o operation) Value() string {
 	return string(o)
 }
 

@@ -55,16 +55,10 @@ func (s *service) Etag(ctx context.Context, etagID string) (*athena.Etag, error)
 
 func (s *service) UpdateEtag(ctx context.Context, etagID string, etag *athena.Etag) (*athena.Etag, error) {
 	var err error
-	if etag.ID > 0 {
-		etag, err = s.EtagRepository.UpdateEtag(ctx, etag.EtagID, etag)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		etag, err = s.EtagRepository.InsertEtag(ctx, etag)
-		if err != nil {
-			return nil, err
-		}
+
+	etag, err = s.EtagRepository.InsertEtag(ctx, etag)
+	if err != nil {
+		return nil, err
 	}
 
 	_ = s.cache.SetEtag(

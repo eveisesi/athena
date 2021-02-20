@@ -42,14 +42,16 @@ func (r *memberContactRepository) MemberContact(ctx context.Context, memberID, c
 
 }
 
-func (r *memberContactRepository) MemberContacts(ctx context.Context, memberID uint) ([]*athena.MemberContact, error) {
+func (r *memberContactRepository) MemberContacts(ctx context.Context, memberID uint, operators ...*athena.Operator) ([]*athena.MemberContact, error) {
 
-	query, args, err := sq.Select(
-		"member_id", "contact_id", "contact_type",
-		"is_blocked", "is_watched",
-		// "label_ids",
-		"standing", "created_at", "updated_at",
-	).From(r.contacts).Where(sq.Eq{"member_id": memberID}).ToSql()
+	query, args, err := BuildFilters(
+		sq.Select(
+			"member_id", "contact_id", "contact_type",
+			"is_blocked", "is_watched",
+			"label_ids",
+			"standing", "created_at", "updated_at",
+		).From(r.contacts), operators...,
+	).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
 	}
@@ -67,7 +69,7 @@ func (r *memberContactRepository) CreateMemberContacts(ctx context.Context, memb
 		Columns(
 			"member_id", "contact_id", "contact_type",
 			"is_blocked", "is_watched",
-			//  "label_ids",
+			"label_ids",
 			"standing", "created_at", "updated_at",
 		)
 	for _, contact := range contacts {
@@ -75,7 +77,7 @@ func (r *memberContactRepository) CreateMemberContacts(ctx context.Context, memb
 			memberID,
 			contact.ContactID, contact.ContactType,
 			contact.IsBlocked, contact.IsWatched,
-			// contact.LabelIDs,
+			contact.LabelIDs,
 			contact.Standing,
 			sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 		)
@@ -101,7 +103,7 @@ func (r *memberContactRepository) UpdateMemberContact(ctx context.Context, membe
 		Set("contact_type", contact.ContactType).
 		Set("is_blocked", contact.IsBlocked).
 		Set("is_watched", contact.IsWatched).
-		// Set("label_ids", contact.LabelIDs).
+		Set("label_ids", contact.LabelIDs).
 		Set("standing", contact.Standing).
 		Set("updated_at", sq.Expr(`NOW()`)).
 		Where(sq.Eq{"member_id": memberID, "contact_id": contact.ContactID}).ToSql()

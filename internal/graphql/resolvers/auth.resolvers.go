@@ -1,13 +1,10 @@
-package graphql
-
-// This file will be automatically regenerated based on the schema, any resolver implementations
-// will be copied through when generating and any unknown code will be moved to the end.
+package resolvers
 
 import (
 	"context"
 
 	"github.com/eveisesi/athena"
-	"github.com/eveisesi/athena/internal/graphql/generated"
+	"github.com/eveisesi/athena/internal/graphql"
 )
 
 func (r *authAttemptResolver) Status(ctx context.Context, obj *athena.AuthAttempt) (string, error) {
@@ -19,6 +16,6 @@ func (r *authAttemptResolver) URL(ctx context.Context, obj *athena.AuthAttempt, 
 }
 
 // AuthAttempt returns generated.AuthAttemptResolver implementation.
-func (r *Resolver) AuthAttempt() generated.AuthAttemptResolver { return &authAttemptResolver{r} }
+func (r *resolver) AuthAttempt() graphql.AuthAttemptResolver { return &authAttemptResolver{r} }
 
-type authAttemptResolver struct{ *Resolver }
+type authAttemptResolver struct{ *resolver }

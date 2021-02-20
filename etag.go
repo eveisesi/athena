@@ -10,11 +10,10 @@ type EtagRepository interface {
 	Etags(ctx context.Context, operators ...*Operator) ([]*Etag, error)
 	InsertEtag(ctx context.Context, etag *Etag) (*Etag, error)
 	UpdateEtag(ctx context.Context, etagID string, etag *Etag) (*Etag, error)
-	DeleteEtag(ctx context.Context, id string) (bool, error)
+	DeleteEtag(ctx context.Context, etagID string) (bool, error)
 }
 
 type Etag struct {
-	ID          uint      `db:"id" json:"id"`
 	EtagID      string    `db:"etag_id" json:"etag_id"`
 	Etag        string    `db:"etag" json:"etag"`
 	CachedUntil time.Time `db:"cached_until" json:"cached_until"`

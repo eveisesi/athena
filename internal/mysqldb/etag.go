@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Masterminds/squirrel"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/eveisesi/athena"
 	"github.com/jmoiron/sqlx"
@@ -42,7 +41,7 @@ func (r *etagRepository) Etag(ctx context.Context, etagID string) (*athena.Etag,
 func (r *etagRepository) Etags(ctx context.Context, operators ...*athena.Operator) ([]*athena.Etag, error) {
 
 	query, args, err := BuildFilters(sq.Select(
-		"id", "etag_id", "etag", "cached_until", "created_at", "updated_at",
+		"etag_id", "etag", "cached_until", "created_at", "updated_at",
 	).From(r.table), operators...).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("[Etag Repository] Failed to generate sql: %w", err)
@@ -57,17 +56,17 @@ func (r *etagRepository) Etags(ctx context.Context, operators ...*athena.Operato
 
 func (r *etagRepository) InsertEtag(ctx context.Context, etag *athena.Etag) (*athena.Etag, error) {
 
-	query, args, err := squirrel.Insert(r.table).Columns(
-		"etag_id", "etag", "cached_until",
-		"created_at", "updated_at",
-	).Values(
-		etag.EtagID, etag.Etag, etag.CachedUntil, squirrel.Expr(`NOW()`), squirrel.Expr(`NOW()`),
-	).ToSql()
-	if err != nil {
-		return nil, fmt.Errorf("[Etag Repository] Failed to generate sql query: %w", err)
-	}
+	query := `
+		INSERT INTO etags (
+			etag_id,etag,cached_until,created_at,updated_at
+		) VALUES (?, ?, ?, NOW(),NOW()) AS alias 
+		ON DUPLICATE KEY UPDATE 
+			etag=alias.etag,
+			cached_until=alias.cached_until,
+			updated_at=alias.updated_at
+	`
 
-	_, err = r.db.ExecContext(ctx, query, args...)
+	_, err := r.db.ExecContext(ctx, query, etag.EtagID, etag.Etag, etag.CachedUntil)
 	if err != nil {
 		return nil, fmt.Errorf("[Etag Repository] Failed to insert record: %w", err)
 	}

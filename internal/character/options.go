@@ -1,26 +1,26 @@
 package character
 
-type options struct {
-	history bool
-}
+// type options struct {
+// 	history bool
+// }
 
-type OptionFunc func(*options) *options
+// type OptionFunc func(*options) *options
 
-func (s *service) options(optionFuncs []OptionFunc) *options {
-	options := &options{
-		history: false,
-	}
+// func (s *service) options(optionFuncs []OptionFunc) *options {
+// 	options := &options{
+// 		history: false,
+// 	}
 
-	for _, optionFunc := range optionFuncs {
-		options = optionFunc(options)
-	}
+// 	for _, optionFunc := range optionFuncs {
+// 		options = optionFunc(options)
+// 	}
 
-	return options
-}
+// 	return options
+// }
 
-func WithHistory() OptionFunc {
-	return func(o *options) *options {
-		o.history = true
-		return o
-	}
-}
+// func WithHistory() OptionFunc {
+// 	return func(o *options) *options {
+// 		o.history = true
+// 		return o
+// 	}
+// }
