@@ -3,18 +3,16 @@ package cache
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/eveisesi/athena"
-	"github.com/go-redis/redis/v8"
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 type contactService interface {
-	MemberContacts(ctx context.Context, memberID uint, page int) ([]*athena.MemberContact, error)
-	SetMemberContacts(ctx context.Context, memberID uint, page int, contacts []*athena.MemberContact) error
+	MemberContacts(ctx context.Context, memberID, page uint) ([]*athena.MemberContact, error)
+	SetMemberContacts(ctx context.Context, memberID, page uint, contacts []*athena.MemberContact) error
 	MemberContactLabels(ctx context.Context, memberID uint) ([]*athena.MemberContactLabel, error)
 	SetMemberContactLabels(ctx context.Context, memberID uint, labels []*athena.MemberContactLabel) error
 }
@@ -25,59 +23,34 @@ const (
 	keyMemberContactLabels = "athena::member::%d::contact::labels"
 )
 
-func (s *service) MemberContacts(ctx context.Context, memberID uint, page int) ([]*athena.MemberContact, error) {
+func (s *service) MemberContacts(ctx context.Context, memberID, page uint) ([]*athena.MemberContact, error) {
 
-	pages := make([]string, 0, 11)
-
-	if page < 0 {
-		pages, err := s.client.SMembers(ctx, keyMemberContactPages).Result()
-		if err != nil && !errors.Is(err, redis.Nil) {
-			return nil, err
-		}
-
-		if len(pages) == 0 {
-			return nil, nil
-		}
-
-	} else {
-		pages = append(pages, fmt.Sprintf(keyMemberContacts, memberID, page))
+	key := fmt.Sprintf(keyMemberContacts, memberID, page)
+	members, err := s.client.SMembers(ctx, key).Result()
+	if err != nil {
+		return nil, fmt.Errorf("[Cache Layer] Failed to fetch set members for key %s: %w", key, err)
 	}
-	contacts := make([]*athena.MemberContact, 0, len(pages)*1024)
-	for _, page := range pages {
 
-		members, err := s.client.SMembers(ctx, page).Result()
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	contacts := make([]*athena.MemberContact, 0, len(members))
+	for _, member := range members {
+		var contact = new(athena.MemberContact)
+		err = json.Unmarshal([]byte(member), contact)
 		if err != nil {
-			return nil, fmt.Errorf("[Cache Layer] Failed to fetch set members for key %s: %w", page, err)
+			return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s onto struct: %w", key, err)
 		}
 
-		if len(members) == 0 {
-			_, err = s.client.Del(ctx, page).Result()
-			if err != nil {
-				return nil, err
-			}
-
-			continue
-		}
-
-		for _, member := range members {
-			var contact = new(athena.MemberContact)
-			err = json.Unmarshal([]byte(member), contact)
-			if err != nil {
-				err = fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s onto struct: %w", page, err)
-				newrelic.FromContext(ctx).NoticeError(err)
-				continue
-			}
-
-			contacts = append(contacts, contact)
-		}
-
+		contacts = append(contacts, contact)
 	}
 
 	return contacts, nil
 
 }
 
-func (s *service) SetMemberContacts(ctx context.Context, memberID uint, page int, contacts []*athena.MemberContact) error {
+func (s *service) SetMemberContacts(ctx context.Context, memberID, page uint, contacts []*athena.MemberContact) error {
 
 	// Build the interface to send to redis
 	members := make([]string, 0, len(contacts))

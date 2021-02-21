@@ -3,6 +3,7 @@ package null
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -16,7 +17,7 @@ func MarshalTime(nt null.Time) graphql.Marshaler {
 			return
 		}
 
-		_, _ = io.WriteString(w, nt.Time.Format(time.RFC3339))
+		_, _ = io.WriteString(w, strconv.Quote(nt.Time.Format(time.RFC3339)))
 	})
 }
 

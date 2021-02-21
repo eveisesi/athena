@@ -1,0 +1,17 @@
+extend type Query {
+    memberContacts(memberID: Uint!, page: Uint!): [MemberContact]!
+}
+
+type MemberContact @goModel(model: "github.com/eveisesi/athena.MemberContact") {
+    memberID: Uint!
+    contactID: Uint!
+    contactType: String!
+    isBlocked: Boolean!
+    isWatched: Boolean!
+    labelIDs: [Uint64!]!
+    standing: Float!
+
+    info: ContactInfo
+}
+
+union ContactInfo = Character | Corporation | Alliance | Faction

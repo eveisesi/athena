@@ -12,7 +12,7 @@ import (
 
 func testCommand(c *cli.Context) error {
 
-	t := athena.Structure{}
+	t := athena.MemberShip{}
 
 	rt := reflect.TypeOf(t)
 	fmt.Printf("type %s @goModel(model: \"%s.%s\") {\n", rt.Name(), rt.PkgPath(), rt.Name())
@@ -66,8 +66,10 @@ func graphqlTypeFromGoType(t string) string {
 	switch t {
 	case "int8", "int16", "int32", "int64", "int":
 		out = "Int"
-	case "uint8", "uint16", "uint32", "uint64", "uint":
+	case "uint8", "uint16", "uint32", "uint":
 		out = "Uint"
+	case "uint64":
+		out = "Uint64"
 	case "string":
 		out = "String"
 	case "float32", "float64":

@@ -1,11 +1,11 @@
 # Where are all the schema files located? globs are supported eg  src/**/*.graphqls
 schema:
-  - internal/graphql/**/*.graphqls
+  - internal/graphql/schema/*.graphqls
 
 # Where should the generated server code go?
 exec:
-  filename: internal/graphql/service.go
-  package: graphql
+  filename: internal/graphql/service/generated.go
+  package: service
 
 # Uncomment to enable federation
 # federation:
@@ -14,11 +14,13 @@ exec:
 
 # Where should any generated models go?
 model:
-  filename: ./internal/graphql/models.go
-  package: graphql
+  filename: ./internal/graphql/service/models.go
+  package: service
 
 # Where should the resolver implementations go?
 resolver:
+  layout: follow-schema
+  type: resolver
   dir: ./internal/graphql/resolvers
   filename: ./internal/graphql/resolvers/resolvers.go
   package: resolvers
@@ -34,9 +36,9 @@ skip_validation: true
 
 # gqlgen will search for any type names in the schema in these go packages
 # if they match it will use them, otherwise it will generate them.
-autobind:
-  - "github.com/eveisesi/athena/internal/graphql"
-  - "github.com/eveisesi/athena"
+# autobind:
+#   - "github.com/eveisesi/athena/internal/graphql"
+#   - "github.com/eveisesi/athena"
 
 # This section declares type mapping between the GraphQL and go type systems
 #
@@ -65,8 +67,12 @@ models:
   Uint:
     model:
       - github.com/eveisesi/athena/internal/graphql/scalar.Uint
-      - github.com/eveisesi/athena/internal/graphql/scalar.Uint64
       - github.com/eveisesi/athena/internal/graphql/scalar/null.Uint
+  Uint64:
+    model:
+      - github.com/eveisesi/athena/internal/graphql/scalar.Uint64
+      - github.com/eveisesi/athena/internal/graphql/scalar/null.Uint64
+
   String:
     model:
       - github.com/99designs/gqlgen/graphql.String

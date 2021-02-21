@@ -12,7 +12,7 @@
 //go:generate go run github.com/vektah/dataloaden ConstellationLoader uint *github.com/eveisesi/athena.Constellation
 //go:generate go run github.com/vektah/dataloaden SolarSystemLoader uint *github.com/eveisesi/athena.SolarSystem
 //go:generate go run github.com/vektah/dataloaden StationLoader uint *github.com/eveisesi/athena.Station
-//go:generate go run github.com/vektah/dataloaden StructureLoader uint *github.com/eveisesi/athena.Structure
+//go:generate go run github.com/vektah/dataloaden StructureLoader uint64 *github.com/eveisesi/athena.Structure
 
 //go:generate go run github.com/vektah/dataloaden CategoryLoader uint *github.com/eveisesi/athena.Category
 //go:generate go run github.com/vektah/dataloaden GroupLoader uint *github.com/eveisesi/athena.Group

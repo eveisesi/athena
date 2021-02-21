@@ -77,7 +77,7 @@ func (s *service) FetchAlliance(ctx context.Context, allianceID uint) (*athena.E
 		return nil, fmt.Errorf("failed to fetch alliance from DB")
 	}
 
-	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
+	switch existing != nil {
 	case true:
 		alliance, err = s.alliance.UpdateAlliance(ctx, allianceID, alliance)
 		if err != nil {

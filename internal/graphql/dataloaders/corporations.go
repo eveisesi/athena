@@ -2,6 +2,7 @@ package dataloaders
 
 import (
 	"context"
+	"sort"
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/corporation"
@@ -25,16 +26,15 @@ func corporationLoader(ctx context.Context, c corporation.Service) *generated.Co
 		Wait:     defaultWait,
 		MaxBatch: defaultMaxBatch,
 		Fetch: func(keys []uint) ([]*athena.Corporation, []error) {
-
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Corporation, len(keys))
 
-			k := make([]interface{}, 0, len(keys))
-			for _, key := range keys {
-				k = append(k, key)
-			}
+			k := append(make([]uint, 0, len(keys)), keys...)
+			sort.SliceStable(k, func(i, j int) bool {
+				return k[i] < k[j]
+			})
 
-			rows, err := c.Corporations(ctx, athena.NewInOperator("id", k...))
+			rows, err := c.Corporations(ctx, athena.NewInOperator("id", k))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors
@@ -63,12 +63,12 @@ func corporationAllianceHistoryLoader(ctx context.Context, c corporation.Service
 			var errors = make([]error, 0, len(keys))
 			var results = make([][]*athena.CorporationAllianceHistory, len(keys))
 
-			k := make([]interface{}, 0, len(keys))
-			for _, key := range keys {
-				k = append(k, key)
-			}
+			k := append(make([]uint, 0, len(keys)), keys...)
+			sort.SliceStable(k, func(i, j int) bool {
+				return k[i] < k[j]
+			})
 
-			rows, err := c.CorporationAllianceHistory(ctx, athena.NewInOperator("corporation_id", k...))
+			rows, err := c.CorporationAllianceHistory(ctx, athena.NewInOperator("corporation_id", k))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors

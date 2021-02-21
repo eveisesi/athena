@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
-	"github.com/sirkon/go-format"
 )
 
 type characterService interface {
@@ -27,11 +27,9 @@ const (
 	keyCharacterCorporationHistory = "athena::characters::%x::history"
 )
 
-func (s *service) Character(ctx context.Context, id uint) (*athena.Character, error) {
+func (s *service) Character(ctx context.Context, characterID uint) (*athena.Character, error) {
 
-	key := format.Formatm(keyCharacter, format.Values{
-		"id": id,
-	})
+	key := fmt.Sprintf(keyCharacter, characterID)
 	result, err := s.client.Get(ctx, key).Result()
 	if err != nil && err != redis.Nil {
 		return nil, fmt.Errorf("[Cache Layer] Failed to fetch results from cache for key %s: %w", key, err)
@@ -53,9 +51,7 @@ func (s *service) Character(ctx context.Context, id uint) (*athena.Character, er
 
 func (s *service) SetCharacter(ctx context.Context, characterID uint, character *athena.Character) error {
 
-	key := format.Formatm(keyCharacter, format.Values{
-		"id": character.ID,
-	})
+	key := fmt.Sprintf(keyCharacter, characterID)
 	data, err := json.Marshal(character)
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to marshal struct for key %s: %w", key, err)
@@ -77,7 +73,7 @@ func (s *service) Characters(ctx context.Context, operators ...*athena.Operator)
 		return nil, fmt.Errorf("[Cache Layer] Failed to marshal operators for key: %w", err)
 	}
 
-	key := fmt.Sprintf(keyCharacters, sha256.Sum224(keyData))
+	key := fmt.Sprintf(keyCharacters, sha1.Sum(keyData))
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil {
 		return nil, fmt.Errorf(errKeyNotFound, key, err)
@@ -120,13 +116,13 @@ func (s *service) SetCharacters(ctx context.Context, records []*athena.Character
 		return fmt.Errorf("[Cache Layer] Failed to marshal operators for key: %w", err)
 	}
 
-	key := fmt.Sprintf(keyCharacters, sha256.Sum224(keyData))
+	key := fmt.Sprintf(keyCharacters, sha1.Sum(keyData))
 	_, err = s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to cache characters %s: %w", key, err)
 	}
 
-	_, err = s.client.Expire(ctx, key, time.Minute*10).Result()
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Field to set expiry on key %s: %w", key, err)
 	}

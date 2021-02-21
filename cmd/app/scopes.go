@@ -22,26 +22,26 @@ func buildScopeMap(
 ) athena.ScopeMap {
 
 	scopeMap := make(athena.ScopeMap, 10)
-	// scopeMap[athena.ReadLocationV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberLocation",
-	// 		Func: location.EmptyMemberLocation,
-	// 	},
-	// }
+	scopeMap[athena.ReadLocationV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberLocation",
+			Func: location.EmptyMemberLocation,
+		},
+	}
 
-	// scopeMap[athena.ReadOnlineV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberOnline",
-	// 		Func: location.EmptyMemberOnline,
-	// 	},
-	// }
+	scopeMap[athena.ReadOnlineV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberOnline",
+			Func: location.EmptyMemberOnline,
+		},
+	}
 
-	// scopeMap[athena.ReadShipV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberShip",
-	// 		Func: location.EmptyMemberShip,
-	// 	},
-	// }
+	scopeMap[athena.ReadShipV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberShip",
+			Func: location.EmptyMemberShip,
+		},
+	}
 
 	// scopeMap[athena.ReadClonesV1] = []athena.ScopeResolver{
 	// 	{

@@ -20,9 +20,9 @@ import (
 
 type Service interface {
 	EmptyMemberContacts(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberContacts(ctx context.Context, member *athena.Member, page int) ([]*athena.MemberContact, error)
+	MemberContacts(ctx context.Context, memberID, page uint) ([]*athena.MemberContact, error)
 	EmptyMemberContactLabels(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, error)
+	MemberContactLabels(ctx context.Context, memberID uint) ([]*athena.MemberContactLabel, error)
 }
 
 type service struct {
@@ -106,7 +106,7 @@ func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member
 		}
 
 		if len(contacts) > 0 {
-			err := s.cache.SetMemberContacts(ctx, member.ID, int(page), contacts)
+			err := s.cache.SetMemberContacts(ctx, member.ID, page, contacts)
 			if err != nil {
 				entry.WithError(err).Error("failed to cache member contacts")
 			}
@@ -118,15 +118,15 @@ func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member
 
 }
 
-func (s *service) MemberContacts(ctx context.Context, member *athena.Member, page int) ([]*athena.MemberContact, error) {
+func (s *service) MemberContacts(ctx context.Context, memberID, page uint) ([]*athena.MemberContact, error) {
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
+		"member_id": memberID,
 		"service":   serviceIdentifier,
 		"method":    "MemberContacts",
 	})
 
-	contacts, err := s.cache.MemberContacts(ctx, member.ID, page)
+	contacts, err := s.cache.MemberContacts(ctx, memberID, page)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member contacts from cache")
 		return nil, fmt.Errorf("failed to fetch member contacts from cache")
@@ -136,15 +136,22 @@ func (s *service) MemberContacts(ctx context.Context, member *athena.Member, pag
 		return contacts, nil
 	}
 
-	contacts, err = s.contacts.MemberContacts(ctx, member.ID)
+	ops := make([]*athena.Operator, 0, 1)
+	if page > 0 {
+		ops = append(ops, athena.NewEqualOperator("source_page", page))
+	}
+
+	contacts, err = s.contacts.MemberContacts(ctx, memberID, ops...)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		entry.WithError(err).Error("failed to fetch member contacts from DB")
 		return nil, fmt.Errorf("failed to fetch member contacts from DB")
 	}
 
-	err = s.cache.SetMemberContacts(ctx, member.ID, page, contacts)
-	if err != nil {
-		entry.WithError(err).Error("failed to cache member contacts")
+	if len(contacts) > 0 {
+		err = s.cache.SetMemberContacts(ctx, memberID, page, contacts)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member contacts")
+		}
 	}
 
 	return contacts, nil
@@ -330,15 +337,15 @@ func (s *service) EmptyMemberContactLabels(ctx context.Context, member *athena.M
 
 }
 
-func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member) ([]*athena.MemberContactLabel, error) {
+func (s *service) MemberContactLabels(ctx context.Context, memberID uint) ([]*athena.MemberContactLabel, error) {
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
+		"member_id": memberID,
 		"service":   serviceIdentifier,
 		"method":    "MemberContactLabels",
 	})
 
-	labels, err := s.cache.MemberContactLabels(ctx, member.ID)
+	labels, err := s.cache.MemberContactLabels(ctx, memberID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member contact labels from cache")
 		return nil, fmt.Errorf("failed to fetch member contact labels from cache")
@@ -348,13 +355,13 @@ func (s *service) MemberContactLabels(ctx context.Context, member *athena.Member
 		return labels, nil
 	}
 
-	labels, err = s.contacts.MemberContactLabels(ctx, member.ID)
+	labels, err = s.contacts.MemberContactLabels(ctx, memberID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member contact labels from DB")
 		return nil, fmt.Errorf("failed to fetch member contact labels from DB")
 	}
 
-	err = s.cache.SetMemberContactLabels(ctx, member.ID, labels)
+	err = s.cache.SetMemberContactLabels(ctx, memberID, labels)
 	if err != nil {
 		entry.WithError(err).Error("failed to cache member contact labels")
 	}

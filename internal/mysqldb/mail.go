@@ -89,7 +89,7 @@ func (r *mailRepository) CreateMailHeaders(ctx context.Context, headers []*athen
 		return nil, fmt.Errorf("[Mail Repository] Failed to insert records: %w", err)
 	}
 
-	return r.MailHeaders(ctx, athena.NewInOperator("id", mailIDs...))
+	return r.MailHeaders(ctx, athena.NewInOperator("id", mailIDs))
 
 }
 
@@ -135,7 +135,7 @@ func (r *mailRepository) CreateMemberMailHeaders(ctx context.Context, memberID u
 		return nil, fmt.Errorf("[Mail Repository] Failed to insert records: %w", err)
 	}
 
-	return r.MemberMailHeaders(ctx, athena.NewEqualOperator("member_id", memberID), athena.NewInOperator("mail_id", mailIDs...))
+	return r.MemberMailHeaders(ctx, athena.NewEqualOperator("member_id", memberID), athena.NewInOperator("mail_id", mailIDs))
 
 }
 
@@ -163,7 +163,7 @@ func (r *mailRepository) UpdateMemberMailHeaders(ctx context.Context, memberID u
 
 	}
 
-	return r.MemberMailHeaders(ctx, athena.NewEqualOperator("member_id", memberID), athena.NewInOperator("mail_id", mailIDs...))
+	return r.MemberMailHeaders(ctx, athena.NewEqualOperator("member_id", memberID), athena.NewInOperator("mail_id", mailIDs))
 
 }
 
@@ -210,7 +210,7 @@ func (r *mailRepository) CreateMailRecipients(ctx context.Context, recipients []
 		return nil, fmt.Errorf("[Mail Repository] Failed to insert records: %w", err)
 	}
 
-	return r.MailRecipients(ctx, athena.NewInOperator("mail_id", mailIDs...))
+	return r.MailRecipients(ctx, athena.NewInOperator("mail_id", mailIDs))
 
 }
 
@@ -382,7 +382,7 @@ func (r *mailRepository) CreateMailingLists(ctx context.Context, lists []*athena
 		return nil, fmt.Errorf("[Mail Respository] Failed to insert records: %w", err)
 	}
 
-	return r.MailingLists(ctx, athena.NewInOperator("mailing_list_id", ids...))
+	return r.MailingLists(ctx, athena.NewInOperator("mailing_list_id", ids))
 
 }
 

@@ -17,13 +17,13 @@ import (
 
 type Service interface {
 	EmptyMemberLocation(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberLocation(ctx context.Context, member *athena.Member) (*athena.MemberLocation, *athena.Etag, error)
-
-	EmptyMemberOnline(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberOnline(ctx context.Context, member *athena.Member) (*athena.MemberOnline, *athena.Etag, error)
+	MemberLocation(ctx context.Context, memberID uint) (*athena.MemberLocation, error)
 
 	EmptyMemberShip(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberShip(ctx context.Context, member *athena.Member) (*athena.MemberShip, *athena.Etag, error)
+	MemberShip(ctx context.Context, memberID uint) (*athena.MemberShip, error)
+
+	EmptyMemberOnline(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberOnline(ctx context.Context, memberID uint) (*athena.MemberOnline, error)
 }
 
 type service struct {
@@ -66,89 +66,46 @@ func (s *service) EmptyMemberLocation(ctx context.Context, member *athena.Member
 		return nil, fmt.Errorf("failed to fetch etag object")
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
-	}
+	var petag string
+	if etag != nil {
+		if etag.CachedUntil.After(time.Now()) {
 
-	_, etag, err = s.MemberLocation(ctx, member)
-
-	return etag, err
-
-}
-
-func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*athena.MemberLocation, *athena.Etag, error) {
-
-	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
-		"service":   serviceIdentifier,
-		"method":    "MemberLocation",
-	})
-
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterLocation, esi.ModWithCharacterID(member.ID))
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch etag object")
-		return nil, nil, fmt.Errorf("failed to fetch etag object")
-	}
-
-	exists := true
-	cached := true
-
-	location, err := s.cache.MemberLocation(ctx, member.ID)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member location from cache")
-		return nil, nil, fmt.Errorf("failed to fetch member location from cache")
-	}
-
-	if location == nil {
-		cached = false
-		location, err = s.location.MemberLocation(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch member location from DB")
-			return nil, nil, fmt.Errorf("failed to fetch member location from DB")
+			return etag, nil
 		}
 
-		if location == nil || errors.Is(err, sql.ErrNoRows) {
-			exists = false
-			location = &athena.MemberLocation{
-				MemberID: member.ID,
-			}
-		}
+		petag = etag.Etag
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
-
-		if !cached {
-			err = s.cache.SetMemberLocation(ctx, member.ID, location)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member location")
-			}
-		}
-
-		return location, etag, nil
-
-	}
-
-	location, etag, _, err = s.esi.GetCharacterLocation(ctx, member.ID, member.AccessToken.String)
+	location, etag, _, err := s.esi.GetCharacterLocation(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member location from ESI")
-		return nil, nil, fmt.Errorf("failed to fetch member location from ESI")
+		return nil, fmt.Errorf("failed to fetch member location from ESI")
+	}
+
+	if etag.Etag == petag {
+		return etag, nil
 	}
 
 	s.resolveLocationAttributes(ctx, member, location)
 
-	switch exists {
-	case true:
-		location, err = s.location.UpdateMemberLocation(ctx, member.ID, location)
-		if err != nil {
-			entry.WithError(err).Error("failed to update member location in database")
-			return nil, nil, fmt.Errorf("failed to update member location in database")
-		}
+	existing, err := s.location.MemberLocation(ctx, member.ID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member location from DB")
+		return nil, fmt.Errorf("failed to fetch member location from DB")
+	}
 
-	case false:
+	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
+	case true:
 		location, err = s.location.CreateMemberLocation(ctx, member.ID, location)
 		if err != nil {
 			entry.WithError(err).Error("failed to create member location in database")
-			return nil, nil, fmt.Errorf("failed to create member location in database")
+			return nil, fmt.Errorf("failed to create member location in database")
+		}
+	case false:
+		location, err = s.location.UpdateMemberLocation(ctx, member.ID, location)
+		if err != nil {
+			entry.WithError(err).Error("failed to update member location in database")
+			return nil, fmt.Errorf("failed to update member location in database")
 		}
 	}
 
@@ -157,7 +114,42 @@ func (s *service) MemberLocation(ctx context.Context, member *athena.Member) (*a
 		entry.WithError(err).Error("failed to cache member location")
 	}
 
-	return location, etag, nil
+	return etag, nil
+
+}
+
+func (s *service) MemberLocation(ctx context.Context, memberID uint) (*athena.MemberLocation, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": memberID,
+		"service":   serviceIdentifier,
+		"method":    "EmptyMemberLocation",
+	})
+
+	location, err := s.cache.MemberLocation(ctx, memberID)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member location from cache")
+		return nil, fmt.Errorf("failed to fetch member location from cache")
+	}
+
+	if location != nil {
+		return location, nil
+	}
+
+	location, err = s.location.MemberLocation(ctx, memberID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member location from DB")
+		return nil, fmt.Errorf("failed to fetch member location from DB")
+	}
+
+	if location != nil {
+		err = s.cache.SetMemberLocation(ctx, memberID, location)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member location")
+		}
+	}
+
+	return location, nil
 
 }
 
@@ -214,88 +206,46 @@ func (s *service) EmptyMemberShip(ctx context.Context, member *athena.Member) (*
 		return nil, fmt.Errorf("failed to fetch etag object")
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
-	}
+	var petag string
+	if etag != nil {
+		if etag.CachedUntil.After(time.Now()) {
 
-	_, etag, err = s.MemberShip(ctx, member)
-
-	return etag, err
-
-}
-
-func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athena.MemberShip, *athena.Etag, error) {
-
-	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
-		"service":   serviceIdentifier,
-		"method":    "MemberShip",
-	})
-
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterShip, esi.ModWithCharacterID(member.ID))
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch etag object")
-		return nil, nil, fmt.Errorf("failed to fetch etag object")
-	}
-
-	exists := true
-	cached := true
-
-	ship, err := s.cache.MemberShip(ctx, member.ID)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member ship from cache")
-		return nil, nil, fmt.Errorf("failed to fetch member ship from cache")
-	}
-
-	if ship == nil {
-		cached = false
-		ship, err = s.location.MemberShip(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch member ship from DB")
-			return nil, nil, fmt.Errorf("failed to fetch member ship from DB")
+			return etag, nil
 		}
 
-		if ship == nil || errors.Is(err, sql.ErrNoRows) {
-			exists = false
-			ship = &athena.MemberShip{
-				MemberID: member.ID,
-			}
-		}
+		petag = etag.Etag
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
-
-		if !cached {
-			err = s.cache.SetMemberShip(ctx, member.ID, ship)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member ship")
-			}
-		}
-
-		return ship, etag, nil
-
-	}
-
-	ship, etag, _, err = s.esi.GetCharacterShip(ctx, member.ID, member.AccessToken.String)
+	ship, etag, _, err := s.esi.GetCharacterShip(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member ship from ESI")
-		return nil, nil, fmt.Errorf("failed to fetch member ship from ESI")
+		return nil, fmt.Errorf("failed to fetch member ship from ESI")
+	}
+
+	if etag.Etag == petag {
+		return etag, nil
 	}
 
 	s.resolveShipAttributes(ctx, member, ship)
 
-	switch exists {
+	existing, err := s.location.MemberOnline(ctx, member.ID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member ship from DB")
+		return nil, fmt.Errorf("failed to fetch member ship from DB")
+	}
+
+	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
 	case true:
-		ship, err = s.location.UpdateMemberShip(ctx, member.ID, ship)
-		if err != nil {
-			entry.WithError(err).Error("failed to update member ship in database")
-			return nil, nil, fmt.Errorf("failed to update member ship in database")
-		}
-	case false:
 		ship, err = s.location.CreateMemberShip(ctx, member.ID, ship)
 		if err != nil {
 			entry.WithError(err).Error("failed to create member ship in database")
-			return nil, nil, fmt.Errorf("failed to create member ship in database")
+			return nil, fmt.Errorf("failed to create member ship in database")
+		}
+	case false:
+		ship, err = s.location.UpdateMemberShip(ctx, member.ID, ship)
+		if err != nil {
+			entry.WithError(err).Error("failed to update member ship in database")
+			return nil, fmt.Errorf("failed to update member ship in database")
 		}
 	}
 
@@ -304,7 +254,42 @@ func (s *service) MemberShip(ctx context.Context, member *athena.Member) (*athen
 		entry.WithError(err).Error("failed to cache member ship")
 	}
 
-	return ship, etag, nil
+	return etag, nil
+
+}
+
+func (s *service) MemberShip(ctx context.Context, memberID uint) (*athena.MemberShip, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": memberID,
+		"service":   serviceIdentifier,
+		"method":    "MemberShip",
+	})
+
+	ship, err := s.cache.MemberShip(ctx, memberID)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member ship from cache")
+		return nil, fmt.Errorf("failed to fetch member ship from cache")
+	}
+
+	if ship != nil {
+		return ship, nil
+	}
+
+	ship, err = s.location.MemberShip(ctx, memberID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member ship from DB")
+		return nil, fmt.Errorf("failed to fetch member ship from DB")
+	}
+
+	if ship != nil {
+		err = s.cache.SetMemberShip(ctx, memberID, ship)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member ship")
+		}
+	}
+
+	return ship, nil
 
 }
 
@@ -336,86 +321,44 @@ func (s *service) EmptyMemberOnline(ctx context.Context, member *athena.Member) 
 		return nil, fmt.Errorf("failed to fetch etag object")
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
+	var petag string
+	if etag != nil {
+		if etag.CachedUntil.After(time.Now()) {
+
+			return etag, nil
+		}
+
+		petag = etag.Etag
+	}
+
+	online, etag, _, err := s.esi.GetCharacterOnline(ctx, member.ID, member.AccessToken.String)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member online from ESI")
+		return nil, fmt.Errorf("failed to fetch member online from ESI")
+	}
+
+	if etag.Etag == petag {
 		return etag, nil
 	}
 
-	_, etag, err = s.MemberOnline(ctx, member)
-
-	return etag, err
-
-}
-
-func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*athena.MemberOnline, *athena.Etag, error) {
-
-	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
-		"service":   serviceIdentifier,
-		"method":    "MemberOnline",
-	})
-
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterOnline, esi.ModWithCharacterID(member.ID))
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch etag object")
-		return nil, nil, fmt.Errorf("failed to fetch etag object")
+	existing, err := s.location.MemberOnline(ctx, member.ID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member online from DB")
+		return nil, fmt.Errorf("failed to fetch member online from DB")
 	}
 
-	exists := true
-	cached := true
-
-	online, err := s.cache.MemberOnline(ctx, member.ID)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member online from cache")
-		return nil, nil, fmt.Errorf("failed to fetch member online from cache")
-	}
-
-	if online == nil {
-		cached = false
-		online, err = s.location.MemberOnline(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch member online from DB")
-			return nil, nil, fmt.Errorf("failed to fetch member online from DB")
-		}
-
-		if online == nil || errors.Is(err, sql.ErrNoRows) {
-			exists = false
-			online = &athena.MemberOnline{
-				MemberID: member.ID,
-			}
-		}
-	}
-
-	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
-
-		if !cached {
-			err = s.cache.SetMemberOnline(ctx, member.ID, online)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member online")
-			}
-		}
-
-		return online, etag, nil
-
-	}
-
-	online, etag, _, err = s.esi.GetCharacterOnline(ctx, member.ID, member.AccessToken.String)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member online from ESI")
-		return nil, nil, fmt.Errorf("failed to fetch member online from ESI")
-	}
-
-	switch exists {
-	case false:
+	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
+	case true:
 		online, err = s.location.CreateMemberOnline(ctx, member.ID, online)
 		if err != nil {
 			entry.WithError(err).Error("failed to update member online in database")
-			return nil, nil, fmt.Errorf("failed to update member online in database")
+			return nil, fmt.Errorf("failed to update member online in database")
 		}
-	case true:
+	case false:
 		online, err = s.location.UpdateMemberOnline(ctx, member.ID, online)
 		if err != nil {
 			entry.WithError(err).Error("failed to create member online in database")
-			return nil, nil, fmt.Errorf("failed to create member online in database")
+			return nil, fmt.Errorf("failed to create member online in database")
 		}
 	}
 
@@ -424,6 +367,41 @@ func (s *service) MemberOnline(ctx context.Context, member *athena.Member) (*ath
 		entry.WithError(err).Error("failed to cache member online")
 	}
 
-	return online, etag, nil
+	return etag, nil
+
+}
+
+func (s *service) MemberOnline(ctx context.Context, memberID uint) (*athena.MemberOnline, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": memberID,
+		"service":   serviceIdentifier,
+		"method":    "MemberOnline",
+	})
+
+	online, err := s.cache.MemberOnline(ctx, memberID)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member online from cache")
+		return nil, fmt.Errorf("failed to fetch member online from cache")
+	}
+
+	if online != nil {
+		return online, nil
+	}
+
+	online, err = s.location.MemberOnline(ctx, memberID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member online from DB")
+		return nil, fmt.Errorf("failed to fetch member online from DB")
+	}
+
+	if online != nil {
+		err = s.cache.SetMemberOnline(ctx, memberID, online)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member online")
+		}
+	}
+
+	return online, nil
 
 }

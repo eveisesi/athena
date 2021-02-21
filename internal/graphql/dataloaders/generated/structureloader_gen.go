@@ -12,7 +12,7 @@ import (
 // StructureLoaderConfig captures the config to create a new StructureLoader
 type StructureLoaderConfig struct {
 	// Fetch is a method that provides the data for the loader
-	Fetch func(keys []uint) ([]*athena.Structure, []error)
+	Fetch func(keys []uint64) ([]*athena.Structure, []error)
 
 	// Wait is how long wait before sending a batch
 	Wait time.Duration
@@ -33,7 +33,7 @@ func NewStructureLoader(config StructureLoaderConfig) *StructureLoader {
 // StructureLoader batches and caches requests
 type StructureLoader struct {
 	// this method provides the data for the loader
-	fetch func(keys []uint) ([]*athena.Structure, []error)
+	fetch func(keys []uint64) ([]*athena.Structure, []error)
 
 	// how long to done before sending a batch
 	wait time.Duration
@@ -44,7 +44,7 @@ type StructureLoader struct {
 	// INTERNAL
 
 	// lazily created cache
-	cache map[uint]*athena.Structure
+	cache map[uint64]*athena.Structure
 
 	// the current batch. keys will continue to be collected until timeout is hit,
 	// then everything will be sent to the fetch method and out to the listeners
@@ -55,7 +55,7 @@ type StructureLoader struct {
 }
 
 type structureLoaderBatch struct {
-	keys    []uint
+	keys    []uint64
 	data    []*athena.Structure
 	error   []error
 	closing bool
@@ -63,14 +63,14 @@ type structureLoaderBatch struct {
 }
 
 // Load a Structure by key, batching and caching will be applied automatically
-func (l *StructureLoader) Load(key uint) (*athena.Structure, error) {
+func (l *StructureLoader) Load(key uint64) (*athena.Structure, error) {
 	return l.LoadThunk(key)()
 }
 
 // LoadThunk returns a function that when called will block waiting for a Structure.
 // This method should be used if you want one goroutine to make requests to many
 // different data loaders without blocking until the thunk is called.
-func (l *StructureLoader) LoadThunk(key uint) func() (*athena.Structure, error) {
+func (l *StructureLoader) LoadThunk(key uint64) func() (*athena.Structure, error) {
 	l.mu.Lock()
 	if it, ok := l.cache[key]; ok {
 		l.mu.Unlock()
@@ -113,7 +113,7 @@ func (l *StructureLoader) LoadThunk(key uint) func() (*athena.Structure, error) 
 
 // LoadAll fetches many keys at once. It will be broken into appropriate sized
 // sub batches depending on how the loader is configured
-func (l *StructureLoader) LoadAll(keys []uint) ([]*athena.Structure, []error) {
+func (l *StructureLoader) LoadAll(keys []uint64) ([]*athena.Structure, []error) {
 	results := make([]func() (*athena.Structure, error), len(keys))
 
 	for i, key := range keys {
@@ -131,7 +131,7 @@ func (l *StructureLoader) LoadAll(keys []uint) ([]*athena.Structure, []error) {
 // LoadAllThunk returns a function that when called will block waiting for a Structures.
 // This method should be used if you want one goroutine to make requests to many
 // different data loaders without blocking until the thunk is called.
-func (l *StructureLoader) LoadAllThunk(keys []uint) func() ([]*athena.Structure, []error) {
+func (l *StructureLoader) LoadAllThunk(keys []uint64) func() ([]*athena.Structure, []error) {
 	results := make([]func() (*athena.Structure, error), len(keys))
 	for i, key := range keys {
 		results[i] = l.LoadThunk(key)
@@ -149,7 +149,7 @@ func (l *StructureLoader) LoadAllThunk(keys []uint) func() ([]*athena.Structure,
 // Prime the cache with the provided key and value. If the key already exists, no change is made
 // and false is returned.
 // (To forcefully prime the cache, clear the key first with loader.clear(key).prime(key, value).)
-func (l *StructureLoader) Prime(key uint, value *athena.Structure) bool {
+func (l *StructureLoader) Prime(key uint64, value *athena.Structure) bool {
 	l.mu.Lock()
 	var found bool
 	if _, found = l.cache[key]; !found {
@@ -163,22 +163,22 @@ func (l *StructureLoader) Prime(key uint, value *athena.Structure) bool {
 }
 
 // Clear the value at key from the cache, if it exists
-func (l *StructureLoader) Clear(key uint) {
+func (l *StructureLoader) Clear(key uint64) {
 	l.mu.Lock()
 	delete(l.cache, key)
 	l.mu.Unlock()
 }
 
-func (l *StructureLoader) unsafeSet(key uint, value *athena.Structure) {
+func (l *StructureLoader) unsafeSet(key uint64, value *athena.Structure) {
 	if l.cache == nil {
-		l.cache = map[uint]*athena.Structure{}
+		l.cache = map[uint64]*athena.Structure{}
 	}
 	l.cache[key] = value
 }
 
 // keyIndex will return the location of the key in the batch, if its not found
 // it will add the key to the batch
-func (b *structureLoaderBatch) keyIndex(l *StructureLoader, key uint) int {
+func (b *structureLoaderBatch) keyIndex(l *StructureLoader, key uint64) int {
 	for i, existingKey := range b.keys {
 		if key == existingKey {
 			return i

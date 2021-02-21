@@ -27,9 +27,9 @@ func (r *memberContactRepository) MemberContact(ctx context.Context, memberID, c
 
 	query, args, err := sq.Select(
 		"member_id", "contact_id", "contact_type",
-		"is_blocked", "is_watched",
-		// "label_ids",
-		"standing", "created_at", "updated_at",
+		"source_page", "is_blocked", "is_watched",
+		"label_ids", "standing",
+		"created_at", "updated_at",
 	).From(r.contacts).Where(sq.Eq{"member_id": memberID, "contact_id": contactID}).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
@@ -47,9 +47,9 @@ func (r *memberContactRepository) MemberContacts(ctx context.Context, memberID u
 	query, args, err := BuildFilters(
 		sq.Select(
 			"member_id", "contact_id", "contact_type",
-			"is_blocked", "is_watched",
-			"label_ids",
-			"standing", "created_at", "updated_at",
+			"source_page", "is_blocked", "is_watched",
+			"label_ids", "standing",
+			"created_at", "updated_at",
 		).From(r.contacts), operators...,
 	).ToSql()
 	if err != nil {
@@ -68,18 +68,16 @@ func (r *memberContactRepository) CreateMemberContacts(ctx context.Context, memb
 	i := sq.Insert(r.contacts).
 		Columns(
 			"member_id", "contact_id", "contact_type",
-			"is_blocked", "is_watched",
-			"label_ids",
-			"standing", "created_at", "updated_at",
+			"source_page", "is_blocked", "is_watched",
+			"label_ids", "standing",
+			"created_at", "updated_at",
 		)
 	for _, contact := range contacts {
 		i = i.Values(
 			memberID,
-			contact.ContactID, contact.ContactType,
-			contact.IsBlocked, contact.IsWatched,
-			contact.LabelIDs,
-			contact.Standing,
-			sq.Expr(`NOW()`), sq.Expr(`NOW()`),
+			contact.ContactID, contact.ContactType, contact.SourcePage,
+			contact.IsBlocked, contact.IsWatched, contact.LabelIDs,
+			contact.Standing, sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 		)
 	}
 
@@ -101,6 +99,7 @@ func (r *memberContactRepository) UpdateMemberContact(ctx context.Context, membe
 
 	query, args, err := sq.Update(r.contacts).
 		Set("contact_type", contact.ContactType).
+		Set("source_page", contact.SourcePage).
 		Set("is_blocked", contact.IsBlocked).
 		Set("is_watched", contact.IsWatched).
 		Set("label_ids", contact.LabelIDs).

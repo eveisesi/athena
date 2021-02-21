@@ -110,6 +110,10 @@ func (s *service) EmptyMemberAssets(ctx context.Context, member *athena.Member) 
 
 }
 
+// func (s *service) MemberAssets(ctx context.Context, memberID uint) ([]*athena.MemberAsset, error) {
+
+// }
+
 func (s *service) diffAndCreateOrUpdateAssets(ctx context.Context, member *athena.Member, oldAssets, newAssets []*athena.MemberAsset) error {
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{

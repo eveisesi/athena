@@ -2,6 +2,7 @@ package dataloaders
 
 import (
 	"context"
+	"sort"
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/alliance"
@@ -27,12 +28,12 @@ func allianceLoader(ctx context.Context, a alliance.Service) *generated.Alliance
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Alliance, len(keys))
 
-			k := make([]interface{}, 0, len(keys))
-			for _, key := range keys {
-				k = append(k, key)
-			}
+			k := append(make([]uint, 0, len(keys)), keys...)
+			sort.SliceStable(k, func(i, j int) bool {
+				return k[i] < k[j]
+			})
 
-			rows, err := a.Alliances(ctx, athena.NewInOperator("id", k...))
+			rows, err := a.Alliances(ctx, athena.NewInOperator("id", k))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors

@@ -35,6 +35,8 @@ type Corporation struct {
 	UpdatedAt     time.Time   `db:"updated_at" json:"updated_at" deep:"-"`
 }
 
+func (Corporation) IsContactInfo() {}
+
 type CorporationAllianceHistory struct {
 	CorporationID uint      `db:"corporation_id" json:"id"`
 	RecordID      uint      `db:"record_id" json:"record_id"`

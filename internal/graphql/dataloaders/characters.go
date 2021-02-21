@@ -2,6 +2,7 @@ package dataloaders
 
 import (
 	"context"
+	"sort"
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/character"
@@ -28,12 +29,12 @@ func characterLoader(ctx context.Context, c character.Service) *generated.Charac
 			var errors = make([]error, 0, len(keys))
 			var results = make([]*athena.Character, len(keys))
 
-			k := make([]interface{}, 0, len(keys))
-			for _, key := range keys {
-				k = append(k, key)
-			}
+			k := append(make([]uint, 0, len(keys)), keys...)
+			sort.SliceStable(k, func(i, j int) bool {
+				return k[i] < k[j]
+			})
 
-			rows, err := c.Characters(ctx, athena.NewInOperator("id", k...))
+			rows, err := c.Characters(ctx, athena.NewInOperator("id", k))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors
@@ -61,12 +62,12 @@ func characterCorporationHistoryLoader(ctx context.Context, c character.Service)
 			var errors = make([]error, 0, len(keys))
 			var results = make([][]*athena.CharacterCorporationHistory, len(keys))
 
-			k := make([]interface{}, 0, len(keys))
-			for _, key := range keys {
-				k = append(k, key)
-			}
+			k := append(make([]uint, 0, len(keys)), keys...)
+			sort.SliceStable(k, func(i, j int) bool {
+				return k[i] < k[j]
+			})
 
-			rows, err := c.CharacterCorporationHistory(ctx, athena.NewInOperator("character_id", k...))
+			rows, err := c.CharacterCorporationHistory(ctx, athena.NewInOperator("character_id", k))
 			if err != nil {
 				errors = append(errors, err)
 				return nil, errors

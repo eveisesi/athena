@@ -455,7 +455,7 @@ func (s *service) FetchMemberMailingLists(ctx context.Context, member *athena.Me
 			mailingListIDs = append(mailingListIDs, list.MailingListID)
 		}
 
-		mailingLists, err := s.mail.MailingLists(ctx, athena.NewInOperator("mailing_list_id", mailingListIDs...))
+		mailingLists, err := s.mail.MailingLists(ctx, athena.NewInOperator("mailing_list_id", mailingListIDs))
 		if err != nil {
 			entry.WithError(err).Error("failed to resolve member mailing list ids to mailing lists")
 			return nil, fmt.Errorf("failed to resolve member mailing list ids to mailing lists")

@@ -1,0 +1,33 @@
+extend type Query {
+    memberLocation(memberID: Uint!): MemberLocation
+    memberOnline(memberID: Uint!): MemberOnline
+    memberShip(memberID: Uint!): MemberShip
+}
+
+type MemberLocation @goModel(model: "github.com/eveisesi/athena.MemberLocation") {
+    memberID: Uint!
+    solarSystemID: Uint!
+    stationID: Uint
+    structureID: Uint64
+
+    system: SolarSystem!
+    station: Station
+    structure: Structure
+}
+
+type MemberOnline @goModel(model: "github.com/eveisesi/athena.MemberOnline") {
+    memberID: Uint!
+    lastLogin: Time
+    lastLogout: Time
+    logins: Uint!
+    online: Boolean!
+}
+
+type MemberShip @goModel(model: "github.com/eveisesi/athena.MemberShip") {
+    memberID: Uint!
+    shipItemID: Uint64!
+    shipName: String!
+    shipTypeID: Uint!
+
+    ship: Type!
+}

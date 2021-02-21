@@ -1,9 +1,16 @@
 package resolvers
 
 import (
+	"github.com/eveisesi/athena/internal/alliance"
 	"github.com/eveisesi/athena/internal/auth"
-	"github.com/eveisesi/athena/internal/graphql"
+	"github.com/eveisesi/athena/internal/character"
+	"github.com/eveisesi/athena/internal/clone"
+	"github.com/eveisesi/athena/internal/contact"
+	"github.com/eveisesi/athena/internal/corporation"
+	"github.com/eveisesi/athena/internal/graphql/service"
+	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/member"
+	"github.com/eveisesi/athena/internal/universe"
 	"github.com/sirupsen/logrus"
 )
 
@@ -14,15 +21,40 @@ import (
 type resolver struct {
 	logger *logrus.Logger
 
-	auth   auth.Service
-	member member.Service
+	auth        auth.Service
+	member      member.Service
+	character   character.Service
+	corporation corporation.Service
+	alliance    alliance.Service
+	universe    universe.Service
+	location    location.Service
+	clone       clone.Service
+	contact     contact.Service
 }
 
-func New(logger *logrus.Logger, auth auth.Service, member member.Service) graphql.ResolverRoot {
+func New(
+	logger *logrus.Logger,
+	auth auth.Service,
+	member member.Service,
+	character character.Service,
+	corporation corporation.Service,
+	alliance alliance.Service,
+	universe universe.Service,
+	location location.Service,
+	clone clone.Service,
+	contact contact.Service,
+) service.ResolverRoot {
 	return &resolver{
-		logger,
-		auth,
-		member,
+		logger:      logger,
+		auth:        auth,
+		member:      member,
+		character:   character,
+		corporation: corporation,
+		alliance:    alliance,
+		universe:    universe,
+		clone:       clone,
+		location:    location,
+		contact:     contact,
 	}
 }
 

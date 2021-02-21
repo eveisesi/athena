@@ -23,8 +23,8 @@ import (
 	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/contact"
 	"github.com/eveisesi/athena/internal/corporation"
-	"github.com/eveisesi/athena/internal/graphql"
 	"github.com/eveisesi/athena/internal/graphql/resolvers"
+	graphql "github.com/eveisesi/athena/internal/graphql/service"
 	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/member"
 	"github.com/eveisesi/athena/internal/universe"
@@ -130,7 +130,12 @@ func (s *server) buildRouter() *chi.Mux {
 
 			// directives := graphql.NewDirectives()
 			es := graphql.NewExecutableSchema(graphql.Config{
-				Resolvers: resolvers.New(s.logger, s.auth, s.member),
+				Resolvers: resolvers.New(
+					s.logger, s.auth, s.member,
+					s.character, s.corporation, s.alliance,
+					s.universe, s.location, s.clone,
+					s.contact,
+				),
 				// Directives: generated.DirectiveRoot{HasGrant: directives.HasGrant},
 			})
 			queryHandler := handler.New(es)

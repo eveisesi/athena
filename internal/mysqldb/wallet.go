@@ -138,7 +138,7 @@ func (r *memberWalletRepository) CreateMemberWalletTransactions(ctx context.Cont
 		return nil, fmt.Errorf("[Wallet Repository] Failed to insert records: %w", err)
 	}
 
-	return r.MemberWalletTransactions(ctx, athena.NewInOperator("transaction_id", transactionIDs...))
+	return r.MemberWalletTransactions(ctx, athena.NewInOperator("transaction_id", transactionIDs))
 
 }
 
@@ -198,6 +198,6 @@ func (r *memberWalletRepository) CreateMemberWalletJournals(ctx context.Context,
 		return nil, fmt.Errorf("[Wallet Repository] Failed to insert records: %w", err)
 	}
 
-	return r.MemberWalletJournals(ctx, athena.NewInOperator("journal_id", journalIDs...))
+	return r.MemberWalletJournals(ctx, athena.NewInOperator("journal_id", journalIDs))
 
 }

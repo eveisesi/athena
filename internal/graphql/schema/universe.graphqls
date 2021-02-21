@@ -22,6 +22,18 @@ type Bloodline @goModel(model: "github.com/eveisesi/athena.Bloodline") {
     willpower: Uint!
 }
 
+type Faction @goModel(model: "github.com/eveisesi/athena.Faction") {
+    factionID: Uint!
+    name: String!
+    isUnique: Boolean!
+    sizeFactor: Float!
+    stationCount: Uint!
+    stationSystemCount: Uint!
+    corporationID: Uint
+    militiaCorporationID: Uint
+    solarSystemID: Uint
+}
+
 type Category @goModel(model: "github.com/eveisesi/athena.Category") {
     id: Uint!
     name: String!

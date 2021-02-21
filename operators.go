@@ -160,7 +160,7 @@ func NewOrderOperator(column string, sort Sort) *Operator {
 
 }
 
-func NewInOperator(column string, values ...interface{}) *Operator {
+func NewInOperator(column string, values interface{}) *Operator {
 
 	return &Operator{
 		Column:    column,

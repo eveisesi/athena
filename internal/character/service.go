@@ -85,16 +85,16 @@ func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena
 
 	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
 	case true:
-		character, err = s.character.UpdateCharacter(ctx, characterID, character)
-		if err != nil {
-			entry.WithError(err).Error("failed to update character in DB")
-			return nil, fmt.Errorf("failed to update character in DB")
-		}
-	case false:
 		character, err = s.character.CreateCharacter(ctx, character)
 		if err != nil {
 			entry.WithError(err).Error("failed to create character in DB")
 			return nil, fmt.Errorf("failed to create character in DB")
+		}
+	case false:
+		character, err = s.character.UpdateCharacter(ctx, characterID, character)
+		if err != nil {
+			entry.WithError(err).Error("failed to update character in DB")
+			return nil, fmt.Errorf("failed to update character in DB")
 		}
 	}
 

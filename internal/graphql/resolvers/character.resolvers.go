@@ -1,18 +1,15 @@
 package resolvers
 
+// This file will be automatically regenerated based on the schema, any resolver implementations
+// will be copied through when generating and any unknown code will be moved to the end.
+
 import (
 	"context"
 
 	"github.com/eveisesi/athena"
-	"github.com/eveisesi/athena/internal/graphql"
 	"github.com/eveisesi/athena/internal/graphql/dataloaders"
+	"github.com/eveisesi/athena/internal/graphql/service"
 )
-
-func (r *resolver) Character() graphql.CharacterResolver {
-	return &characterResolver{r}
-}
-
-type characterResolver struct{ *resolver }
 
 func (r *characterResolver) Race(ctx context.Context, obj *athena.Character) (*athena.Race, error) {
 	return dataloaders.CtxLoaders(ctx).Race.Load(obj.RaceID)
@@ -39,3 +36,8 @@ func (r *characterResolver) Alliance(ctx context.Context, obj *athena.Character)
 	}
 	return dataloaders.CtxLoaders(ctx).Alliance.Load(obj.AllianceID.Uint)
 }
+
+// Character returns service.CharacterResolver implementation.
+func (r *resolver) Character() service.CharacterResolver { return &characterResolver{r} }
+
+type characterResolver struct{ *resolver }

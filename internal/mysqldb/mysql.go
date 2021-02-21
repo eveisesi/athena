@@ -40,30 +40,6 @@ func New(ctx context.Context, host string, port int, user, pass, dbname string) 
 
 }
 
-// func ConvertSliceIntToSliceInterface(n []int) []interface{} {
-// 	newSlice := make([]interface{}, len(n))
-// 	for i, v := range n {
-// 		newSlice[i] = v
-// 	}
-// 	return newSlice
-// }
-
-// func ConvertSliceStrToSliceInterface(n []string) []interface{} {
-// 	newSlice := make([]interface{}, len(n))
-// 	for i, v := range n {
-// 		newSlice[i] = v
-// 	}
-// 	return newSlice
-// }
-
-// func ConvertSliceUintToSliceInterface(n []uint) []interface{} {
-// 	newSlice := make([]interface{}, len(n))
-// 	for i, v := range n {
-// 		newSlice[i] = v
-// 	}
-// 	return newSlice
-// }
-
 func BuildFilters(s sq.SelectBuilder, operators ...*athena.Operator) sq.SelectBuilder {
 	for _, a := range operators {
 		if !a.Operation.IsValid() {
@@ -84,7 +60,7 @@ func BuildFilters(s sq.SelectBuilder, operators ...*athena.Operator) sq.SelectBu
 		case athena.LessThanOp:
 			s = s.Where(sq.Lt{a.Column: a.Value})
 		case athena.InOp:
-			s = s.Where(sq.Eq{a.Column: a.Value.([]interface{})})
+			s = s.Where(sq.Eq{a.Column: a.Value.(interface{})})
 		case athena.NotInOp:
 			s = s.Where(sq.NotEq{a.Column: a.Value.([]interface{})})
 		case athena.LikeOp:

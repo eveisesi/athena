@@ -45,3 +45,8 @@ type MemberContactLabel struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at" deep:"-"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at" deep:"-"`
 }
+
+type MemberContactInfoLoader struct {
+	ContactID   uint
+	ContactType string
+}

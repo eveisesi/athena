@@ -41,6 +41,8 @@ type Character struct {
 	UpdatedAt      time.Time    `db:"updated_at" json:"updated_at"`
 }
 
+func (Character) IsContactInfo() {}
+
 type CharacterCorporationHistory struct {
 	CharacterID   uint      `db:"character_id" json:"character_id"`
 	RecordID      uint64    `db:"record_id" json:"record_id"`
