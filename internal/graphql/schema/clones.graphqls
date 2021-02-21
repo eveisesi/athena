@@ -1,0 +1,34 @@
+extend type Query {
+    memberClones(memberID: Uint!): MemberClones!
+    memberImplants(memberID: Uint!): [MemberImplant]!
+}
+
+type MemberClones @goModel(model: "github.com/eveisesi/athena.MemberClones") {
+    memberID: Uint!
+    homeLocation: MemberHomeLocation!
+    jumpClones: [MemberJumpClone]!
+    lastCloneJumpDate: Time
+    lastStationChangeDate: Time
+}
+
+type MemberHomeLocation @goModel(model: "github.com/eveisesi/athena.MemberHomeLocation") {
+    locationID: Uint64!
+    locationType: String!
+    info: CloneLocationInfo
+}
+
+type MemberJumpClone @goModel(model: "github.com/eveisesi/athena.MemberJumpClone") {
+    jumpCloneID: Uint!
+    locationID: Uint64!
+    locationType: String!
+    implants: [Type]!
+    info: CloneLocationInfo
+}
+
+type MemberImplant @goModel(model: "github.com/eveisesi/athena.MemberImplant") {
+    memberID: Uint!
+    implantID: Uint!
+    type: Type!
+}
+
+union CloneLocationInfo = Structure | Station

@@ -95,7 +95,7 @@ type Station @goModel(model: "github.com/eveisesi/athena.Station") {
 }
 
 type Structure @goModel(model: "github.com/eveisesi/athena.Structure") {
-    id: Uint!
+    id: Uint64!
     name: String!
     ownerID: Uint!
     solarSystemID: Uint!

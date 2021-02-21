@@ -2,6 +2,10 @@
 
 package service
 
+type CloneLocationInfo interface {
+	IsCloneLocationInfo()
+}
+
 type ContactInfo interface {
 	IsContactInfo()
 }

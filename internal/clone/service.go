@@ -16,9 +16,9 @@ import (
 
 type Service interface {
 	EmptyMemberClones(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberClones(ctx context.Context, member *athena.Member) (*athena.MemberClones, *athena.Etag, error)
+	MemberClones(ctx context.Context, memberID uint) (*athena.MemberClones, error)
 	EmptyMemberImplants(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberImplants(ctx context.Context, member *athena.Member) ([]*athena.MemberImplant, *athena.Etag, error)
+	MemberImplants(ctx context.Context, memberID uint) ([]*athena.MemberImplant, error)
 }
 
 type service struct {
@@ -49,94 +49,56 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, uni
 
 func (s *service) EmptyMemberClones(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "EmptyMemberClones",
+	})
+
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object")
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
-	}
-
-	_, etag, err = s.MemberClones(ctx, member)
-
-	return etag, err
-
-}
-
-func (s *service) MemberClones(ctx context.Context, member *athena.Member) (*athena.MemberClones, *athena.Etag, error) {
-
-	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
-		"service":   serviceIdentifier,
-		"method":    "MemberClones",
-	})
-
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithCharacterID(member.ID))
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch etag object")
-		return nil, nil, fmt.Errorf("failed to fetch etag object")
-	}
-
-	exists := true
-	cached := true
-
-	clones, err := s.cache.MemberClones(ctx, member.ID)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member clones from cache")
-		return nil, nil, fmt.Errorf("failed to fetch member clones from cache")
-	}
-
-	if clones == nil {
-		cached = false
-		clones, err = s.clones.MemberClones(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch member clones from DB")
-			return nil, nil, fmt.Errorf("failed to fetch member clones from DB")
+	var petag string
+	if etag != nil {
+		if etag.CachedUntil.After(time.Now()) {
+			return etag, nil
 		}
 
-		if clones == nil || errors.Is(err, sql.ErrNoRows) {
-			exists = false
-			clones = &athena.MemberClones{
-				MemberID: member.ID,
-			}
-		}
+		petag = etag.Etag
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) && exists && clones != nil {
-
-		if !cached {
-			err = s.cache.SetMemberClones(ctx, member.ID, clones)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member clones")
-			}
-
-		}
-
-		return clones, etag, nil
-
-	}
-
-	clones, etag, _, err = s.esi.GetCharacterClones(ctx, member.ID, member.AccessToken.String)
+	clones, etag, _, err := s.esi.GetCharacterClones(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member clones from ESI")
-		return nil, nil, fmt.Errorf("failed to fetch member clones from ESI")
+		return nil, fmt.Errorf("failed to fetch member clones from ESI")
+	}
+
+	if etag.Etag == petag {
+		return etag, nil
 	}
 
 	s.resolveCloneAttributes(ctx, member, clones)
 
-	switch exists {
+	existing, err := s.clones.MemberClones(ctx, member.ID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member clones from DB")
+		return nil, fmt.Errorf("failed to fetch member clones from DB")
+	}
+
+	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
 	case true:
-		clones, err = s.clones.UpdateMemberClones(ctx, clones)
-		if err != nil {
-			entry.WithError(err).Error("failed to update member clones in database")
-			return nil, nil, fmt.Errorf("failed to update member clones in database")
-		}
-	case false:
 		clones, err = s.clones.CreateMemberClones(ctx, clones)
 		if err != nil {
-			entry.WithError(err).Error("failed to create member clones in database")
-			return nil, nil, fmt.Errorf("failed to create member clones in database")
+			entry.WithError(err).Error("failed to create member clones in DB")
+			return nil, fmt.Errorf("failed to create member clones in DB")
+		}
+	case false:
+		clones, err = s.clones.UpdateMemberClones(ctx, clones)
+		if err != nil {
+			entry.WithError(err).Error("failed to update member clones in DB")
+			return nil, fmt.Errorf("failed to update member clones in DB")
 		}
 	}
 
@@ -145,7 +107,42 @@ func (s *service) MemberClones(ctx context.Context, member *athena.Member) (*ath
 		entry.WithError(err).Error("failed to cache member clones")
 	}
 
-	return clones, etag, nil
+	return etag, err
+
+}
+
+func (s *service) MemberClones(ctx context.Context, memberID uint) (*athena.MemberClones, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": memberID,
+		"service":   serviceIdentifier,
+		"method":    "MemberClones",
+	})
+
+	clones, err := s.cache.MemberClones(ctx, memberID)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member clones from cache")
+		return nil, fmt.Errorf("failed to fetch member clones from cache")
+	}
+
+	if clones != nil {
+		return clones, nil
+	}
+
+	clones, err = s.clones.MemberClones(ctx, memberID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member clones from DB")
+		return nil, fmt.Errorf("failed to fetch member clones from DB")
+	}
+
+	if clones != nil {
+		err = s.cache.SetMemberClones(ctx, memberID, clones)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member clones")
+		}
+	}
+	return clones, nil
+
 }
 
 func (s *service) resolveCloneAttributes(ctx context.Context, member *athena.Member, clones *athena.MemberClones) {
@@ -214,7 +211,13 @@ func (s *service) resolveCloneAttributes(ctx context.Context, member *athena.Mem
 
 func (s *service) EmptyMemberImplants(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterClones, esi.ModWithCharacterID(member.ID))
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "EmptyMemberImplants",
+	})
+
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterImplants, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -223,73 +226,60 @@ func (s *service) EmptyMemberImplants(ctx context.Context, member *athena.Member
 		return etag, nil
 	}
 
-	_, etag, err = s.MemberImplants(ctx, member)
+	newImplants, etag, _, err := s.esi.GetCharacterImplants(ctx, member.ID, member.AccessToken.String)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member implants from ESI")
+		return nil, fmt.Errorf("failed to fetch member implants from ESI")
+	}
+
+	implants, err := s.resolveImplantAttributes(ctx, member, newImplants)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve member implants")
+	}
+
+	if len(implants) > 0 {
+		err = s.cache.SetMemberImplants(ctx, member.ID, implants)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member implants")
+		}
+	}
 
 	return etag, err
 
 }
 
-func (s *service) MemberImplants(ctx context.Context, member *athena.Member) ([]*athena.MemberImplant, *athena.Etag, error) {
+func (s *service) MemberImplants(ctx context.Context, memberID uint) ([]*athena.MemberImplant, error) {
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
+		"member_id": memberID,
 		"service":   serviceIdentifier,
 		"method":    "MemberImplants",
 	})
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterImplants, esi.ModWithCharacterID(member.ID))
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch etag object")
-		return nil, nil, fmt.Errorf("failed to fetch etag object")
-	}
-
-	cached := true
-
-	implants, err := s.cache.MemberImplants(ctx, member.ID)
+	implants, err := s.cache.MemberImplants(ctx, memberID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch member implants from cache")
-		return nil, nil, fmt.Errorf("failed to fetch member implants from cache")
+		return nil, fmt.Errorf("failed to fetch member implants from cache")
 	}
 
-	if len(implants) == 0 {
-		cached = false
-		implants, err = s.clones.MemberImplants(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch member implants from DB")
-			return nil, nil, fmt.Errorf("failed to fetch member implants from DB")
+	if len(implants) > 0 {
+		return implants, nil
+	}
+
+	implants, err = s.clones.MemberImplants(ctx, memberID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member implants from DB")
+		return nil, fmt.Errorf("failed to fetch member implants from DB")
+	}
+
+	if len(implants) > 0 {
+		err = s.cache.SetMemberImplants(ctx, memberID, implants)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member implants")
 		}
-
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-
-		if !cached {
-			err = s.cache.SetMemberImplants(ctx, member.ID, implants)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member implants")
-			}
-		}
-
-		return implants, etag, nil
-	}
-
-	newImplants, etag, _, err := s.esi.GetCharacterImplants(ctx, member.ID, member.AccessToken.String)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member implants from ESI")
-		return nil, nil, fmt.Errorf("failed to fetch member implants from ESI")
-	}
-
-	implants, err = s.resolveImplantAttributes(ctx, member, newImplants)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to resolve member implants")
-	}
-
-	err = s.cache.SetMemberImplants(ctx, member.ID, implants)
-	if err != nil {
-		entry.WithError(err).Error("failed to cache member implants")
-	}
-
-	return implants, etag, nil
+	return implants, nil
 
 }
 
@@ -317,6 +307,7 @@ func (s *service) resolveImplantAttributes(ctx context.Context, member *athena.M
 			MemberID:  member.ID,
 			ImplantID: implant.ID,
 		}
+
 	}
 
 	_, err := s.clones.DeleteMemberImplants(ctx, member.ID)

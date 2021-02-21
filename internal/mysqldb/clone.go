@@ -383,7 +383,7 @@ func (r *cloneRepository) CreateMemberImplants(ctx context.Context, id uint, imp
 			"member_id", "implant_id", "created_at",
 		)
 	for _, implant := range implants {
-		i = i.Values(implant.MemberID, implant.ImplantID, sq.Expr(`NOW()`), sq.Expr(`NOW()`))
+		i = i.Values(implant.MemberID, implant.ImplantID, sq.Expr(`NOW()`))
 	}
 
 	query, args, err := i.ToSql()

@@ -8,8 +8,6 @@ import (
 
 	"github.com/eveisesi/athena"
 	"github.com/go-redis/redis/v8"
-	"github.com/newrelic/go-agent/v3/newrelic"
-	"github.com/sirkon/go-format"
 )
 
 type cloneService interface {
@@ -20,15 +18,13 @@ type cloneService interface {
 }
 
 const (
-	keyMemberClone    = "athena::member::${memberID}::clone"
-	keyMemberImplants = "athena::member::${memberID}::implants"
+	keyMemberClone    = "athena::member::%d::clone"
+	keyMemberImplants = "athena::member::%d::implants"
 )
 
 func (s *service) MemberClones(ctx context.Context, memberID uint) (*athena.MemberClones, error) {
 
-	key := format.Formatm(keyMemberClone, format.Values{
-		"memberID": memberID,
-	})
+	key := fmt.Sprintf(keyMemberClone, memberID)
 	result, err := s.client.Get(ctx, key).Bytes()
 	if err != nil && err != redis.Nil {
 		return nil, err
@@ -55,9 +51,7 @@ func (s *service) SetMemberClones(ctx context.Context, memberID uint, clone *ath
 		return fmt.Errorf("failed to marshal struct: %w", err)
 	}
 
-	key := format.Formatm(keyMemberClone, format.Values{
-		"memberID": memberID,
-	})
+	key := fmt.Sprintf(keyMemberClone, memberID)
 	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("failed to write to cache: %w", err)
@@ -69,9 +63,7 @@ func (s *service) SetMemberClones(ctx context.Context, memberID uint, clone *ath
 
 func (s *service) MemberImplants(ctx context.Context, memberID uint) ([]*athena.MemberImplant, error) {
 
-	key := format.Formatm(keyMemberImplants, format.Values{
-		"memberID": memberID,
-	})
+	key := fmt.Sprintf(keyMemberImplants, memberID)
 	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
@@ -86,9 +78,7 @@ func (s *service) MemberImplants(ctx context.Context, memberID uint) ([]*athena.
 		var implant = new(athena.MemberImplant)
 		err = json.Unmarshal([]byte(member), implant)
 		if err != nil {
-			err = fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s on struct: %w", key, err)
-			newrelic.FromContext(ctx).NoticeError(err)
-			continue
+			return nil, fmt.Errorf("[Cache Layer] Failed to unmarshal set member for key %s on struct: %w", key, err)
 		}
 
 		implants[i] = implant
@@ -111,9 +101,7 @@ func (s *service) SetMemberImplants(ctx context.Context, memberID uint, implants
 		members = append(members, string(data))
 	}
 
-	key := format.Formatm(keyMemberImplants, format.Values{
-		"memberID": memberID,
-	})
+	key := fmt.Sprintf(keyMemberImplants, memberID)
 	_, err := s.client.SAdd(ctx, key, members, time.Hour).Result()
 	if err != nil {
 		return fmt.Errorf("[Cache Layer] Failed to write to cache: %w", err)

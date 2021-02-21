@@ -274,6 +274,8 @@ type Station struct {
 	UpdatedAt                time.Time `db:"updated_at" json:"updated_at"`
 }
 
+func (Station) IsCloneLocationInfo() {}
+
 type Structure struct {
 	ID            uint64    `db:"id" json:"id"`
 	Name          string    `db:"name" json:"name"`
@@ -283,6 +285,8 @@ type Structure struct {
 	CreatedAt     time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
 }
+
+func (Structure) IsCloneLocationInfo() {}
 
 type Type struct {
 	ID             uint         `db:"id" json:"id"`

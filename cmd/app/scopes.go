@@ -43,19 +43,19 @@ func buildScopeMap(
 		},
 	}
 
-	// scopeMap[athena.ReadClonesV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberClones",
-	// 		Func: clone.EmptyMemberClones,
-	// 	},
-	// }
+	scopeMap[athena.ReadClonesV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberClones",
+			Func: clone.EmptyMemberClones,
+		},
+	}
 
-	// scopeMap[athena.ReadImplantsV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberImplants",
-	// 		Func: clone.EmptyMemberImplants,
-	// 	},
-	// }
+	scopeMap[athena.ReadImplantsV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberImplants",
+			Func: clone.EmptyMemberImplants,
+		},
+	}
 
 	scopeMap[athena.ReadContactsV1] = []athena.ScopeResolver{
 		{
