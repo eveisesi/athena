@@ -19,29 +19,25 @@ type ScopeResolver struct {
 type Scope string
 
 const (
-	ReadLocationV1   Scope = "esi-location.read_location.v1"
-	ReadOnlineV1     Scope = "esi-location.read_online.v1"
-	ReadShipV1       Scope = "esi-location.read_ship_type.v1"
+	ReadAssetsV1     Scope = "esi-assets.read_assets.v1"
 	ReadClonesV1     Scope = "esi-clones.read_clones.v1"
 	ReadImplantsV1   Scope = "esi-clones.read_implants.v1"
 	ReadContactsV1   Scope = "esi-characters.read_contacts.v1"
+	ReadContractsV1  Scope = "esi-contracts.read_character_contracts.v1"
+	ReadLocationV1   Scope = "esi-location.read_location.v1"
+	ReadOnlineV1     Scope = "esi-location.read_online.v1"
+	ReadShipV1       Scope = "esi-location.read_ship_type.v1"
+	ReadMailV1       Scope = "esi-mail.read_mail.v1"
 	ReadSkillQueueV1 Scope = "esi-skills.read_skillqueue.v1"
 	ReadSkillsV1     Scope = "esi-skills.read_skills.v1"
 	ReadWalletV1     Scope = "esi-wallet.read_character_wallet.v1"
-	ReadMailV1       Scope = "esi-mail.read_mail.v1"
-	ReadAssetsV1     Scope = "esi-assets.read_assets.v1"
 )
 
 var AllScopes = []Scope{
-	ReadLocationV1,
-	ReadOnlineV1,
-	ReadShipV1,
-	ReadClonesV1,
-	ReadImplantsV1,
-	ReadContactsV1,
-	ReadSkillQueueV1,
-	ReadSkillsV1,
-	ReadWalletV1,
+	ReadAssetsV1, ReadClonesV1, ReadImplantsV1,
+	ReadContactsV1, ReadContractsV1, ReadLocationV1,
+	ReadOnlineV1, ReadShipV1, ReadMailV1,
+	ReadSkillQueueV1, ReadSkillsV1, ReadWalletV1,
 }
 
 func (s Scope) String() string {

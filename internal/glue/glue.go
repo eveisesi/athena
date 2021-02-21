@@ -1,5 +1,7 @@
 package glue
 
+import "fmt"
+
 const (
 	IDTypeCharacter   = "character"
 	IDTypeCorporation = "corporation"
@@ -37,4 +39,8 @@ func ResolveIDTypeFromIDRange(id uint64) string {
 		return IDTypeUnknown
 	}
 
+}
+
+func FormatError(prefix, format string, args ...interface{}) error {
+	return fmt.Errorf(fmt.Sprintf("[%s] %s", prefix, format), args...)
 }

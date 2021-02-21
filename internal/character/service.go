@@ -73,7 +73,7 @@ func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena
 		return nil, fmt.Errorf("failed to fetch character from ESI")
 	}
 
-	if etag.Etag == petag {
+	if petag != "" && etag.Etag == petag {
 		return etag, nil
 	}
 
@@ -131,7 +131,7 @@ func (s *service) FetchCharacterCorporationHistory(ctx context.Context, characte
 		return nil, fmt.Errorf("failed to fetch character from ESI")
 	}
 
-	if etag.Etag == petag {
+	if petag != "" && etag.Etag == petag {
 		return etag, nil
 	}
 

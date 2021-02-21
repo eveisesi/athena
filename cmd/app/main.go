@@ -36,6 +36,7 @@ type repositories struct {
 	asset       athena.MemberAssetsRepository
 	character   athena.CharacterRepository
 	contact     athena.MemberContactRepository
+	contract    athena.MemberContractRepository
 	corporation athena.CorporationRepository
 	clone       athena.CloneRepository
 	etag        athena.EtagRepository
@@ -106,6 +107,7 @@ func basics(command string) *app {
 		location:    mysqldb.NewMemberLocationRepository(app.db),
 		contact:     mysqldb.NewMemberContactRepository(app.db),
 		wallet:      mysqldb.NewMemberWalletRepository(app.db),
+		contract:    mysqldb.NewMemberContractRepository(app.db),
 	}
 
 	return &app

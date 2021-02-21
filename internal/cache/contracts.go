@@ -11,14 +11,14 @@ import (
 )
 
 type contractService interface {
-	MemberContracts(ctx context.Context, memberID uint, page int) ([]*athena.MemberContract, error)
-	SetMemberContracts(ctx context.Context, memberID uint, page int, contracts []*athena.MemberContract) error
+	MemberContracts(ctx context.Context, memberID, page uint) ([]*athena.MemberContract, error)
+	SetMemberContracts(ctx context.Context, memberID, page uint, contracts []*athena.MemberContract) error
 
-	MemberContractItems(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractItem, error)
-	SetMemberContractItems(ctx context.Context, memberID uint, contractID int, bids []*athena.MemberContractItem) error
+	MemberContractItems(ctx context.Context, memberID, contractID uint) ([]*athena.MemberContractItem, error)
+	SetMemberContractItems(ctx context.Context, memberID, contractID uint, bids []*athena.MemberContractItem) error
 
-	MemberContractBids(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractBid, error)
-	SetMemberContractBids(ctx context.Context, memberID uint, contractID int, items []*athena.MemberContractBid) error
+	MemberContractBids(ctx context.Context, memberID, contractID uint) ([]*athena.MemberContractBid, error)
+	SetMemberContractBids(ctx context.Context, memberID, contractID uint, items []*athena.MemberContractBid) error
 }
 
 const (
@@ -38,7 +38,7 @@ const (
 	errFailedToSetExpiry          = "[Cache Layer] Failed to set expiry on key %s: %w"
 )
 
-func (s *service) MemberContracts(ctx context.Context, memberID uint, page int) ([]*athena.MemberContract, error) {
+func (s *service) MemberContracts(ctx context.Context, memberID, page uint) ([]*athena.MemberContract, error) {
 
 	key := fmt.Sprintf(keyMemberContracts, memberID, page)
 
@@ -67,7 +67,7 @@ func (s *service) MemberContracts(ctx context.Context, memberID uint, page int) 
 
 }
 
-func (s *service) SetMemberContracts(ctx context.Context, memberID uint, page int, contracts []*athena.MemberContract) error {
+func (s *service) SetMemberContracts(ctx context.Context, memberID, page uint, contracts []*athena.MemberContract) error {
 
 	if len(contracts) > 1000 {
 		return fmt.Errorf(errMaxNumContractsExceeded, 1000)
@@ -98,7 +98,7 @@ func (s *service) SetMemberContracts(ctx context.Context, memberID uint, page in
 
 }
 
-func (s *service) MemberContractItems(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractItem, error) {
+func (s *service) MemberContractItems(ctx context.Context, memberID, contractID uint) ([]*athena.MemberContractItem, error) {
 
 	key := fmt.Sprintf(keyMemberContractItems, memberID, contractID)
 
@@ -125,7 +125,7 @@ func (s *service) MemberContractItems(ctx context.Context, memberID uint, contra
 
 }
 
-func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, contractID int, items []*athena.MemberContractItem) error {
+func (s *service) SetMemberContractItems(ctx context.Context, memberID, contractID uint, items []*athena.MemberContractItem) error {
 
 	members := make([]string, 0, len(items))
 	for _, item := range items {
@@ -152,7 +152,7 @@ func (s *service) SetMemberContractItems(ctx context.Context, memberID uint, con
 
 }
 
-func (s *service) MemberContractBids(ctx context.Context, memberID uint, contractID int) ([]*athena.MemberContractBid, error) {
+func (s *service) MemberContractBids(ctx context.Context, memberID, contractID uint) ([]*athena.MemberContractBid, error) {
 
 	key := fmt.Sprintf(keyMemberContractBids, memberID, contractID)
 
@@ -179,7 +179,7 @@ func (s *service) MemberContractBids(ctx context.Context, memberID uint, contrac
 
 }
 
-func (s *service) SetMemberContractBids(ctx context.Context, memberID uint, contractID int, bids []*athena.MemberContractBid) error {
+func (s *service) SetMemberContractBids(ctx context.Context, memberID, contractID uint, bids []*athena.MemberContractBid) error {
 
 	members := make([]interface{}, len(bids))
 	for i, bid := range bids {

@@ -61,7 +61,7 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, uni
 
 func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithCharacterID(member.ID))
+	etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithCharacterID(member.ID), esi.ModWithPage(1))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
@@ -87,20 +87,39 @@ func (s *service) EmptyMemberContacts(ctx context.Context, member *athena.Member
 	for page := uint(1); page <= pages; page++ {
 		entry := entry.WithField("page", page)
 
-		contacts, err := s.contacts.MemberContacts(ctx, member.ID, athena.NewEqualOperator("source_page", page))
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, err
+		etag, err := s.esi.Etag(ctx, esi.GetCharacterContacts, esi.ModWithCharacterID(member.ID), esi.ModWithPage(page))
+		if err != nil {
+			entry.WithError(err).Error("failed to fetch page of member contacts from ESI")
+			return nil, fmt.Errorf("failed to fetch page of member contacts from ESI")
 		}
 
-		newContacts, _, _, err := s.esi.GetCharacterContacts(ctx, member.ID, page, member.AccessToken.String)
+		var petag string
+		if etag != nil {
+			if etag.CachedUntil.After(time.Now()) {
+				continue
+			}
+
+			petag = etag.Etag
+		}
+
+		contacts, etag, _, err := s.esi.GetCharacterContacts(ctx, member.ID, page, member.AccessToken.String)
 		if err != nil {
 			entry.WithError(err).Error("failed to fetch member contacts from ESI")
 			return nil, fmt.Errorf("failed to fetch member contacts from ESI")
 		}
 
+		if petag == etag.Etag {
+			continue
+		}
+
+		existingContacts, err := s.contacts.MemberContacts(ctx, member.ID, athena.NewEqualOperator("source_page", page))
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+
 		// Need to add page or sourcePage property to Struct so that the ESI Page that the record was discovered on can be tracked.
-		s.resolveContactAttributes(ctx, newContacts)
-		contacts, err = s.diffAndUpdateContacts(ctx, member, page, contacts, newContacts)
+		s.resolveContactAttributes(ctx, contacts)
+		contacts, err = s.diffAndUpdateContacts(ctx, member, page, existingContacts, contacts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to diff and update contacts")
 		}
@@ -180,9 +199,8 @@ func (s *service) diffAndUpdateContacts(ctx context.Context, member *athena.Memb
 	}
 
 	for _, contact := range new {
-		var ok bool
 		// This is an unknown contact, so lets flag it to be created
-		if _, ok = oldContactMap[contact.ContactID]; !ok {
+		if _, ok := oldContactMap[contact.ContactID]; !ok {
 			contactsToCreate = append(contactsToCreate, contact)
 
 			// We've seen this contact before for this member, lets compare it to the existing contact to see
@@ -313,7 +331,7 @@ func (s *service) EmptyMemberContactLabels(ctx context.Context, member *athena.M
 		return nil, fmt.Errorf("failed to fetch member contact labels from ESI")
 	}
 
-	if etag.Etag == petag {
+	if petag != "" && etag.Etag == petag {
 		return etag, nil
 	}
 

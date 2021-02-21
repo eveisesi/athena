@@ -17,7 +17,7 @@ type memberContractRepository interface {
 	MemberContract(ctx context.Context, memberID, contractID uint) (*MemberContract, error)
 	MemberContracts(ctx context.Context, memberID uint, operators ...*Operator) ([]*MemberContract, error)
 	CreateContracts(ctx context.Context, memberID uint, contracts []*MemberContract) ([]*MemberContract, error)
-	UpdateContract(ctx context.Context, memberID uint, contracts []*MemberContract) ([]*MemberContract, error)
+	UpdateContract(ctx context.Context, memberID uint, contract *MemberContract) (*MemberContract, error)
 }
 
 type memberContractItemRepository interface {
@@ -31,10 +31,13 @@ type memberContractBidRepository interface {
 }
 
 type MemberContract struct {
-	MemberID            uint                 `db:"member_id" json:"member_id"`
+	MemberID            uint                 `db:"member_id" json:"member_id" deep:"-"`
 	ContractID          uint                 `db:"contract_id" json:"contract_id"`
+	SourcePage          uint                 `db:"source_page" json:"-"`
 	AcceptorID          null.Uint            `db:"acceptor_id" json:"acceptor_id"`
+	AcceptorType        null.String          `db:"acceptor_type" json:"acceptor_type"`
 	AssigneeID          null.Uint            `db:"assignee_id" json:"assignee_id"`
+	AssigneeType        null.String          `db:"assignee_type" json:"assignee_type"`
 	Availability        ContractAvailability `db:"availability" json:"availability"`
 	Buyout              null.Float64         `db:"buyout,omitempty" json:"buyout,omitempty"`
 	Collateral          null.Float64         `db:"collateral,omitempty" json:"collateral,omitempty"`
@@ -44,18 +47,20 @@ type MemberContract struct {
 	DateIssued          time.Time            `db:"date_issued" json:"date_issued"`
 	DaysToComplete      null.Uint            `db:"days_to_complete,omitempty" json:"days_to_complete,omitempty"`
 	EndLocationID       null.Uint64          `db:"end_location_id,omitempty" json:"end_location_id,omitempty"`
+	EndLocationType     null.String          `db:"end_location_type" json:"end_location_type"`
 	ForCorporation      bool                 `db:"for_corporation" json:"for_corporation"`
 	IssuerCorporationID uint                 `db:"issuer_corporation_id" json:"issuer_corporation_id"`
 	IssuerID            uint64               `db:"issuer_id" json:"issuer_id"`
-	Price               null.Uint            `db:"price,omitempty" json:"price,omitempty"`
-	Reward              null.Uint            `db:"reward,omitempty" json:"reward,omitempty"`
+	Price               null.Float64         `db:"price,omitempty" json:"price,omitempty"`
+	Reward              null.Float64         `db:"reward,omitempty" json:"reward,omitempty"`
 	StartLocationID     null.Uint64          `db:"start_location_id,omitempty" json:"start_location_id,omitempty"`
+	StartLocationType   null.String          `db:"start_location_type" json:"start_location_type"`
 	Status              ContractStatus       `db:"status" json:"status"`
 	Title               null.String          `db:"title,omitempty" json:"title,omitempty"`
 	Type                ContractType         `db:"type" json:"type"`
 	Volume              null.Float64         `db:"volume,omitempty" json:"volume,omitempty"`
-	CreatedAt           time.Time            `db:"created_at" json:"created_at"`
-	UpdatedAt           time.Time            `db:"updated_at" json:"updated_at"`
+	CreatedAt           time.Time            `db:"created_at" json:"created_at" deep:"-"`
+	UpdatedAt           time.Time            `db:"updated_at" json:"updated_at" deep:"-"`
 }
 
 type ContractAvailability string
@@ -66,6 +71,10 @@ const (
 	ContractAvailabilityCorporation ContractAvailability = "corporation"
 	ContractAvailabilityAlliance    ContractAvailability = "alliance"
 )
+
+func (r ContractAvailability) String() string {
+	return string(r)
+}
 
 var AllContractAvailabilities = []ContractAvailability{
 	ContractAvailabilityPublic,
@@ -98,6 +107,10 @@ const (
 	ContractStatusDeleted            ContractStatus = "deleted"
 	ContractStatusRevered            ContractStatus = "reversed"
 )
+
+func (r ContractStatus) String() string {
+	return string(r)
+}
 
 var AllContractStatuses = []ContractStatus{
 	ContractStatusOutstanding,
@@ -132,6 +145,10 @@ const (
 	ContractTypeLoan         ContractType = "loan"
 )
 
+func (r ContractType) String() string {
+	return string(r)
+}
+
 var AllContractTypes = []ContractType{
 	ContractTypeUnknown,
 	ContractTypeItemExchange,
@@ -158,7 +175,7 @@ type MemberContractBid struct {
 	BidID uint `db:"bid_id" json:"bid_id"`
 
 	// Character ID of the bidder
-	BidderID uint64 `db:"bidder" json:"bidder"`
+	BidderID uint `db:"bidder" json:"bidder"`
 
 	// The amount bid, in ISK
 	Amount float64 `db:"amount" json:"amount"`

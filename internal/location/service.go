@@ -82,7 +82,7 @@ func (s *service) EmptyMemberLocation(ctx context.Context, member *athena.Member
 		return nil, fmt.Errorf("failed to fetch member location from ESI")
 	}
 
-	if etag.Etag == petag {
+	if petag != "" && etag.Etag == petag {
 		return etag, nil
 	}
 
@@ -222,7 +222,7 @@ func (s *service) EmptyMemberShip(ctx context.Context, member *athena.Member) (*
 		return nil, fmt.Errorf("failed to fetch member ship from ESI")
 	}
 
-	if etag.Etag == petag {
+	if petag != "" && etag.Etag == petag {
 		return etag, nil
 	}
 
@@ -337,7 +337,7 @@ func (s *service) EmptyMemberOnline(ctx context.Context, member *athena.Member) 
 		return nil, fmt.Errorf("failed to fetch member online from ESI")
 	}
 
-	if etag.Etag == petag {
+	if petag != "" && etag.Etag == petag {
 		return etag, nil
 	}
 

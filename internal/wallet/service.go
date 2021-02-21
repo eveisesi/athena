@@ -345,6 +345,12 @@ func (s *service) resolveMemberWalletTransactionAttributes(ctx context.Context, 
 
 func (s *service) FetchMemberWalletJournals(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "FetchMemberWalletJournal",
+	})
+
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterWalletJournal, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
@@ -353,22 +359,6 @@ func (s *service) FetchMemberWalletJournals(ctx context.Context, member *athena.
 	if etag != nil && etag.CachedUntil.After(time.Now()) {
 		return etag, nil
 	}
-
-	return s.FetchMemberWalletJournal(ctx, member, etag)
-
-}
-
-func (s *service) FetchMemberWalletJournal(ctx context.Context, member *athena.Member, etag *athena.Etag) (*athena.Etag, error) {
-
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
-	}
-
-	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
-		"member_id": member.ID,
-		"service":   serviceIdentifier,
-		"method":    "FetchMemberWalletJournal",
-	})
 
 	etag, res, err := s.esi.HeadCharacterWalletJournals(ctx, member.ID, 1, member.AccessToken.String)
 	if err != nil {

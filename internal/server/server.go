@@ -22,6 +22,7 @@ import (
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/contact"
+	"github.com/eveisesi/athena/internal/contract"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/graphql/resolvers"
 	graphql "github.com/eveisesi/athena/internal/graphql/service"
@@ -50,6 +51,7 @@ type server struct {
 	location    location.Service
 	clone       clone.Service
 	contact     contact.Service
+	contract    contract.Service
 
 	server *http.Server
 }
@@ -69,6 +71,7 @@ func NewServer(
 	location location.Service,
 	clone clone.Service,
 	contact contact.Service,
+	contract contract.Service,
 ) *server {
 
 	s := &server{
@@ -86,6 +89,7 @@ func NewServer(
 		clone:       clone,
 		location:    location,
 		contact:     contact,
+		contract:    contract,
 	}
 
 	s.server = &http.Server{
@@ -134,7 +138,7 @@ func (s *server) buildRouter() *chi.Mux {
 					s.logger, s.auth, s.member,
 					s.character, s.corporation, s.alliance,
 					s.universe, s.location, s.clone,
-					s.contact,
+					s.contact, s.contract,
 				),
 				// Directives: generated.DirectiveRoot{HasGrant: directives.HasGrant},
 			})

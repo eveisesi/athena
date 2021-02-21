@@ -11,6 +11,7 @@ import (
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/contact"
+	"github.com/eveisesi/athena/internal/contract"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/esi"
 	"github.com/eveisesi/athena/internal/etag"
@@ -40,6 +41,7 @@ func serverCommand(c *cli.Context) error {
 	corporation := corporation.NewService(basics.logger, cache, esi, alliance, basics.repositories.corporation)
 	character := character.NewService(basics.logger, cache, esi, corporation, basics.repositories.character)
 	contact := contact.NewService(basics.logger, cache, esi, universe, alliance, character, corporation, basics.repositories.contact)
+	contract := contract.NewService(basics.logger, cache, esi, universe, alliance, character, corporation, basics.repositories.contract)
 
 	auth := auth.NewService(
 		cache,
@@ -65,6 +67,7 @@ func serverCommand(c *cli.Context) error {
 		location,
 		clone,
 		contact,
+		contract,
 	)
 
 	serverErrors := make(chan error, 1)

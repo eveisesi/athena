@@ -47,6 +47,8 @@ func (s *service) HeadCharacterWalletBalance(ctx context.Context, characterID ui
 		return etag, res, fmt.Errorf("failed to make head request to contracts for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
+
 	if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
@@ -144,6 +146,7 @@ func (s *service) HeadCharacterWalletTransactions(ctx context.Context, character
 		make([]OptionFunc, 0),
 		WithMethod(http.MethodHead),
 		WithPath(path),
+		WithEtag(etag.Etag),
 		WithAuthorization(token),
 	)
 	if fromID > 0 {
@@ -161,6 +164,8 @@ func (s *service) HeadCharacterWalletTransactions(ctx context.Context, character
 	if res.StatusCode >= http.StatusBadRequest {
 		return etag, res, fmt.Errorf("failed to exec head request to character wallet transactions for character %d, received status code of %d", characterID, res.StatusCode)
 	}
+
+	etag.Etag = RetrieveEtagHeader(res.Header)
 
 	if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -276,6 +281,7 @@ func (s *service) HeadCharacterWalletJournals(ctx context.Context, characterID, 
 		WithMethod(http.MethodHead),
 		WithPath(path),
 		WithPage(page),
+		WithEtag(etag.Etag),
 		WithAuthorization(token),
 	)
 	if err != nil {
@@ -285,6 +291,8 @@ func (s *service) HeadCharacterWalletJournals(ctx context.Context, characterID, 
 	if res.StatusCode >= http.StatusBadRequest {
 		return etag, res, fmt.Errorf("head request failed, received status code of %d", res.StatusCode)
 	}
+
+	etag.Etag = RetrieveEtagHeader(res.Header)
 
 	if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -353,13 +361,15 @@ func (s *service) GetCharacterWalletJournals(ctx context.Context, characterID, p
 func characterWalletJournalKeyFunc(mods *modifiers) string {
 
 	requireCharacterID(mods)
-	requirePage(mods)
 
-	return buildKey(
-		GetCharacterWalletJournal.String(),
-		strconv.FormatUint(uint64(mods.characterID), 10),
-		strconv.FormatUint(uint64(mods.page), 10),
-	)
+	params := make([]string, 0, 3)
+	params = append(params, GetCharacterWalletJournal.String(), strconv.FormatUint(uint64(mods.characterID), 10))
+
+	if mods.page > 0 {
+		params = append(params, strconv.FormatUint(uint64(mods.page), 10))
+	}
+
+	return buildKey(params...)
 
 }
 

@@ -103,7 +103,7 @@ func (s *service) processMember(ctx context.Context, memberID uint) {
 	// Member Retrieve successfully. Loop over the scopes array calling the functions in the scope map
 	for i, scope := range member.Scopes {
 
-		entry := s.logger.WithField("scope", scope.Scope)
+		entry := entry.WithField("scope", scope.Scope)
 
 		// If the scope expiry is valid, that means it has previously been called,
 		// and if the expiry is after the current time, that means that the cache timer
@@ -116,7 +116,7 @@ func (s *service) processMember(ctx context.Context, memberID uint) {
 
 		if _, ok := s.scopes[scope.Scope]; !ok {
 			// entry.Error("scope not supported")
-			time.Sleep(time.Second)
+			// time.Sleep(time.Second)
 			continue
 		}
 
@@ -138,7 +138,7 @@ func (s *service) processMember(ctx context.Context, memberID uint) {
 
 			member.Scopes[i] = scope
 
-			time.Sleep(time.Second)
+			// time.Sleep(time.Second)
 		}
 
 	}

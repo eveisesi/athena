@@ -63,6 +63,8 @@ func (s *service) HeadCharacterMailHeaders(ctx context.Context, characterID uint
 		return nil, res, fmt.Errorf("failed to make head request to mail headers for character %d, received status code of %d", characterID, res.StatusCode)
 	}
 
+	etag.Etag = RetrieveEtagHeader(res.Header)
+
 	if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
 		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)

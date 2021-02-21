@@ -75,7 +75,7 @@ func (s *service) EmptyMemberClones(ctx context.Context, member *athena.Member) 
 		return nil, fmt.Errorf("failed to fetch member clones from ESI")
 	}
 
-	if etag.Etag == petag {
+	if petag != "" && etag.Etag == petag {
 		return etag, nil
 	}
 

@@ -6,6 +6,7 @@ import (
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/contact"
+	"github.com/eveisesi/athena/internal/contract"
 	"github.com/eveisesi/athena/internal/corporation"
 	"github.com/eveisesi/athena/internal/graphql/service"
 	"github.com/eveisesi/athena/internal/location"
@@ -30,6 +31,7 @@ type resolver struct {
 	location    location.Service
 	clone       clone.Service
 	contact     contact.Service
+	contract    contract.Service
 }
 
 func New(
@@ -43,6 +45,7 @@ func New(
 	location location.Service,
 	clone clone.Service,
 	contact contact.Service,
+	contract contract.Service,
 ) service.ResolverRoot {
 	return &resolver{
 		logger:      logger,
@@ -55,6 +58,7 @@ func New(
 		clone:       clone,
 		location:    location,
 		contact:     contact,
+		contract:    contract,
 	}
 }
 

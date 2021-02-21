@@ -1,0 +1,54 @@
+extend type Query {
+    memberContracts(memberID: Uint!, page: Uint!): [MemberContract]!
+}
+
+type MemberContract @goModel(model: "github.com/eveisesi/athena.MemberContract") {
+    memberID: Uint!
+    contractID: Uint!
+    acceptorID: Uint
+    assigneeID: Uint
+    availability: String!
+    buyout: Float
+    collateral: Float
+    dateAccepted: Time
+    dateCompleted: Time
+    dateExpired: Time!
+    dateIssued: Time!
+    daysToComplete: Uint
+    endLocationID: Uint64
+    forCorporation: Boolean!
+    issuerCorporationID: Uint!
+    issuerID: Uint64!
+    price: Uint
+    reward: Uint
+    startLocationID: Uint64
+    status: String!
+    title: String
+    type: String!
+    volume: Float
+
+    items: [MemberContractItem]!
+    bids: [MemberContractBid]!
+}
+
+type MemberContractItem @goModel(model: "github.com/eveisesi/athena.MemberContractItem") {
+    memberID: Uint!
+    contractID: Uint!
+    recordID: Uint!
+    typeID: Uint!
+    quantity: Uint!
+    rawQuantity: Int!
+    isIncluded: Boolean!
+    isSingleton: Boolean!
+}
+
+type MemberContractBid @goModel(model: "github.com/eveisesi/athena.MemberContractBid") {
+    memberID: Uint!
+    contractID: Uint!
+    bidID: Uint!
+    bidderID: Uint!
+    amount: Float!
+    bidDate: Time!
+
+    bidder: Character!
+}

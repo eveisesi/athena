@@ -5,6 +5,7 @@ import (
 	"github.com/eveisesi/athena/internal/asset"
 	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/contact"
+	"github.com/eveisesi/athena/internal/contract"
 	"github.com/eveisesi/athena/internal/location"
 	"github.com/eveisesi/athena/internal/mail"
 	"github.com/eveisesi/athena/internal/skill"
@@ -19,6 +20,7 @@ func buildScopeMap(
 	skill skill.Service,
 	wallet wallet.Service,
 	asset asset.Service,
+	contract contract.Service,
 ) athena.ScopeMap {
 
 	scopeMap := make(athena.ScopeMap, 10)
@@ -82,20 +84,20 @@ func buildScopeMap(
 	// 	},
 	// }
 
-	// scopeMap[athena.ReadWalletV1] = []athena.ScopeResolver{
-	// {
-	// 	Name: "MemberWalletBalannce",
-	// 	Func: wallet.EmptyMemberBalance,
-	// },
-	// {
-	// 	Name: "MemberWalletTransactions",
-	// 	Func: wallet.EmptyMembetWalletTransactions,
-	// },
-	// {
-	// 	Name: "MemberWalletJournals",
-	// 	Func: wallet.EmptyMemberWalletJournals,
-	// },
-	// }
+	scopeMap[athena.ReadWalletV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberWalletBalannce",
+			Func: wallet.FetchMemberBalance,
+		},
+		{
+			Name: "MemberWalletTransactions",
+			Func: wallet.FetchMemberWalletTransactions,
+		},
+		{
+			Name: "MemberWalletJournals",
+			Func: wallet.FetchMemberWalletJournals,
+		},
+	}
 
 	// scopeMap[athena.ReadMailV1] = []athena.ScopeResolver{
 	// 	{
@@ -104,12 +106,19 @@ func buildScopeMap(
 	// 	},
 	// }
 
-	// scopeMap[athena.ReadAssetsV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberAssets",
-	// 		Func: asset.EmptyMemberAssets,
-	// 	},
-	// }
+	scopeMap[athena.ReadAssetsV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberAssets",
+			Func: asset.EmptyMemberAssets,
+		},
+	}
+
+	scopeMap[athena.ReadContractsV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberContracts",
+			Func: contract.FetchMemberContracts,
+		},
+	}
 
 	return scopeMap
 

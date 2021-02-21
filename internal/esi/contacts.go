@@ -34,6 +34,7 @@ func (s *service) HeadCharacterContacts(ctx context.Context, characterID, page u
 		WithMethod(http.MethodHead),
 		WithPath(path),
 		WithPage(page),
+		WithEtag(etag.Etag),
 		WithAuthorization(token),
 	)
 	if err != nil {
@@ -41,8 +42,10 @@ func (s *service) HeadCharacterContacts(ctx context.Context, characterID, page u
 	}
 
 	if res.StatusCode >= http.StatusBadRequest {
-		return etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", characterID, res.StatusCode)
+		return nil, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", characterID, res.StatusCode)
 	}
+
+	etag.Etag = RetrieveEtagHeader(res.Header)
 
 	if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)

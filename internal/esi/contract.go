@@ -35,6 +35,7 @@ func (s *service) HeadCharacterContracts(ctx context.Context, characterID, page 
 		WithMethod(http.MethodHead),
 		WithPath(path),
 		WithPage(page),
+		WithEtag(etag.Etag),
 		WithAuthorization(token),
 	)
 	if err != nil {
@@ -44,6 +45,8 @@ func (s *service) HeadCharacterContracts(ctx context.Context, characterID, page 
 	if res.StatusCode >= http.StatusBadRequest {
 		return etag, res, fmt.Errorf("failed to fetch contracts for character %d, received status code of %d", characterID, res.StatusCode)
 	}
+
+	etag.Etag = RetrieveEtagHeader(res.Header)
 
 	if res.StatusCode == http.StatusNotModified {
 		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
@@ -111,9 +114,15 @@ func (s *service) GetCharacterContracts(ctx context.Context, characterID, page u
 func characterContractsKeyFunc(mods *modifiers) string {
 
 	requireCharacterID(mods)
-	requirePage(mods)
 
-	return buildKey(GetCharacterContracts.String(), strconv.FormatUint(uint64(mods.characterID), 10), strconv.FormatUint(uint64(mods.page), 10))
+	params := make([]string, 0, 3)
+	params = append(params, GetCharacterContracts.String(), strconv.FormatUint(uint64(mods.characterID), 10))
+
+	if mods.page > 0 {
+		params = append(params, strconv.FormatUint(uint64(mods.page), 10))
+	}
+
+	return buildKey(params...)
 
 }
 

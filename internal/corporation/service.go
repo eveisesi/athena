@@ -74,7 +74,7 @@ func (s *service) FetchCorporation(ctx context.Context, corporationID uint) (*at
 		return nil, fmt.Errorf("failed to fetch corporation from ESI")
 	}
 
-	if etag.Etag == petag {
+	if petag != "" && etag.Etag == petag {
 		return etag, err
 	}
 
@@ -199,7 +199,7 @@ func (s *service) FetchCorporationAllianceHistory(ctx context.Context, corporati
 		return nil, fmt.Errorf("failed to fetch corporation alliance history from ESI")
 	}
 
-	if etag.Etag == petag {
+	if petag != "" && etag.Etag == petag {
 		return etag, nil
 	}
 

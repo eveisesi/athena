@@ -12,7 +12,7 @@ import (
 
 func testCommand(c *cli.Context) error {
 
-	t := athena.MemberShip{}
+	t := athena.MemberContractBid{}
 
 	rt := reflect.TypeOf(t)
 	fmt.Printf("type %s @goModel(model: \"%s.%s\") {\n", rt.Name(), rt.PkgPath(), rt.Name())

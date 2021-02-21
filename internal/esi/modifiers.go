@@ -46,12 +46,6 @@ func ModWithPage(page uint) modifierFunc {
 	}
 }
 
-func requirePage(mods *modifiers) {
-	if mods.page == 0 {
-		panic("page modifier should be greater than zero for this request")
-	}
-}
-
 func ModWithFromID(from uint64) modifierFunc {
 	return func(mods *modifiers) *modifiers {
 		mods.from = from

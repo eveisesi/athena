@@ -65,11 +65,11 @@ func (r *memberContractRepository) MemberContracts(ctx context.Context, memberID
 func (r *memberContractRepository) CreateContracts(ctx context.Context, memberID uint, contracts []*athena.MemberContract) ([]*athena.MemberContract, error) {
 
 	i := sq.Insert(r.contracts).Columns(
-		"member_id", "contract_id", "acceptor_id", "assignee_id",
+		"member_id", "contract_id", "acceptor_id", "acceptor_type", "assignee_id", "assignee_type",
 		"availability", "buyout", "collateral", "date_accepted",
 		"date_completed", "date_expired", "date_issued", "days_to_complete",
-		"end_location_id", "for_corporation", "issuer_corporation_id", "issuer_id",
-		"price", "reward", "start_location_id", "status", "title",
+		"end_location_id", "end_location_type", "for_corporation", "issuer_corporation_id", "issuer_id",
+		"price", "reward", "start_location_id", "start_location_type", "status", "title",
 		"type", "volume", "created_at", "updated_at",
 	)
 
@@ -77,11 +77,11 @@ func (r *memberContractRepository) CreateContracts(ctx context.Context, memberID
 	for j, contract := range contracts {
 		contractIDs[j] = contract.ContractID
 		i = i.Values(
-			memberID, contract.ContractID, contract.AcceptorID, contract.AssigneeID,
+			memberID, contract.ContractID, contract.AcceptorID, contract.AcceptorType, contract.AssigneeID, contract.AssigneeType,
 			contract.Availability, contract.Buyout, contract.Collateral, contract.DateAccepted,
 			contract.DateCompleted, contract.DateExpired, contract.DateIssued, contract.DaysToComplete,
-			contract.EndLocationID, contract.ForCorporation, contract.IssuerCorporationID, contract.IssuerID,
-			contract.Price, contract.Reward, contract.StartLocationID,
+			contract.EndLocationID, contract.EndLocationType, contract.ForCorporation, contract.IssuerCorporationID, contract.IssuerID,
+			contract.Price, contract.Reward, contract.StartLocationID, contract.StartLocationType,
 			contract.Status, contract.Title, contract.Type,
 			contract.Volume, sq.Expr(`NOW()`), sq.Expr(`NOW()`),
 		)
@@ -101,47 +101,42 @@ func (r *memberContractRepository) CreateContracts(ctx context.Context, memberID
 
 }
 
-func (r *memberContractRepository) UpdateContract(ctx context.Context, memberID uint, contracts []*athena.MemberContract) ([]*athena.MemberContract, error) {
+func (r *memberContractRepository) UpdateContract(ctx context.Context, memberID uint, contract *athena.MemberContract) (*athena.MemberContract, error) {
 
-	contractIDs := make([]uint, len(contracts))
-	for j, contract := range contracts {
-		contractIDs[j] = contract.ContractID
-		query, args, err := sq.Update(r.contracts).
-			Set("acceptor_id", contract.AcceptorID).
-			Set("assignee_id", contract.AssigneeID).
-			Set("availability", contract.Availability).
-			Set("buyout", contract.Buyout).
-			Set("collateral", contract.Collateral).
-			Set("date_accepted", contract.DateAccepted).
-			Set("date_completed", contract.DateCompleted).
-			Set("date_expired", contract.DateExpired).
-			Set("date_issued", contract.DateIssued).
-			Set("days_to_complete", contract.DaysToComplete).
-			Set("end_location_id", contract.EndLocationID).
-			Set("for_corporation", contract.ForCorporation).
-			Set("issuer_corporation_id", contract.IssuerCorporationID).
-			Set("issuer_id", contract.IssuerID).
-			Set("price", contract.Price).
-			Set("reward", contract.Reward).
-			Set("start_location_id", contract.StartLocationID).
-			Set("status", contract.Status).
-			Set("title", contract.Title).
-			Set("type", contract.Type).
-			Set("volume", contract.Volume).
-			Set("updated_at", sq.Expr(`NOW()`)).
-			Where(sq.Eq{"member_id": memberID, "contract_id": contract.ContractID}).ToSql()
-		if err != nil {
-			return nil, fmt.Errorf("[Contract Repository] Failed to generate query: %w", err)
-		}
-
-		_, err = r.db.ExecContext(ctx, query, args...)
-		if err != nil {
-			return nil, fmt.Errorf("[Contract Repository] Failed to insert records: %w", err)
-		}
-
+	query, args, err := sq.Update(r.contracts).
+		Set("acceptor_id", contract.AcceptorID).
+		Set("assignee_id", contract.AssigneeID).
+		Set("availability", contract.Availability).
+		Set("buyout", contract.Buyout).
+		Set("collateral", contract.Collateral).
+		Set("date_accepted", contract.DateAccepted).
+		Set("date_completed", contract.DateCompleted).
+		Set("date_expired", contract.DateExpired).
+		Set("date_issued", contract.DateIssued).
+		Set("days_to_complete", contract.DaysToComplete).
+		Set("end_location_id", contract.EndLocationID).
+		Set("for_corporation", contract.ForCorporation).
+		Set("issuer_corporation_id", contract.IssuerCorporationID).
+		Set("issuer_id", contract.IssuerID).
+		Set("price", contract.Price).
+		Set("reward", contract.Reward).
+		Set("start_location_id", contract.StartLocationID).
+		Set("status", contract.Status).
+		Set("title", contract.Title).
+		Set("type", contract.Type).
+		Set("volume", contract.Volume).
+		Set("updated_at", sq.Expr(`NOW()`)).
+		Where(sq.Eq{"member_id": memberID, "contract_id": contract.ContractID}).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("[Contract Repository] Failed to generate query: %w", err)
 	}
 
-	return r.MemberContracts(ctx, memberID, athena.NewInOperator("contract_id", contractIDs))
+	_, err = r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("[Contract Repository] Failed to insert records: %w", err)
+	}
+
+	return r.MemberContract(ctx, memberID, contract.ContractID)
 
 }
 
@@ -174,7 +169,7 @@ func (r *memberContractRepository) CreateMemberContractItems(ctx context.Context
 	)
 
 	for _, item := range items {
-		i.Values(
+		i = i.Values(
 			memberID, contractID,
 			item.RecordID, item.TypeID, item.Quantity,
 			item.RawQuantity, item.IsIncluded, item.IsSingleton,

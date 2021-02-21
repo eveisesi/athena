@@ -298,14 +298,15 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Auth           func(childComplexity int) int
-		Member         func(childComplexity int) int
-		MemberClones   func(childComplexity int, memberID uint) int
-		MemberContacts func(childComplexity int, memberID uint, page uint) int
-		MemberImplants func(childComplexity int, memberID uint) int
-		MemberLocation func(childComplexity int, memberID uint) int
-		MemberOnline   func(childComplexity int, memberID uint) int
-		MemberShip     func(childComplexity int, memberID uint) int
+		Auth            func(childComplexity int) int
+		Member          func(childComplexity int) int
+		MemberClones    func(childComplexity int, memberID uint) int
+		MemberContacts  func(childComplexity int, memberID uint, page uint) int
+		MemberContracts func(childComplexity int, memberID uint, page uint) int
+		MemberImplants  func(childComplexity int, memberID uint) int
+		MemberLocation  func(childComplexity int, memberID uint) int
+		MemberOnline    func(childComplexity int, memberID uint) int
+		MemberShip      func(childComplexity int, memberID uint) int
 	}
 
 	Race struct {
@@ -429,6 +430,7 @@ type QueryResolver interface {
 	MemberClones(ctx context.Context, memberID uint) (*athena.MemberClones, error)
 	MemberImplants(ctx context.Context, memberID uint) ([]*athena.MemberImplant, error)
 	MemberContacts(ctx context.Context, memberID uint, page uint) ([]*athena.MemberContact, error)
+	MemberContracts(ctx context.Context, memberID uint, page uint) ([]*athena.MemberContract, error)
 	MemberLocation(ctx context.Context, memberID uint) (*athena.MemberLocation, error)
 	MemberOnline(ctx context.Context, memberID uint) (*athena.MemberOnline, error)
 	MemberShip(ctx context.Context, memberID uint) (*athena.MemberShip, error)
@@ -1686,6 +1688,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.MemberContacts(childComplexity, args["memberID"].(uint), args["page"].(uint)), true
 
+	case "Query.memberContracts":
+		if e.complexity.Query.MemberContracts == nil {
+			break
+		}
+
+		args, err := ec.field_Query_memberContracts_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.MemberContracts(childComplexity, args["memberID"].(uint), args["page"].(uint)), true
+
 	case "Query.memberImplants":
 		if e.complexity.Query.MemberImplants == nil {
 			break
@@ -2159,7 +2173,11 @@ type MemberContact @goModel(model: "github.com/eveisesi/athena.MemberContact") {
 
 union ContactInfo = Character | Corporation | Alliance | Faction
 `, BuiltIn: false},
-	{Name: "internal/graphql/schema/contract.graphqls", Input: `type MemberContract @goModel(model: "github.com/eveisesi/athena.MemberContract") {
+	{Name: "internal/graphql/schema/contract.graphqls", Input: `extend type Query {
+    memberContracts(memberID: Uint!, page: Uint!): [MemberContract]!
+}
+
+type MemberContract @goModel(model: "github.com/eveisesi/athena.MemberContract") {
     memberID: Uint!
     contractID: Uint!
     acceptorID: Uint
@@ -2203,7 +2221,7 @@ type MemberContractBid @goModel(model: "github.com/eveisesi/athena.MemberContrac
     memberID: Uint!
     contractID: Uint!
     bidID: Uint!
-    bidderID: Uint64! @goField(name: "bidder")
+    bidderID: Uint!
     amount: Float!
     bidDate: Time!
 
@@ -2460,6 +2478,30 @@ func (ec *executionContext) field_Query_memberClones_args(ctx context.Context, r
 }
 
 func (ec *executionContext) field_Query_memberContacts_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 uint
+	if tmp, ok := rawArgs["memberID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("memberID"))
+		arg0, err = ec.unmarshalNUint2uint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["memberID"] = arg0
+	var arg1 uint
+	if tmp, ok := rawArgs["page"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
+		arg1, err = ec.unmarshalNUint2uint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["page"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_memberContracts_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 uint
@@ -7054,9 +7096,9 @@ func (ec *executionContext) _MemberContractBid_bidderID(ctx context.Context, fie
 		}
 		return graphql.Null
 	}
-	res := resTmp.(uint64)
+	res := resTmp.(uint)
 	fc.Result = res
-	return ec.marshalNUint642uint64(ctx, field.Selections, res)
+	return ec.marshalNUint2uint(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MemberContractBid_amount(ctx context.Context, field graphql.CollectedField, obj *athena.MemberContractBid) (ret graphql.Marshaler) {
@@ -8559,6 +8601,48 @@ func (ec *executionContext) _Query_memberContacts(ctx context.Context, field gra
 	res := resTmp.([]*athena.MemberContact)
 	fc.Result = res
 	return ec.marshalNMemberContact2ᚕᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberContact(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_memberContracts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_memberContracts_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().MemberContracts(rctx, args["memberID"].(uint), args["page"].(uint))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*athena.MemberContract)
+	fc.Result = res
+	return ec.marshalNMemberContract2ᚕᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberContract(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_memberLocation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12713,6 +12797,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
+		case "memberContracts":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_memberContracts(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "memberLocation":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -13486,6 +13584,43 @@ func (ec *executionContext) marshalNMemberContact2ᚕᚖgithubᚗcomᚋeveisesi�
 	return ret
 }
 
+func (ec *executionContext) marshalNMemberContract2ᚕᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberContract(ctx context.Context, sel ast.SelectionSet, v []*athena.MemberContract) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOMemberContract2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberContract(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
 func (ec *executionContext) marshalNMemberContractBid2ᚕᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberContractBid(ctx context.Context, sel ast.SelectionSet, v []*athena.MemberContractBid) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -14152,6 +14287,13 @@ func (ec *executionContext) marshalOMemberContact2ᚖgithubᚗcomᚋeveisesiᚋa
 		return graphql.Null
 	}
 	return ec._MemberContact(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOMemberContract2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberContract(ctx context.Context, sel ast.SelectionSet, v *athena.MemberContract) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._MemberContract(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOMemberContractBid2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberContractBid(ctx context.Context, sel ast.SelectionSet, v *athena.MemberContractBid) graphql.Marshaler {
