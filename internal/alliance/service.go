@@ -50,8 +50,13 @@ func (s *service) FetchAlliance(ctx context.Context, allianceID uint) (*athena.E
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
+	var petag string
+	if etag != nil {
+		if etag.CachedUntil.After(time.Now()) {
+			return etag, nil
+		}
+
+		petag = etag.Etag
 	}
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
@@ -60,7 +65,6 @@ func (s *service) FetchAlliance(ctx context.Context, allianceID uint) (*athena.E
 		"method":    "FetchAlliance",
 	})
 
-	petag := etag.Etag
 	alliance, etag, _, err := s.esi.GetAlliance(ctx, allianceID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch alliance from ESI")

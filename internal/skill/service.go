@@ -17,10 +17,11 @@ import (
 )
 
 type Service interface {
-	EmptyMemberSkills(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberSkills(ctx context.Context, member *athena.Member) (*athena.MemberSkills, *athena.Etag, error)
-	EmptyMemberSkillQueue(ctx context.Context, member *athena.Member) (*athena.Etag, error)
-	MemberSkillQueue(ctx context.Context, member *athena.Member) ([]*athena.MemberSkillQueue, *athena.Etag, error)
+	FetchMemberSkills(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberSkillProperties(ctx context.Context, memberID uint) (*athena.MemberSkills, error)
+	MemberSkills(ctx context.Context, memberID uint) ([]*athena.Skill, error)
+	FetchMemberSkillQueue(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberSkillQueue(ctx context.Context, memberID uint) ([]*athena.MemberSkillQueue, error)
 }
 
 type service struct {
@@ -51,24 +52,7 @@ func NewService(logger *logrus.Logger, cache cache.Service, esi esi.Service, eta
 	}
 }
 
-func (s *service) EmptyMemberSkills(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
-
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkills, esi.ModWithCharacterID(member.ID))
-	if err != nil {
-		return nil, fmt.Errorf("[Skills Service] Failed to fetch etag object: %w", err)
-	}
-
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
-	}
-
-	_, etag, err = s.MemberSkills(ctx, member)
-
-	return etag, err
-
-}
-
-func (s *service) MemberSkills(ctx context.Context, member *athena.Member) (*athena.MemberSkills, *athena.Etag, error) {
+func (s *service) FetchMemberSkills(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
 		"member_id": member.ID,
@@ -79,108 +63,83 @@ func (s *service) MemberSkills(ctx context.Context, member *athena.Member) (*ath
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkills, esi.ModWithCharacterID(member.ID))
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch etag object")
-		return nil, nil, fmt.Errorf("failed to fetch etag object")
+		return nil, fmt.Errorf("failed to fetch etag object")
 	}
-	cached := true
-	exists := true
 
-	properties, err := s.cache.MemberSkillProperties(ctx, member.ID)
+	var petag string
+	if etag != nil {
+		if etag.CachedUntil.After(time.Now()) {
+			return etag, nil
+		}
+
+		petag = etag.Etag
+	}
+
+	skillProperties, etag, _, err := s.esi.GetCharacterSkills(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
-		entry.WithError(err).Error("failed to fetch member skill properties from cache")
-		return nil, nil, fmt.Errorf("failed to fetch member skill properties from cache")
+		entry.WithError(err).Error("failed to fetch skills for member")
+		return nil, fmt.Errorf("failed to fetch skills for member")
 	}
 
-	if properties == nil {
-		cached = false
-		properties, err = s.skills.MemberSkillProperties(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch member skill properties from db")
-			return nil, nil, fmt.Errorf("failed to fetch member skill properties from db")
-		}
-
-		if properties == nil || errors.Is(err, sql.ErrNoRows) {
-			exists = false
-			properties = &athena.MemberSkills{
-				MemberID: member.ID,
-			}
-
-		}
-
+	if petag != "" && etag.Etag == petag {
+		return etag, nil
 	}
 
-	properties.Skills, err = s.cache.MemberSkills(ctx, member.ID)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member skill properties from cache")
-		return nil, nil, fmt.Errorf("failed to fetch member skill properties from cache")
-	}
+	s.processSkills(ctx, member, skillProperties.Skills)
+	skillProperties.MemberID = member.ID
+	skillProperties.Skills = nil
 
-	if len(properties.Skills) == 0 {
-		cached = false
-		properties.Skills, err = s.skills.MemberSkills(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch member skills from DB")
-			return nil, nil, fmt.Errorf("failed to fetch member skills from DB")
-		}
+	existing, err := s.skills.MemberSkillProperties(ctx, member.ID)
 
-		if properties.Skills == nil || errors.Is(err, sql.ErrNoRows) {
-			exists = false
-		}
-	}
-
-	if etag != nil && etag.CachedUntil.After(time.Now()) && exists {
-
-		if !cached {
-			err = s.cache.SetMemberSkills(ctx, member.ID, properties.Skills)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member clones")
-			}
-
-			t := properties.Skills
-			properties.Skills = nil
-			err = s.cache.SetMemberSkillProperties(ctx, member.ID, properties)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member clones")
-			}
-			properties.Skills = t
-		}
-
-		return properties, etag, nil
-	}
-
-	newProperties, etag, _, err := s.esi.GetCharacterSkills(ctx, member.ID, member.AccessToken.String)
-	if err != nil {
-		return nil, nil, fmt.Errorf("[Skills Service] Failed to fetch skills for member %d: %w", member.ID, err)
-	}
-
-	oldSkills := properties.Skills
-	newSkills := newProperties.Skills
-
-	s.resolveSkillAttributes(ctx, newSkills)
-
-	switch exists {
+	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
 	case true:
-		_, err = s.skills.UpdateMemberSkillProperties(ctx, member.ID, newProperties)
+		_, err := s.skills.CreateMemberSkillProperties(ctx, skillProperties)
 		if err != nil {
-			return nil, nil, fmt.Errorf("[Skills Service] Failed to update skill properties for member %d: %w", member.ID, err)
+			entry.WithError(err).Error("failed to create member skill properties in db")
+			return nil, fmt.Errorf("failed to create member skill properties in db")
 		}
 	case false:
-		_, err = s.skills.CreateMemberSkillProperties(ctx, newProperties)
+		_, err := s.skills.UpdateMemberSkillProperties(ctx, member.ID, skillProperties)
 		if err != nil {
-			return nil, nil, fmt.Errorf("[Skills Service] Failed to update skill properties for member %d: %w", member.ID, err)
+			entry.WithError(err).Error("failed to update member skill properties in db")
+			return nil, fmt.Errorf("failed to update member skill properties in db")
 		}
 	}
-	newProperties.Skills = nil
-	_ = s.cache.SetMemberSkillProperties(ctx, member.ID, newProperties)
 
-	s.resolveSkillAttributes(ctx, newSkills)
-	skills, err := s.diffAndUpdateSkills(ctx, member, oldSkills, newSkills)
+	return etag, nil
+
+}
+
+func (s *service) processSkills(ctx context.Context, member *athena.Member, skills []*athena.Skill) error {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": member.ID,
+		"service":   serviceIdentifier,
+		"method":    "processSkills",
+	})
+
+	s.resolveSkillAttributes(ctx, skills)
+
+	existing, err := s.skills.MemberSkills(ctx, member.ID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("[Skills Service] Failed to update skills for member %d: %w", member.ID, err)
+		entry.WithError(err).Error("failed to fetch existing skills from DB")
+		return fmt.Errorf("failed to fetch existing skills from DB")
 	}
 
-	newProperties.Skills = skills
+	skills, err = s.diffAndUpdateSkills(ctx, member, existing, skills)
+	if err != nil {
+		entry.WithError(err).Error("failed to diff and update skills")
+		return fmt.Errorf("failed to diff and update skills")
+	}
 
-	return newProperties, etag, nil
+	if len(skills) > 0 {
+		err = s.cache.SetMemberSkills(ctx, member.ID, skills)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member skills")
+		}
+	}
+
+	return nil
 
 }
 
@@ -240,24 +199,77 @@ func (s *service) diffAndUpdateSkills(ctx context.Context, member *athena.Member
 
 }
 
-func (s *service) EmptyMemberSkillQueue(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
+func (s *service) MemberSkillProperties(ctx context.Context, memberID uint) (*athena.MemberSkills, error) {
 
-	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkillQueue, esi.ModWithCharacterID(member.ID))
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": memberID,
+		"service":   serviceIdentifier,
+		"method":    "MemberSkillQueue",
+	})
+
+	properties, err := s.cache.MemberSkillProperties(ctx, memberID)
 	if err != nil {
-		return nil, fmt.Errorf("[Skills Service] Failed to fetch etag object: %w", err)
+		entry.WithError(err).Error("failed to fetch member skill properties from cache")
+		return nil, fmt.Errorf("failed to fetch member skill properties from cache")
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
+	if properties != nil {
+		return properties, nil
 	}
 
-	_, etag, err = s.MemberSkillQueue(ctx, member)
+	properties, err = s.skills.MemberSkillProperties(ctx, memberID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member skill properties from DB")
+		return nil, fmt.Errorf("failed to fetch member skill properties from DB")
+	}
 
-	return etag, err
+	if err == nil {
+		err = s.cache.SetMemberSkillProperties(ctx, memberID, properties)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member skill properties")
+		}
+	}
+
+	return properties, nil
 
 }
 
-func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) ([]*athena.MemberSkillQueue, *athena.Etag, error) {
+func (s *service) MemberSkills(ctx context.Context, memberID uint) ([]*athena.Skill, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": memberID,
+		"service":   serviceIdentifier,
+		"method":    "MemberSkills",
+	})
+
+	skills, err := s.cache.MemberSkills(ctx, memberID)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member skills from cache")
+		return nil, fmt.Errorf("failed to fetch member skills from cache")
+	}
+
+	if len(skills) > 0 {
+		return skills, nil
+	}
+
+	skills, err = s.skills.MemberSkills(ctx, memberID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member skills from DB")
+		return nil, fmt.Errorf("failed to fetch member skills from DB")
+	}
+
+	if len(skills) > 0 {
+		err = s.cache.SetMemberSkills(ctx, memberID, skills)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member skills")
+		}
+	}
+
+	return skills, nil
+
+}
+
+func (s *service) FetchMemberSkillQueue(ctx context.Context, member *athena.Member) (*athena.Etag, error) {
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
 		"member_id": member.ID,
@@ -267,48 +279,38 @@ func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) (
 
 	etag, err := s.esi.Etag(ctx, esi.GetCharacterSkillQueue, esi.ModWithCharacterID(member.ID))
 	if err != nil {
-		entry.WithError(err).Error("failed to fetch etag object")
-		return nil, nil, fmt.Errorf("failed to fetch etag object")
+		return nil, fmt.Errorf("[Skills Service] Failed to fetch etag object: %w", err)
 	}
 
-	cached := true
-
-	positions, err := s.cache.MemberSkillQueue(ctx, member.ID)
-	if err != nil {
-		entry.WithError(err).Error("failed to fetch member skill queue from cache")
-		return nil, nil, fmt.Errorf("failed to fetch member skill queue from cache")
-	}
-
-	if len(positions) == 0 {
-		cached = false
-		positions, err = s.skills.MemberSkillQueue(ctx, member.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			entry.WithError(err).Error("failed to fetch member skill queue from DB")
-			return nil, nil, fmt.Errorf("failed to fetch member skill queue from DB")
-		}
-	}
-
-	if etag != nil && etag.CachedUntil.After(time.Now()) && len(positions) > 0 {
-		if !cached {
-			err = s.cache.SetMemberSkillQueue(ctx, member.ID, positions)
-			if err != nil {
-				entry.WithError(err).Error("failed to cache member skill queue")
-			}
+	var petag string
+	if etag != nil {
+		if etag.CachedUntil.After(time.Now()) {
+			return etag, nil
 		}
 
-		return positions, etag, nil
+		petag = etag.Etag
 	}
 
 	newPositions, etag, _, err := s.esi.GetCharacterSkillQueue(ctx, member.ID, member.AccessToken.String)
 	if err != nil {
-		entry.WithError(err).Error("failed to fetch member implants from ESI")
-		return nil, nil, fmt.Errorf("failed to fetch member implants from ESI")
+		entry.WithError(err).Error("failed to fetch member skill queue from ESI")
+		return nil, fmt.Errorf("failed to fetch member skill queue from ESI")
+	}
+
+	if petag != "" && etag.Etag == petag {
+		return etag, nil
+	}
+
+	existing, err := s.skills.MemberSkillQueue(ctx, member.ID)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member skill queue from db")
+		return nil, fmt.Errorf("failed to fetch member skill queue from db")
 	}
 
 	s.resolveSkillQueueAttributes(ctx, newPositions)
-	positions, err = s.diffAndUpdateSkillQueue(ctx, member, positions, newPositions)
+	positions, err := s.diffAndUpdateSkillQueue(ctx, member, existing, newPositions)
 	if err != nil {
-		return nil, nil, fmt.Errorf("[Skill Service] Failed to execute diffing options: %w", err)
+		return nil, fmt.Errorf("[Skill Service] Failed to execute diffing options: %w", err)
 	}
 
 	if len(positions) > 0 {
@@ -318,7 +320,7 @@ func (s *service) MemberSkillQueue(ctx context.Context, member *athena.Member) (
 		}
 	}
 
-	return positions, etag, nil
+	return etag, nil
 
 }
 
@@ -405,5 +407,40 @@ func (s *service) diffAndUpdateSkillQueue(ctx context.Context, member *athena.Me
 	}
 
 	return final, nil
+
+}
+
+func (s *service) MemberSkillQueue(ctx context.Context, memberID uint) ([]*athena.MemberSkillQueue, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"member_id": memberID,
+		"service":   serviceIdentifier,
+		"method":    "MemberSkillQueue",
+	})
+
+	positions, err := s.cache.MemberSkillQueue(ctx, memberID)
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member skill queue from cache")
+		return nil, fmt.Errorf("failed to fetch member skill queue from cache")
+	}
+
+	if len(positions) > 0 {
+		return positions, nil
+	}
+
+	positions, err = s.skills.MemberSkillQueue(ctx, memberID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		entry.WithError(err).Error("failed to fetch member skill queue from DB")
+		return nil, fmt.Errorf("failed to fetch member skill queue from DB")
+	}
+
+	if len(positions) > 0 {
+		err = s.cache.SetMemberSkillQueue(ctx, memberID, positions)
+		if err != nil {
+			entry.WithError(err).Error("failed to cache member skill queue")
+		}
+	}
+
+	return positions, nil
 
 }

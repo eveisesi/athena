@@ -11,6 +11,7 @@ require (
 	github.com/dgryski/trifles v0.0.0-20210119233746-37d926d5de6c // indirect
 	github.com/friendsofgo/errors v0.9.2 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v8 v8.4.9
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7

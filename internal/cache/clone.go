@@ -102,9 +102,14 @@ func (s *service) SetMemberImplants(ctx context.Context, memberID uint, implants
 	}
 
 	key := fmt.Sprintf(keyMemberImplants, memberID)
-	_, err := s.client.SAdd(ctx, key, members, time.Hour).Result()
+	_, err := s.client.SAdd(ctx, key, members).Result()
 	if err != nil {
-		return fmt.Errorf("[Cache Layer] Failed to write to cache: %w", err)
+		return fmt.Errorf("[Cache Layer] Failed to write to cache for key %s: %w", key, err)
+	}
+
+	_, err = s.client.Expire(ctx, key, time.Hour).Result()
+	if err != nil {
+		return fmt.Errorf("[Cache Layer] Failed to set expiry on key %s: %w", key, err)
 	}
 
 	return nil

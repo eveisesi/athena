@@ -246,7 +246,17 @@ func (s *service) MemberFromToken(ctx context.Context, token jwt.Token) (*athena
 
 	if member == nil {
 		// This is a new member, lets create a record for them.
+		_, err := s.character.FetchCharacter(ctx, memberID)
+		if err != nil {
+			return nil, err
+		}
+
 		character, err := s.character.Character(ctx, memberID)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = s.corporation.FetchCorporation(ctx, character.CorporationID)
 		if err != nil {
 			return nil, err
 		}
@@ -257,7 +267,7 @@ func (s *service) MemberFromToken(ctx context.Context, token jwt.Token) (*athena
 		}
 
 		if corporation.AllianceID.Valid {
-			_, err = s.alliance.Alliance(ctx, corporation.AllianceID.Uint)
+			_, err = s.alliance.FetchAlliance(ctx, corporation.AllianceID.Uint)
 			if err != nil {
 				return nil, err
 			}

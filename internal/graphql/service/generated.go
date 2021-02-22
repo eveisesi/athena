@@ -45,6 +45,7 @@ type ResolverRoot interface {
 	Character() CharacterResolver
 	Corporation() CorporationResolver
 	Member() MemberResolver
+	MemberAsset() MemberAssetResolver
 	MemberContact() MemberContactResolver
 	MemberContract() MemberContractResolver
 	MemberContractBid() MemberContractBidResolver
@@ -183,6 +184,18 @@ type ComplexityRoot struct {
 		Scopes            func(childComplexity int) int
 	}
 
+	MemberAsset struct {
+		IsBlueprintCopy func(childComplexity int) int
+		IsSingleton     func(childComplexity int) int
+		ItemID          func(childComplexity int) int
+		LocationFlag    func(childComplexity int) int
+		LocationID      func(childComplexity int) int
+		LocationType    func(childComplexity int) int
+		MemberID        func(childComplexity int) int
+		Quantity        func(childComplexity int) int
+		TypeID          func(childComplexity int) int
+	}
+
 	MemberClones struct {
 		HomeLocation          func(childComplexity int) int
 		JumpClones            func(childComplexity int) int
@@ -300,6 +313,7 @@ type ComplexityRoot struct {
 	Query struct {
 		Auth            func(childComplexity int) int
 		Member          func(childComplexity int) int
+		MemberAssets    func(childComplexity int, memberID uint, page uint) int
 		MemberClones    func(childComplexity int, memberID uint) int
 		MemberContacts  func(childComplexity int, memberID uint, page uint) int
 		MemberContracts func(childComplexity int, memberID uint, page uint) int
@@ -389,6 +403,10 @@ type MemberResolver interface {
 	Main(ctx context.Context, obj *athena.Member) (*athena.Character, error)
 	Character(ctx context.Context, obj *athena.Member) (*athena.Character, error)
 }
+type MemberAssetResolver interface {
+	LocationFlag(ctx context.Context, obj *athena.MemberAsset) (string, error)
+	LocationType(ctx context.Context, obj *athena.MemberAsset) (string, error)
+}
 type MemberContactResolver interface {
 	LabelIDs(ctx context.Context, obj *athena.MemberContact) ([]uint64, error)
 
@@ -427,6 +445,7 @@ type MemberShipResolver interface {
 }
 type QueryResolver interface {
 	Auth(ctx context.Context) (*athena.AuthAttempt, error)
+	MemberAssets(ctx context.Context, memberID uint, page uint) ([]*athena.MemberAsset, error)
 	MemberClones(ctx context.Context, memberID uint) (*athena.MemberClones, error)
 	MemberImplants(ctx context.Context, memberID uint) ([]*athena.MemberImplant, error)
 	MemberContacts(ctx context.Context, memberID uint, page uint) ([]*athena.MemberContact, error)
@@ -1083,6 +1102,69 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Member.Scopes(childComplexity), true
 
+	case "MemberAsset.isBlueprintCopy":
+		if e.complexity.MemberAsset.IsBlueprintCopy == nil {
+			break
+		}
+
+		return e.complexity.MemberAsset.IsBlueprintCopy(childComplexity), true
+
+	case "MemberAsset.isSingleton":
+		if e.complexity.MemberAsset.IsSingleton == nil {
+			break
+		}
+
+		return e.complexity.MemberAsset.IsSingleton(childComplexity), true
+
+	case "MemberAsset.itemID":
+		if e.complexity.MemberAsset.ItemID == nil {
+			break
+		}
+
+		return e.complexity.MemberAsset.ItemID(childComplexity), true
+
+	case "MemberAsset.locationFlag":
+		if e.complexity.MemberAsset.LocationFlag == nil {
+			break
+		}
+
+		return e.complexity.MemberAsset.LocationFlag(childComplexity), true
+
+	case "MemberAsset.locationID":
+		if e.complexity.MemberAsset.LocationID == nil {
+			break
+		}
+
+		return e.complexity.MemberAsset.LocationID(childComplexity), true
+
+	case "MemberAsset.locationType":
+		if e.complexity.MemberAsset.LocationType == nil {
+			break
+		}
+
+		return e.complexity.MemberAsset.LocationType(childComplexity), true
+
+	case "MemberAsset.memberID":
+		if e.complexity.MemberAsset.MemberID == nil {
+			break
+		}
+
+		return e.complexity.MemberAsset.MemberID(childComplexity), true
+
+	case "MemberAsset.quantity":
+		if e.complexity.MemberAsset.Quantity == nil {
+			break
+		}
+
+		return e.complexity.MemberAsset.Quantity(childComplexity), true
+
+	case "MemberAsset.typeID":
+		if e.complexity.MemberAsset.TypeID == nil {
+			break
+		}
+
+		return e.complexity.MemberAsset.TypeID(childComplexity), true
+
 	case "MemberClones.homeLocation":
 		if e.complexity.MemberClones.HomeLocation == nil {
 			break
@@ -1664,6 +1746,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Member(childComplexity), true
 
+	case "Query.memberAssets":
+		if e.complexity.Query.MemberAssets == nil {
+			break
+		}
+
+		args, err := ec.field_Query_memberAssets_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.MemberAssets(childComplexity, args["memberID"].(uint), args["page"].(uint)), true
+
 	case "Query.memberClones":
 		if e.complexity.Query.MemberClones == nil {
 			break
@@ -2091,6 +2185,22 @@ var sources = []*ast.Source{
     isClosed: Boolean!
 }
 `, BuiltIn: false},
+	{Name: "internal/graphql/schema/assets.graphqls", Input: `extend type Query {
+    memberAssets(memberID: Uint!, page: Uint!): [MemberAsset]!
+}
+
+type MemberAsset @goModel(model: "github.com/eveisesi/athena.MemberAsset") {
+    memberID: Uint!
+    itemID: Uint64!
+    typeID: Uint!
+    locationID: Uint64!
+    locationFlag: String!
+    locationType: String!
+    quantity: Int!
+    isBlueprintCopy: Boolean!
+    isSingleton: Boolean!
+}
+`, BuiltIn: false},
 	{Name: "internal/graphql/schema/auth.graphqls", Input: `type AuthAttempt @goModel(model: "github.com/eveisesi/athena.AuthAttempt") {
     status: String!
     state: String
@@ -2121,7 +2231,7 @@ var sources = []*ast.Source{
 }
 `, BuiltIn: false},
 	{Name: "internal/graphql/schema/clones.graphqls", Input: `extend type Query {
-    memberClones(memberID: Uint!): MemberClones!
+    memberClones(memberID: Uint!): MemberClones
     memberImplants(memberID: Uint!): [MemberImplant]!
 }
 
@@ -2194,8 +2304,8 @@ type MemberContract @goModel(model: "github.com/eveisesi/athena.MemberContract")
     forCorporation: Boolean!
     issuerCorporationID: Uint!
     issuerID: Uint64!
-    price: Uint
-    reward: Uint
+    price: Float
+    reward: Float
     startLocationID: Uint64
     status: String!
     title: String
@@ -2459,6 +2569,30 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_memberAssets_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 uint
+	if tmp, ok := rawArgs["memberID"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("memberID"))
+		arg0, err = ec.unmarshalNUint2uint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["memberID"] = arg0
+	var arg1 uint
+	if tmp, ok := rawArgs["page"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
+		arg1, err = ec.unmarshalNUint2uint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["page"] = arg1
 	return args, nil
 }
 
@@ -5679,6 +5813,321 @@ func (ec *executionContext) _Member_character(ctx context.Context, field graphql
 	return ec.marshalOCharacter2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐCharacter(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _MemberAsset_memberID(ctx context.Context, field graphql.CollectedField, obj *athena.MemberAsset) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "MemberAsset",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MemberID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(uint)
+	fc.Result = res
+	return ec.marshalNUint2uint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _MemberAsset_itemID(ctx context.Context, field graphql.CollectedField, obj *athena.MemberAsset) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "MemberAsset",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ItemID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(uint64)
+	fc.Result = res
+	return ec.marshalNUint642uint64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _MemberAsset_typeID(ctx context.Context, field graphql.CollectedField, obj *athena.MemberAsset) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "MemberAsset",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TypeID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(uint)
+	fc.Result = res
+	return ec.marshalNUint2uint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _MemberAsset_locationID(ctx context.Context, field graphql.CollectedField, obj *athena.MemberAsset) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "MemberAsset",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LocationID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(uint64)
+	fc.Result = res
+	return ec.marshalNUint642uint64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _MemberAsset_locationFlag(ctx context.Context, field graphql.CollectedField, obj *athena.MemberAsset) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "MemberAsset",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.MemberAsset().LocationFlag(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _MemberAsset_locationType(ctx context.Context, field graphql.CollectedField, obj *athena.MemberAsset) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "MemberAsset",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.MemberAsset().LocationType(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _MemberAsset_quantity(ctx context.Context, field graphql.CollectedField, obj *athena.MemberAsset) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "MemberAsset",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Quantity, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _MemberAsset_isBlueprintCopy(ctx context.Context, field graphql.CollectedField, obj *athena.MemberAsset) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "MemberAsset",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsBlueprintCopy, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _MemberAsset_isSingleton(ctx context.Context, field graphql.CollectedField, obj *athena.MemberAsset) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "MemberAsset",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsSingleton, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _MemberClones_memberID(ctx context.Context, field graphql.CollectedField, obj *athena.MemberClones) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -6688,9 +7137,9 @@ func (ec *executionContext) _MemberContract_price(ctx context.Context, field gra
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(null.Uint)
+	res := resTmp.(null.Float64)
 	fc.Result = res
-	return ec.marshalOUint2githubᚗcomᚋvolatiletechᚋnullᚐUint(ctx, field.Selections, res)
+	return ec.marshalOFloat2githubᚗcomᚋvolatiletechᚋnullᚐFloat64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MemberContract_reward(ctx context.Context, field graphql.CollectedField, obj *athena.MemberContract) (ret graphql.Marshaler) {
@@ -6720,9 +7169,9 @@ func (ec *executionContext) _MemberContract_reward(ctx context.Context, field gr
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(null.Uint)
+	res := resTmp.(null.Float64)
 	fc.Result = res
-	return ec.marshalOUint2githubᚗcomᚋvolatiletechᚋnullᚐUint(ctx, field.Selections, res)
+	return ec.marshalOFloat2githubᚗcomᚋvolatiletechᚋnullᚐFloat64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MemberContract_startLocationID(ctx context.Context, field graphql.CollectedField, obj *athena.MemberContract) (ret graphql.Marshaler) {
@@ -8477,6 +8926,48 @@ func (ec *executionContext) _Query_auth(ctx context.Context, field graphql.Colle
 	return ec.marshalNAuthAttempt2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐAuthAttempt(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Query_memberAssets(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_memberAssets_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().MemberAssets(rctx, args["memberID"].(uint), args["page"].(uint))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*athena.MemberAsset)
+	fc.Result = res
+	return ec.marshalNMemberAsset2ᚕᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberAsset(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_memberClones(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -8509,14 +9000,11 @@ func (ec *executionContext) _Query_memberClones(ctx context.Context, field graph
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(*athena.MemberClones)
 	fc.Result = res
-	return ec.marshalNMemberClones2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberClones(ctx, field.Selections, res)
+	return ec.marshalOMemberClones2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberClones(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_memberImplants(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -12007,6 +12495,91 @@ func (ec *executionContext) _Member(ctx context.Context, sel ast.SelectionSet, o
 	return out
 }
 
+var memberAssetImplementors = []string{"MemberAsset"}
+
+func (ec *executionContext) _MemberAsset(ctx context.Context, sel ast.SelectionSet, obj *athena.MemberAsset) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, memberAssetImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MemberAsset")
+		case "memberID":
+			out.Values[i] = ec._MemberAsset_memberID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "itemID":
+			out.Values[i] = ec._MemberAsset_itemID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "typeID":
+			out.Values[i] = ec._MemberAsset_typeID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "locationID":
+			out.Values[i] = ec._MemberAsset_locationID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "locationFlag":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._MemberAsset_locationFlag(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "locationType":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._MemberAsset_locationType(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "quantity":
+			out.Values[i] = ec._MemberAsset_quantity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "isBlueprintCopy":
+			out.Values[i] = ec._MemberAsset_isBlueprintCopy(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "isSingleton":
+			out.Values[i] = ec._MemberAsset_isSingleton(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var memberClonesImplementors = []string{"MemberClones"}
 
 func (ec *executionContext) _MemberClones(ctx context.Context, sel ast.SelectionSet, obj *athena.MemberClones) graphql.Marshaler {
@@ -12755,6 +13328,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
+		case "memberAssets":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_memberAssets(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "memberClones":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -12764,9 +13351,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_memberClones(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
 				return res
 			})
 		case "memberImplants":
@@ -13533,18 +14117,41 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) marshalNMemberClones2githubᚗcomᚋeveisesiᚋathenaᚐMemberClones(ctx context.Context, sel ast.SelectionSet, v athena.MemberClones) graphql.Marshaler {
-	return ec._MemberClones(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNMemberClones2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberClones(ctx context.Context, sel ast.SelectionSet, v *athena.MemberClones) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
+func (ec *executionContext) marshalNMemberAsset2ᚕᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberAsset(ctx context.Context, sel ast.SelectionSet, v []*athena.MemberAsset) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
 	}
-	return ec._MemberClones(ctx, sel, v)
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOMemberAsset2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberAsset(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) marshalNMemberContact2ᚕᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberContact(ctx context.Context, sel ast.SelectionSet, v []*athena.MemberContact) graphql.Marshaler {
@@ -14280,6 +14887,20 @@ func (ec *executionContext) marshalOMember2ᚖgithubᚗcomᚋeveisesiᚋathena�
 		return graphql.Null
 	}
 	return ec._Member(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOMemberAsset2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberAsset(ctx context.Context, sel ast.SelectionSet, v *athena.MemberAsset) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._MemberAsset(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOMemberClones2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberClones(ctx context.Context, sel ast.SelectionSet, v *athena.MemberClones) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._MemberClones(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOMemberContact2ᚖgithubᚗcomᚋeveisesiᚋathenaᚐMemberContact(ctx context.Context, sel ast.SelectionSet, v *athena.MemberContact) graphql.Marshaler {

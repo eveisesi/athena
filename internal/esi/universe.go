@@ -422,6 +422,8 @@ func (s *service) GetCategory(ctx context.Context, categoryID uint) (*athena.Cat
 		return nil, nil, nil, err
 	}
 
+	category.ID = categoryID
+
 	return category, etag, res, nil
 
 }
@@ -487,6 +489,8 @@ func (s *service) GetGroup(ctx context.Context, groupID uint) (*athena.Group, *a
 		return nil, nil, nil, err
 	}
 
+	group.ID = groupID
+
 	return group, etag, res, nil
 
 }
@@ -551,6 +555,8 @@ func (s *service) GetType(ctx context.Context, typeID uint) (*athena.Type, *athe
 		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 		return nil, nil, nil, err
 	}
+
+	item.ID = typeID
 
 	return item, etag, res, nil
 
@@ -674,6 +680,8 @@ func (s *service) GetRegion(ctx context.Context, regionID uint) (*athena.Region,
 		return nil, nil, nil, err
 	}
 
+	region.ID = regionID
+
 	return region, etag, res, nil
 
 }
@@ -738,6 +746,8 @@ func (s *service) GetConstellation(ctx context.Context, constellationID uint) (*
 		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 		return nil, nil, nil, err
 	}
+
+	constellation.ID = constellationID
 
 	return constellation, etag, res, nil
 
@@ -804,6 +814,8 @@ func (s *service) GetSolarSystem(ctx context.Context, systemID uint) (*athena.So
 		return nil, nil, nil, err
 	}
 
+	system.ID = systemID
+
 	return system, etag, res, nil
 
 }
@@ -868,6 +880,8 @@ func (s *service) GetStation(ctx context.Context, stationID uint) (*athena.Stati
 		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 		return nil, nil, nil, err
 	}
+
+	station.ID = stationID
 
 	return station, etag, res, nil
 
@@ -934,6 +948,8 @@ func (s *service) GetStructure(ctx context.Context, structureID uint64, token st
 		err = fmt.Errorf("unable to unmarshal response body on request %s: %w", path, err)
 		return nil, nil, nil, err
 	}
+
+	structure.ID = structureID
 
 	return structure, etag, res, nil
 

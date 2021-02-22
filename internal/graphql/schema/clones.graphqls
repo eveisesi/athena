@@ -1,5 +1,5 @@
 extend type Query {
-    memberClones(memberID: Uint!): MemberClones!
+    memberClones(memberID: Uint!): MemberClones
     memberImplants(memberID: Uint!): [MemberImplant]!
 }
 

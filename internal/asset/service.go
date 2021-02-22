@@ -18,6 +18,7 @@ import (
 
 type Service interface {
 	EmptyMemberAssets(ctx context.Context, member *athena.Member) (*athena.Etag, error)
+	MemberAssets(ctx context.Context, memberID, page uint) ([]*athena.MemberAsset, error)
 }
 
 type service struct {
@@ -73,7 +74,7 @@ func (s *service) EmptyMemberAssets(ctx context.Context, member *athena.Member) 
 
 	pages := esi.RetrieveXPagesFromHeader(res.Header)
 
-	for page := uint(0); page <= pages; page++ {
+	for page := uint(1); page <= pages; page++ {
 		entry := entry.WithField("page", page)
 
 		newAssets, _, _, err := s.esi.GetCharacterAssets(ctx, member.ID, page, member.AccessToken.String)
@@ -82,22 +83,24 @@ func (s *service) EmptyMemberAssets(ctx context.Context, member *athena.Member) 
 			return nil, fmt.Errorf("failed to fetch member assets from ESI")
 		}
 
-		if len(newAssets) > 0 {
-			s.resolveMemberAssetsAttributes(ctx, member, newAssets)
-
-			oldAssets, err := s.assets.MemberAssets(ctx, member.ID)
-			if err != nil && !errors.Is(err, sql.ErrNoRows) {
-				entry.WithError(err).Error("failed to fetch existing member assets from DB")
-				return nil, fmt.Errorf("failed to fetch existing member assets from DB")
-			}
-
-			err = s.diffAndCreateOrUpdateAssets(ctx, member, oldAssets, newAssets)
-			if err != nil {
-				entry.WithError(err).Error("failed to diff and create or update assets")
-				return nil, fmt.Errorf("failed to diff and create or update assets")
-			}
-
+		if len(newAssets) == 0 {
+			continue
 		}
+
+		s.resolveMemberAssetsAttributes(ctx, member, newAssets)
+
+		oldAssets, err := s.assets.MemberAssets(ctx, member.ID)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			entry.WithError(err).Error("failed to fetch existing member assets from DB")
+			return nil, fmt.Errorf("failed to fetch existing member assets from DB")
+		}
+
+		err = s.diffAndCreateOrUpdateAssets(ctx, member, oldAssets, newAssets)
+		if err != nil {
+			entry.WithError(err).Error("failed to diff and create or update assets")
+			return nil, fmt.Errorf("failed to diff and create or update assets")
+		}
+
 	}
 
 	etag, err = s.esi.Etag(ctx, esi.GetCharacterAssets, esi.ModWithCharacterID(member.ID))
@@ -109,10 +112,6 @@ func (s *service) EmptyMemberAssets(ctx context.Context, member *athena.Member) 
 	return etag, nil
 
 }
-
-// func (s *service) MemberAssets(ctx context.Context, memberID uint) ([]*athena.MemberAsset, error) {
-
-// }
 
 func (s *service) diffAndCreateOrUpdateAssets(ctx context.Context, member *athena.Member, oldAssets, newAssets []*athena.MemberAsset) error {
 
@@ -238,5 +237,42 @@ func (s *service) resolveMemberAssetsAttributes(ctx context.Context, member *ath
 			entry.WithError(err).WithField("system_id", k).Error("failed to resolve solar system id")
 		}
 	}
+
+}
+
+func (s *service) MemberAssets(ctx context.Context, memberID, page uint) ([]*athena.MemberAsset, error) {
+
+	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"service":     serviceIdentifier,
+		"method":      "Characters",
+		"member_id":   memberID,
+		"source_page": page,
+	})
+
+	// assets, err := s.cache.MemberAssets(ctx, memberID, page)
+	// if err != nil {
+	// 	entry.WithError(err).Error("failed to fetch member contacts from cache")
+	// 	return nil, fmt.Errorf("failed to fetch member contacts from cache")
+	// }
+
+	// if len(assets) > 0 {
+	// 	return assets, nil
+	// }
+
+	assets, err := s.assets.MemberAssets(ctx, memberID, athena.NewEqualOperator("source_page", page))
+	if err != nil {
+		entry.WithError(err).Error("failed to fetch member contacts from DB")
+		return nil, fmt.Errorf("failed to fetch member contacts from DB")
+	}
+
+	// if len(assets) > 0 {
+	// 	err = s.cache.SetMemberAssets(ctx, memberID, page, assets)
+	// 	if err != nil {
+	// 		entry.WithError(err).Error("failed to cache member contacts")
+
+	// 	}
+	// }
+
+	return assets, nil
 
 }

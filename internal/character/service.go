@@ -56,8 +56,13 @@ func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
+	var petag string
+	if etag != nil {
+		if etag.CachedUntil.After(time.Now()) {
+			return etag, nil
+		}
+
+		petag = etag.Etag
 	}
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
@@ -66,7 +71,6 @@ func (s *service) FetchCharacter(ctx context.Context, characterID uint) (*athena
 		"method":    "FetchCharacter",
 	})
 
-	petag := etag.Etag
 	character, etag, _, err := s.esi.GetCharacter(ctx, characterID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch character from ESI")

@@ -57,8 +57,13 @@ func (s *service) FetchCorporation(ctx context.Context, corporationID uint) (*at
 		return nil, fmt.Errorf("failed to fetch etag object: %w", err)
 	}
 
-	if etag != nil && etag.CachedUntil.After(time.Now()) {
-		return etag, nil
+	var petag string
+	if etag != nil {
+		if etag.CachedUntil.After(time.Now()) {
+			return etag, nil
+		}
+
+		petag = etag.Etag
 	}
 
 	entry := s.logger.WithContext(ctx).WithFields(logrus.Fields{
@@ -67,7 +72,6 @@ func (s *service) FetchCorporation(ctx context.Context, corporationID uint) (*at
 		"method":         "FetchCorporation",
 	})
 
-	petag := etag.Etag
 	corporation, etag, _, err := s.esi.GetCorporation(ctx, corporationID)
 	if err != nil {
 		entry.WithError(err).Error("failed to fetch corporation from ESI")
@@ -86,16 +90,16 @@ func (s *service) FetchCorporation(ctx context.Context, corporationID uint) (*at
 
 	switch existing == nil || errors.Is(err, sql.ErrNoRows) {
 	case true:
-		corporation, err = s.corporation.UpdateCorporation(ctx, corporationID, corporation)
-		if err != nil {
-			entry.WithError(err).Error("failed to update corporation in DB")
-			return nil, fmt.Errorf("failed to update corporation in DB")
-		}
-	case false:
 		corporation, err = s.corporation.CreateCorporation(ctx, corporation)
 		if err != nil {
 			entry.WithError(err).Error("failed to create corporation in DB")
 			return nil, fmt.Errorf("failed to create corporation in DB")
+		}
+	case false:
+		corporation, err = s.corporation.UpdateCorporation(ctx, corporationID, corporation)
+		if err != nil {
+			entry.WithError(err).Error("failed to update corporation in DB")
+			return nil, fmt.Errorf("failed to update corporation in DB")
 		}
 	}
 
@@ -151,8 +155,8 @@ func (s *service) Corporations(ctx context.Context, operators ...*athena.Operato
 
 	corporations, err := s.cache.Corporations(ctx, operators...)
 	if err != nil {
-		entry.WithError(err).Error("failed to fetch alliances from cache")
-		return nil, fmt.Errorf("failed to fetch alliances from cache")
+		entry.WithError(err).Error("failed to fetch corporation from cache")
+		return nil, fmt.Errorf("failed to fetch corporation from cache")
 	}
 
 	if len(corporations) > 0 {
@@ -161,8 +165,8 @@ func (s *service) Corporations(ctx context.Context, operators ...*athena.Operato
 
 	corporations, err = s.corporation.Corporations(ctx, operators...)
 	if err != nil {
-		entry.WithError(err).Error("failed to fetch alliances from db")
-		return nil, fmt.Errorf("failed to fetch alliances from db")
+		entry.WithError(err).Error("failed to fetch corporation from db")
+		return nil, fmt.Errorf("failed to fetch corporation from db")
 	}
 
 	err = s.cache.SetCorporations(ctx, corporations, operators...)

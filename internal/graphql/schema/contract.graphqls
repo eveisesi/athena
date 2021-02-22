@@ -19,8 +19,8 @@ type MemberContract @goModel(model: "github.com/eveisesi/athena.MemberContract")
     forCorporation: Boolean!
     issuerCorporationID: Uint!
     issuerID: Uint64!
-    price: Uint
-    reward: Uint
+    price: Float
+    reward: Float
     startLocationID: Uint64
     status: String!
     title: String

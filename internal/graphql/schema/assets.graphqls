@@ -1,0 +1,15 @@
+extend type Query {
+    memberAssets(memberID: Uint!, page: Uint!): [MemberAsset]!
+}
+
+type MemberAsset @goModel(model: "github.com/eveisesi/athena.MemberAsset") {
+    memberID: Uint!
+    itemID: Uint64!
+    typeID: Uint!
+    locationID: Uint64!
+    locationFlag: String!
+    locationType: String!
+    quantity: Int!
+    isBlueprintCopy: Boolean!
+    isSingleton: Boolean!
+}

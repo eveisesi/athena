@@ -120,7 +120,7 @@ func (s *service) FetchMemberContracts(ctx context.Context, member *athena.Membe
 			return nil, fmt.Errorf("failed to fetch member contracts from ESI")
 		}
 
-		if petag == etag.Etag {
+		if petag != "" && petag == etag.Etag {
 			continue
 		}
 

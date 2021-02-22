@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"github.com/eveisesi/athena/internal/alliance"
+	"github.com/eveisesi/athena/internal/asset"
 	"github.com/eveisesi/athena/internal/auth"
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/clone"
@@ -32,6 +33,7 @@ type resolver struct {
 	clone       clone.Service
 	contact     contact.Service
 	contract    contract.Service
+	asset       asset.Service
 }
 
 func New(
@@ -46,6 +48,7 @@ func New(
 	clone clone.Service,
 	contact contact.Service,
 	contract contract.Service,
+	asset asset.Service,
 ) service.ResolverRoot {
 	return &resolver{
 		logger:      logger,
@@ -59,6 +62,7 @@ func New(
 		location:    location,
 		contact:     contact,
 		contract:    contract,
+		asset:       asset,
 	}
 }
 

@@ -10,6 +10,54 @@ import (
 	"github.com/eveisesi/athena"
 )
 
+type fittingInterface interface {
+	HeadCharacterFittings(ctx context.Context, characterID uint, token string) (*athena.Etag, *http.Response, error)
+	GetCharacterFittings(ctx context.Context, characterID uint, token string) ([]*athena.MemberFitting, *athena.Etag, *http.Response, error)
+}
+
+func (s *service) HeadCharacterFittings(ctx context.Context, characterID uint, token string) (*athena.Etag, *http.Response, error) {
+
+	endpoint := endpoints[GetCharacterFittings]
+
+	mods := s.modifiers(ModWithCharacterID(characterID))
+
+	etag, err := s.etag.Etag(ctx, endpoint.KeyFunc(mods))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path := endpoint.PathFunc(mods)
+
+	_, res, err := s.request(
+		ctx,
+		WithMethod(http.MethodGet),
+		WithPath(path),
+		WithEtag(etag.Etag),
+		WithAuthorization(token),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if res.StatusCode >= http.StatusBadRequest {
+		return etag, res, fmt.Errorf("failed to fetch fittings for character %d, received status code of %d", characterID, res.StatusCode)
+	}
+
+	if res.StatusCode == http.StatusNotModified {
+		etag.CachedUntil = RetrieveExpiresHeader(res.Header, 0)
+		_, err = s.etag.UpdateEtag(ctx, etag.EtagID, etag)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to update etag: %w", err)
+		}
+		return etag, res, nil
+	}
+
+	etag.Etag = RetrieveEtagHeader(res.Header)
+
+	return etag, res, nil
+
+}
+
 func (s *service) GetCharacterFittings(ctx context.Context, characterID uint, token string) ([]*athena.MemberFitting, *athena.Etag, *http.Response, error) {
 
 	endpoint := endpoints[GetCharacterFittings]

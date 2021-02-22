@@ -1,12 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"log"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/eveisesi/athena"
@@ -156,25 +152,25 @@ func addMemberByCLI(c *cli.Context) error {
 
 	ctx := context.Background()
 
-	reader := bufio.NewReader(os.Stdin)
+	// reader := bufio.NewReader(os.Stdin)
 
-	fmt.Print("Access Token: ")
-	at, err := reader.ReadString('\n')
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Print("Refresh Token: ")
-	rt, err := reader.ReadString('\n')
-	if err != nil {
-		log.Fatal(err)
-	}
+	// fmt.Print("Access Token: ")
+	// at, err := reader.ReadString('\n')
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Print("Refresh Token: ")
+	// rt, err := reader.ReadString('\n')
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	at = strings.TrimSuffix(at, "\n")
-	rt = strings.TrimSuffix(rt, "\n")
+	// at = strings.TrimSuffix(at, "\n")
+	// rt = strings.TrimSuffix(rt, "\n")
 
 	oauth2Token := new(oauth2.Token)
-	oauth2Token.AccessToken = at
-	oauth2Token.RefreshToken = rt
+	oauth2Token.AccessToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6IkpXVC1TaWduYXR1cmUtS2V5IiwidHlwIjoiSldUIn0.eyJzY3AiOlsiZXNpLWFzc2V0cy5yZWFkX2Fzc2V0cy52MSIsImVzaS1jaGFyYWN0ZXJzLnJlYWRfY29udGFjdHMudjEiLCJlc2ktY2xvbmVzLnJlYWRfY2xvbmVzLnYxIiwiZXNpLWNsb25lcy5yZWFkX2ltcGxhbnRzLnYxIiwiZXNpLWNvbnRyYWN0cy5yZWFkX2NoYXJhY3Rlcl9jb250cmFjdHMudjEiLCJlc2ktbG9jYXRpb24ucmVhZF9sb2NhdGlvbi52MSIsImVzaS1sb2NhdGlvbi5yZWFkX3NoaXBfdHlwZS52MSIsImVzaS1tYWlsLnJlYWRfbWFpbC52MSIsImVzaS1za2lsbHMucmVhZF9za2lsbHF1ZXVlLnYxIiwiZXNpLXNraWxscy5yZWFkX3NraWxscy52MSIsImVzaS11bml2ZXJzZS5yZWFkX3N0cnVjdHVyZXMudjEiLCJlc2ktd2FsbGV0LnJlYWRfY2hhcmFjdGVyX3dhbGxldC52MSJdLCJqdGkiOiI5MjkyYTM3Mi0zNzE0LTQ2MjMtOGVkNy0zNDNmZTUyYmU0YzkiLCJraWQiOiJKV1QtU2lnbmF0dXJlLUtleSIsInN1YiI6IkNIQVJBQ1RFUjpFVkU6OTAyMTg5MjMiLCJhenAiOiI2MWMyMTJiNjFjMWM0NDVmYTUzZmNjYWI2YmJkZDZiMyIsInRlbmFudCI6InRyYW5xdWlsaXR5IiwidGllciI6ImxpdmUiLCJyZWdpb24iOiJ3b3JsZCIsIm5hbWUiOiIxMjNuaWNrIiwib3duZXIiOiJDVzJzU09wN2x3MEVBTlVCcTd5QkVqcFdkWkk9IiwiZXhwIjoxNjEzODY2MjMwLCJpc3MiOiJsb2dpbi5ldmVvbmxpbmUuY29tIn0.aCRi7NB2TY4D5L0i_wHbtVkx9LAj17dmVq9MIeNBZdSGAz_t-e7tDXnRRpdHEcCOMIQT5e4AKu9G35jgCHqpEmjUvv1IwYaybMhlaykZhlViVOoU9r-ysDeKDIepv4AzrXn50MOuEAEQZg6lG3SEq8naHEF7xFfGqIEjJKffe9_GMm3sVau6wZ08sYE1rbFUTO2_qR4zGiGnsb5GVxrrnYOZVR2yDuzw2TfzAM75jyNMMv3Lr0-opjdsj2RwAcp87Z9fURtj_XwenUDb-pBF_gQR-FG0EbNcQ9YpTTN8PDUI14aZ5j3Dp-A__12EThW58nmLuPQS6pm0AM-EkC8XtQ"
+	oauth2Token.RefreshToken = "hb0K7o32K0y82Jo4EQ8r4g=="
 	oauth2Token.Expiry = time.Now()
 
 	oauth := getAuthConfig(basics.cfg)

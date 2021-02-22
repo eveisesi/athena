@@ -41,14 +41,14 @@ func (r *memberAssetsRepository) MemberAsset(ctx context.Context, memberID uint,
 
 }
 
-func (r *memberAssetsRepository) MemberAssets(ctx context.Context, id uint, operators ...*athena.Operator) ([]*athena.MemberAsset, error) {
+func (r *memberAssetsRepository) MemberAssets(ctx context.Context, memberID uint, operators ...*athena.Operator) ([]*athena.MemberAsset, error) {
 
 	query, args, err := BuildFilters(sq.Select(
 		"member_id", "item_id", "type_id",
 		"location_id", "location_flag", "location_type",
 		"quantity", "is_blueprint_copy", "is_singleton",
 		"created_at", "updated_at",
-	).From(r.table), operators...).ToSql()
+	).From(r.table), operators...).Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("[Contact Repository] Failed to generate query: %w", err)
 	}

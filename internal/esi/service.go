@@ -32,6 +32,7 @@ type (
 		contractInterface
 		corporationInterface
 		etagInterface
+		fittingInterface
 		locationInterface
 		mailInterface
 		skillsInterface

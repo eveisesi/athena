@@ -70,19 +70,19 @@ func buildScopeMap(
 		},
 	}
 
-	// scopeMap[athena.ReadSkillQueueV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberSkillQueue",
-	// 		Func: skill.EmptyMemberSkillQueue,
-	// 	},
-	// }
+	scopeMap[athena.ReadSkillQueueV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberSkillQueue",
+			Func: skill.FetchMemberSkillQueue,
+		},
+	}
 
-	// scopeMap[athena.ReadSkillsV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberSkills",
-	// 		Func: skill.EmptyMemberSkills,
-	// 	},
-	// }
+	scopeMap[athena.ReadSkillsV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberSkills",
+			Func: skill.FetchMemberSkills,
+		},
+	}
 
 	scopeMap[athena.ReadWalletV1] = []athena.ScopeResolver{
 		{
@@ -99,12 +99,12 @@ func buildScopeMap(
 		},
 	}
 
-	// scopeMap[athena.ReadMailV1] = []athena.ScopeResolver{
-	// 	{
-	// 		Name: "MemberMailHeaders",
-	// 		Func: mail.EmptyMemberMailHeaders,
-	// 	},
-	// }
+	scopeMap[athena.ReadMailV1] = []athena.ScopeResolver{
+		{
+			Name: "MemberMailHeaders",
+			Func: mail.EmptyMemberMailHeaders,
+		},
+	}
 
 	scopeMap[athena.ReadAssetsV1] = []athena.ScopeResolver{
 		{

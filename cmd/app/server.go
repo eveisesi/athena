@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena/internal/alliance"
+	"github.com/eveisesi/athena/internal/asset"
 	"github.com/eveisesi/athena/internal/character"
 	"github.com/eveisesi/athena/internal/clone"
 	"github.com/eveisesi/athena/internal/contact"
@@ -42,6 +43,7 @@ func serverCommand(c *cli.Context) error {
 	character := character.NewService(basics.logger, cache, esi, corporation, basics.repositories.character)
 	contact := contact.NewService(basics.logger, cache, esi, universe, alliance, character, corporation, basics.repositories.contact)
 	contract := contract.NewService(basics.logger, cache, esi, universe, alliance, character, corporation, basics.repositories.contract)
+	asset := asset.NewService(basics.logger, cache, esi, universe, basics.repositories.asset)
 
 	auth := auth.NewService(
 		cache,
@@ -68,6 +70,7 @@ func serverCommand(c *cli.Context) error {
 		clone,
 		contact,
 		contract,
+		asset,
 	)
 
 	serverErrors := make(chan error, 1)

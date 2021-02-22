@@ -410,7 +410,7 @@ func (s *service) resolveMemberWalletJournalEntries(ctx context.Context, member 
 			s.resolveContextIDType(ctx, member, entry.ContextID.Uint64, entry.ContextType.ContextIDType)
 		}
 
-		if entry.FirstPartyID.Valid && entry.SecondPartyID.Valid {
+		if entry.FirstPartyID.Valid || entry.SecondPartyID.Valid {
 			s.resolvePartyID(ctx, entry)
 		}
 
@@ -431,7 +431,20 @@ func (s *service) resolvePartyID(ctx context.Context, journal *athena.MemberWall
 		"method":  "resolvePartyID",
 	})
 
-	results, res, err := s.esi.PostUniverseNames(ctx, []uint{journal.FirstPartyID.Uint, journal.SecondPartyID.Uint})
+	idMap := make(map[uint]bool)
+	if journal.FirstPartyID.Valid {
+		idMap[journal.FirstPartyID.Uint] = true
+	}
+	if journal.SecondPartyID.Valid {
+		idMap[journal.SecondPartyID.Uint] = true
+	}
+
+	ids := make([]uint, 0, len(idMap))
+	for k := range idMap {
+		ids = append(ids, k)
+	}
+
+	results, res, err := s.esi.PostUniverseNames(ctx, ids)
 	if err != nil && res == nil {
 		entry.WithError(err).Error("failed to execute request to post universe names")
 		return
@@ -442,15 +455,11 @@ func (s *service) resolvePartyID(ctx context.Context, journal *athena.MemberWall
 		return
 	}
 
-	if len(results) != 2 {
-		entry.Error("request to post universe names returned unexpected number of results")
-	}
-
 	for _, result := range results {
-		if result.ID == journal.FirstPartyID.Uint {
+		if journal.FirstPartyID.Valid && result.ID == journal.FirstPartyID.Uint {
 			journal.FirstPartyType.SetValid(string(result.Category))
 		}
-		if result.ID == journal.SecondPartyID.Uint {
+		if journal.SecondPartyID.Valid && result.ID == journal.SecondPartyID.Uint {
 			journal.SecondPartyType.SetValid(string(result.Category))
 		}
 	}

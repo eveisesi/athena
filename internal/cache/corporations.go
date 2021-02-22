@@ -57,9 +57,10 @@ func (s *service) SetCorporation(ctx context.Context, corporationID uint, corpor
 		return fmt.Errorf("failed to marshal corporation: %w", err)
 	}
 
-	_, err = s.client.Set(ctx, fmt.Sprintf(keyCorporation, corporation.ID), data, time.Hour).Result()
+	key := fmt.Sprintf(keyCorporation, corporationID)
+	_, err = s.client.Set(ctx, key, data, time.Hour).Result()
 	if err != nil {
-		return fmt.Errorf("failed to write to cache: %w", err)
+		return fmt.Errorf("failed to write to cache for key %s: %w", key, err)
 	}
 
 	return nil

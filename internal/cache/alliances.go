@@ -71,23 +71,27 @@ func (s *service) Alliances(ctx context.Context, operators ...*athena.Operator) 
 	}
 
 	key := fmt.Sprintf(keyAlliances, sha1.Sum(data))
-	result, err := s.client.Get(ctx, key).Result()
+	members, err := s.client.SMembers(ctx, key).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
 	}
 
-	if len(result) > 0 {
-		var alliances = make([]*athena.Alliance, 0)
+	if len(members) == 0 {
+		return nil, nil
+	}
 
-		err = json.Unmarshal([]byte(result), &alliances)
+	var alliances = make([]*athena.Alliance, 0, len(members))
+	for _, member := range members {
+		var alliance = new(athena.Alliance)
+		err = json.Unmarshal([]byte(member), alliance)
 		if err != nil {
 			return nil, err
 		}
 
-		return alliances, nil
+		alliances = append(alliances, alliance)
 	}
 
-	return nil, nil
+	return alliances, nil
 
 }
 
