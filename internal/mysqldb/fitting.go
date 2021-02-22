@@ -121,22 +121,6 @@ func (r *memberFittingRepository) DeleteMemberFitting(ctx context.Context, membe
 
 }
 
-func (r *memberFittingRepository) DeleteMemberFittings(ctx context.Context, memberID uint) (bool, error) {
-
-	query, args, err := sq.Delete(r.fittings).Where(sq.Eq{"member_id": memberID}).ToSql()
-	if err != nil {
-		return false, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
-	}
-
-	_, err = r.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return false, fmt.Errorf("[Fitting Repository] Failed to insert records: %w", err)
-	}
-
-	return true, nil
-
-}
-
 func (r *memberFittingRepository) MemberFittingItems(ctx context.Context, memberID, fittingID uint) ([]*athena.MemberFittingItem, error) {
 
 	query, args, err := sq.Select(
@@ -188,22 +172,6 @@ func (r *memberFittingRepository) CreateMemberFittingItems(ctx context.Context, 
 func (r *memberFittingRepository) DeleteMemberFittingItems(ctx context.Context, memberID, fittingID uint) (bool, error) {
 
 	query, args, err := sq.Delete(r.items).Where(sq.Eq{"member_id": memberID, "fitting_id": fittingID}).ToSql()
-	if err != nil {
-		return false, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
-	}
-
-	_, err = r.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return false, fmt.Errorf("[Fitting Repository] Failed to insert records: %w", err)
-	}
-
-	return true, nil
-
-}
-
-func (r *memberFittingRepository) DeleteMemberFittingItemsAll(ctx context.Context, memberID uint) (bool, error) {
-
-	query, args, err := sq.Delete(r.items).Where(sq.Eq{"member_id": memberID}).ToSql()
 	if err != nil {
 		return false, fmt.Errorf("[Fitting Repository] Failed to generate query: %w", err)
 	}

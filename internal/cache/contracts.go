@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/eveisesi/athena"
-	"github.com/sirkon/go-format"
 )
 
 type contractService interface {
@@ -186,11 +185,7 @@ func (s *service) SetMemberContractBids(ctx context.Context, memberID, contractI
 		members[i] = bid
 	}
 
-	key := format.Formatm(keyMemberContractBids, format.Values{
-		"memberID":   memberID,
-		"contractID": contractID,
-	})
-
+	key := fmt.Sprintf(keyMemberContractBids, memberID, contractID)
 	_, err := s.client.SAdd(ctx, key, members...).Result()
 	if err != nil {
 		return fmt.Errorf(errFailedToCacheMembers, key, err)

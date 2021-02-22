@@ -12,38 +12,36 @@ type MemberFittingsRepository interface {
 
 type memberFittingRepository interface {
 	MemberFittings(ctx context.Context, memberID uint, operators ...*Operator) ([]*MemberFitting, error)
-	CreateMemberFittings(ctx context.Context, memberID uint, fitting []*MemberFitting) ([]*MemberFitting, error)
+	CreateMemberFittings(ctx context.Context, memberID uint, fittings []*MemberFitting) ([]*MemberFitting, error)
 	UpdateMemberFitting(ctx context.Context, memberID, fittingID uint, fitting *MemberFitting) (*MemberFitting, error)
 	DeleteMemberFitting(ctx context.Context, memberID uint, fittingID uint) (bool, error)
-	DeleteMemberFittings(ctx context.Context, memberID uint) (bool, error)
 }
 
 type memberFittingItemRepository interface {
 	MemberFittingItems(ctx context.Context, memberID, fittingID uint) ([]*MemberFittingItem, error)
 	CreateMemberFittingItems(ctx context.Context, memberID, fittingID uint, items []*MemberFittingItem) ([]*MemberFittingItem, error)
 	DeleteMemberFittingItems(ctx context.Context, memberID, fittingID uint) (bool, error)
-	DeleteMemberFittingItemsAll(ctx context.Context, memberID uint) (bool, error)
 }
 
 type MemberFitting struct {
-	MemberID    uint                 `db:"member_id" json:"member_id"`
+	MemberID    uint                 `db:"member_id" json:"-"`
 	FittingID   uint                 `db:"fitting_id" json:"fitting_id"`
 	ShipTypeID  uint                 `db:"ship_type_id" json:"ship_type_id"`
 	Name        string               `db:"name" json:"name"`
 	Description string               `db:"description" json:"description"`
-	Items       []*MemberFittingItem `db:"-" json:"items,omitempty"`
-	CreatedAt   time.Time            `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time            `db:"updated_at" json:"updated_at"`
+	Items       []*MemberFittingItem `db:"-" json:"items"`
+	ItemsHash   string               `db:"item_hash" json:"item_hash"`
+	CreatedAt   time.Time            `db:"created_at" json:"-"`
+	UpdatedAt   time.Time            `db:"updated_at" json:"-"`
 }
 
 type MemberFittingItem struct {
-	MemberID  uint            `db:"member_id" json:"member_id"`
 	FittingID uint            `db:"fitting_id" json:"fitting_id"`
 	TypeID    uint            `db:"type_id" json:"type_id"`
 	Quantity  uint            `db:"quantity" json:"quantity"`
 	Flag      FittingItemFlag `db:"flag" json:"flag"`
-	CreatedAt time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time       `db:"updated_at" json:"updated_at"`
+	CreatedAt time.Time       `db:"created_at" json:"-"`
+	UpdatedAt time.Time       `db:"updated_at" json:"-"`
 }
 
 type FittingItemFlag string
