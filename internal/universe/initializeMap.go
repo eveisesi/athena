@@ -27,7 +27,6 @@ func (s *service) InitializeUniverse(options ...OptionFunc) error {
 		pOpts = append(pOpts, mpb.WithOutput(ioutil.Discard))
 	}
 	p := mpb.New(pOpts...)
-
 	if o.chr {
 		races, _, _, err := s.esi.GetRaces(ctx)
 		if err != nil {

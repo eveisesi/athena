@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gorilla/websocket"
 
 	"github.com/eveisesi/athena"
 
@@ -149,6 +150,11 @@ func (s *server) buildRouter() *chi.Mux {
 			queryHandler := handler.New(es)
 
 			queryHandler.AddTransport(transport.Websocket{
+				Upgrader: websocket.Upgrader{
+					CheckOrigin: func(r *http.Request) bool {
+						return true
+					},
+				},
 				KeepAlivePingInterval: 2 * time.Second,
 			})
 			queryHandler.AddTransport(transport.POST{})

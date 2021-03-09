@@ -430,7 +430,7 @@ func (s *service) GetCategory(ctx context.Context, categoryID uint) (*athena.Cat
 
 func categoryKeyFunc(mods *modifiers) string {
 
-	requireCategoryID(mods)
+	// requireCategoryID(mods)
 
 	return buildKey(GetCategory.String(), strconv.FormatUint(uint64(mods.categoryID), 10))
 
@@ -438,7 +438,7 @@ func categoryKeyFunc(mods *modifiers) string {
 
 func categoryPathFunc(mods *modifiers) string {
 
-	requireCategoryID(mods)
+	// requireCategoryID(mods)
 
 	return fmt.Sprintf(endpoints[GetCategory].Path, mods.categoryID)
 
@@ -497,7 +497,7 @@ func (s *service) GetGroup(ctx context.Context, groupID uint) (*athena.Group, *a
 
 func groupKeyFunc(mods *modifiers) string {
 
-	requireGroupID(mods)
+	// requireGroupID(mods)
 
 	return buildKey(GetGroup.String(), strconv.FormatUint(uint64(mods.groupID), 10))
 
@@ -505,7 +505,7 @@ func groupKeyFunc(mods *modifiers) string {
 
 func groupPathFunc(mods *modifiers) string {
 
-	requireGroupID(mods)
+	// requireGroupID(mods)
 
 	return fmt.Sprintf(endpoints[GetGroup].Path, mods.groupID)
 
@@ -564,7 +564,7 @@ func (s *service) GetType(ctx context.Context, typeID uint) (*athena.Type, *athe
 
 func typeKeyFunc(mods *modifiers) string {
 
-	requireItemID(mods)
+	// requireItemID(mods)
 
 	return buildKey(GetType.String(), strconv.FormatUint(uint64(mods.itemID), 10))
 
@@ -572,7 +572,7 @@ func typeKeyFunc(mods *modifiers) string {
 
 func typePathFunc(mods *modifiers) string {
 
-	requireItemID(mods)
+	// requireItemID(mods)
 
 	return fmt.Sprintf(endpoints[GetType].Path, mods.itemID)
 

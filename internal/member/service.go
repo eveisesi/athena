@@ -127,8 +127,7 @@ func (s *service) Login(ctx context.Context, code, state string) error {
 
 	bearer, err := s.auth.BearerForCode(ctx, code)
 	if err != nil {
-		msg := "failed to exchange state and code for token"
-		return fmt.Errorf("%s: %w", msg, err)
+		return fmt.Errorf("failed to exchange state and code for token: %w", err)
 	}
 
 	token, err := s.auth.ParseAndVerifyToken(ctx, bearer.AccessToken)

@@ -5,6 +5,7 @@ package resolvers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/eveisesi/athena"
 	"github.com/eveisesi/athena/internal/graphql/dataloaders"
@@ -33,9 +34,9 @@ func (r *memberResolver) Character(ctx context.Context, obj *athena.Member) (*at
 }
 
 func (r *queryResolver) Member(ctx context.Context) (*athena.Member, error) {
-	member := r.member.MemberFromContext(ctx)
+	// r.member.MemberFromContext(ctx)
 
-	return member, nil
+	return nil, fmt.Errorf("Failed to fetch member from context")
 }
 
 // Member returns service.MemberResolver implementation.

@@ -6,7 +6,8 @@ CREATE TABLE `corporation_alliance_history` (
     `start_date` TIMESTAMP NOT NULL,
     `created_at` TIMESTAMP NOT NULL,
     `updated_at` TIMESTAMP NOT NULL,
-    PRIMARY KEY (`id`, `record_id`) USING BTREE,
+    PRIMARY KEY (`corporation_id`, `record_id`) USING BTREE,
     INDEX `corporation_alliance_history_alliance_id_idx` (`alliance_id`) USING BTREE,
-    INDEX `corporation_alliance_history_corporation_id_start_date_idx` (`corporation_id`, `start_date`) CONSTRAINT `corporation_alliance_history_alliance_id_alliances_id_foreign` FOREIGN KEY (`alliance_id`) REFERENCES `athena`.`alliances` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
+    INDEX `corporation_alliance_history_corporation_id_start_date_idx` (`corporation_id`, `start_date`),
+    CONSTRAINT `corporation_alliance_history_alliance_id_alliances_id_foreign` FOREIGN KEY (`alliance_id`) REFERENCES `athena`.`alliances` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
 ) COLLATE = 'utf8mb4_unicode_ci' ENGINE = InnoDB;

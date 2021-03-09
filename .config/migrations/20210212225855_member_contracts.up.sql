@@ -1,4 +1,4 @@
-CREATE TABLE `member_contract2s` (
+CREATE TABLE `member_contracts` (
     `member_id` INT UNSIGNED NOT NULL,
     `contract_id` INT UNSIGNED NOT NULL,
     `source_page` SMALLINT UNSIGNED NOT NULL DEFAULT '1',

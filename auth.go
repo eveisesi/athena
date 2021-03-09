@@ -19,6 +19,7 @@ type AuthAttempt struct {
 	Status AuthAttemptStatus
 	State  string
 	Token  null.String
+	User   *Member
 }
 
 type AuthAttemptStatus string
