@@ -1,4 +1,4 @@
-# Athena
+# Athena Backend
 
 ## What is Athena
 
